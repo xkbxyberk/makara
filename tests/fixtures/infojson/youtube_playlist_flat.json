@@ -1,0 +1,500 @@
+{
+ "id": "UCAuUUnT6oDeKwE6v1NGQxug",
+ "channel": "TED",
+ "channel_id": "UCAuUUnT6oDeKwE6v1NGQxug",
+ "title": "TED - Videos",
+ "availability": "public",
+ "channel_follower_count": 27800000,
+ "description": "The TED Talks channel features the best talks and performances from the TED Conference, where the world's leading thinkers and doers give the talk of their lives in 18 minutes (or less) — plus originals, podcasts and exclusive content. Look for videos on Technology, Entertainment and Design as well as science, business, global issues, the arts and more.\n\nVisit https://TED.com for our entire library, transcripts, translations and personalized recommendations.\n\nTED videos may be used for non-commercial purposes under a Creative Commons License, Attribution–Non Commercial–No Derivatives (or the CC BY – NC – ND 4.0 International) and in accordance with the TED Talks Usage Policy: https://www.ted.com/about/our-organization/our-policies-terms/ted-talks-usage-policy. For more information on using TED for commercial purposes (e.g. employee learning, in a film or online course), submit a request at https://media-requests.ted.com",
+ "tags": [
+  "TED",
+  "talks",
+  "ideas",
+  "worth",
+  "spreading",
+  "technology",
+  "entertainment",
+  "design",
+  "TED Conferences",
+  "TED Talks",
+  "TED talks",
+  "ted talks",
+  "ted",
+  "TED Talk",
+  "TED talk",
+  "ted talk",
+  "science",
+  "climate change",
+  "health",
+  "business",
+  "education",
+  "arts",
+  "politics",
+  "social issues",
+  "social change",
+  "psychology",
+  "personal growth",
+  "mental health",
+  "relationships",
+  "work",
+  "collaboration",
+  "innovation",
+  "future",
+  "the future",
+  "activism",
+  "humanity",
+  "society",
+  "community",
+  "artificial intelligence",
+  "astronomy",
+  "knowledge",
+  "truth",
+  "storytelling",
+  "spoken word",
+  "music",
+  "performance",
+  "poetry"
+ ],
+ "thumbnails": [
+  {
+   "url": "https://yt3.googleusercontent.com/mgi4tXOEErQ-2-TUQISotNllP2DOI2IvpXEImFufQLKixWv2T-mKHv__uH3Nc5_gISGhF3IH=w1060-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
+   "height": 175,
+   "width": 1060,
+   "preference": -10,
+   "id": "0",
+   "resolution": "1060x175"
+  },
+  {
+   "url": "https://yt3.googleusercontent.com/mgi4tXOEErQ-2-TUQISotNllP2DOI2IvpXEImFufQLKixWv2T-mKHv__uH3Nc5_gISGhF3IH=w1138-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
+   "height": 188,
+   "width": 1138,
+   "preference": -10,
+   "id": "1",
+   "resolution": "1138x188"
+  },
+  {
+   "url": "https://yt3.googleusercontent.com/mgi4tXOEErQ-2-TUQISotNllP2DOI2IvpXEImFufQLKixWv2T-mKHv__uH3Nc5_gISGhF3IH=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
+   "height": 283,
+   "width": 1707,
+   "preference": -10,
+   "id": "2",
+   "resolution": "1707x283"
+  },
+  {
+   "url": "https://yt3.googleusercontent.com/mgi4tXOEErQ-2-TUQISotNllP2DOI2IvpXEImFufQLKixWv2T-mKHv__uH3Nc5_gISGhF3IH=w2120-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
+   "height": 351,
+   "width": 2120,
+   "preference": -10,
+   "id": "3",
+   "resolution": "2120x351"
+  },
+  {
+   "url": "https://yt3.googleusercontent.com/mgi4tXOEErQ-2-TUQISotNllP2DOI2IvpXEImFufQLKixWv2T-mKHv__uH3Nc5_gISGhF3IH=w2276-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
+   "height": 377,
+   "width": 2276,
+   "preference": -10,
+   "id": "4",
+   "resolution": "2276x377"
+  },
+  {
+   "url": "https://yt3.googleusercontent.com/mgi4tXOEErQ-2-TUQISotNllP2DOI2IvpXEImFufQLKixWv2T-mKHv__uH3Nc5_gISGhF3IH=w2560-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
+   "height": 424,
+   "width": 2560,
+   "preference": -10,
+   "id": "5",
+   "resolution": "2560x424"
+  },
+  {
+   "url": "https://yt3.googleusercontent.com/mgi4tXOEErQ-2-TUQISotNllP2DOI2IvpXEImFufQLKixWv2T-mKHv__uH3Nc5_gISGhF3IH=s0",
+   "id": "banner_uncropped",
+   "preference": -5
+  },
+  {
+   "url": "https://yt3.googleusercontent.com/ytc/AIdro_koIFcCOrvh0KThLNOiazAIDu6hcs8bjkGNwe1f6A_OYm8=s900-c-k-c0x00ffffff-no-rj",
+   "height": 900,
+   "width": 900,
+   "id": "7",
+   "resolution": "900x900"
+  },
+  {
+   "url": "https://yt3.googleusercontent.com/ytc/AIdro_koIFcCOrvh0KThLNOiazAIDu6hcs8bjkGNwe1f6A_OYm8=s0",
+   "id": "avatar_uncropped",
+   "preference": 1
+  }
+ ],
+ "uploader_id": "@TED",
+ "uploader_url": "https://www.youtube.com/@TED",
+ "channel_is_verified": true,
+ "modified_date": null,
+ "view_count": null,
+ "playlist_count": null,
+ "uploader": "TED",
+ "channel_url": "https://www.youtube.com/channel/UCAuUUnT6oDeKwE6v1NGQxug",
+ "_type": "playlist",
+ "entries": [
+  {
+   "title": "Why You Should Embrace Unproductive Hobbies | TED Intersections",
+   "thumbnails": [
+    {
+     "url": "https://i.ytimg.com/vi/Zgu97mCGS74/hq720_custom_2.jpg?sqp=CLC2zNUG-oaymwEcCOgCEMoBSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLC-UTyCf5DADeQ2We_1VWEyPTQSXg",
+     "height": 202,
+     "width": 360
+    },
+    {
+     "url": "https://i.ytimg.com/vi/Zgu97mCGS74/hq720_custom_2.jpg?sqp=CLC2zNUG-oaymwEcCNAFEJQDSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLBMfGTT5brCixWLM77Bva-hexPjGQ",
+     "height": 404,
+     "width": 720
+    }
+   ],
+   "duration": 1610,
+   "view_count": 29000,
+   "timestamp": null,
+   "live_status": null,
+   "availability": null,
+   "channel_url": null,
+   "uploader_url": null,
+   "creators": null,
+   "ie_key": "Youtube",
+   "id": "Zgu97mCGS74",
+   "_type": "url",
+   "url": "https://www.youtube.com/watch?v=Zgu97mCGS74",
+   "__x_forwarded_for_ip": null
+  },
+  {
+   "title": "How to Help People Make Sense of Science | Jessica Malaty Rivera | TED",
+   "thumbnails": [
+    {
+     "url": "https://i.ytimg.com/vi/PRmIrFhce04/hq720.jpg?sqp=-oaymwEcCOgCEMoBSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLCh78W5Bl87oL38qpwaD2PkiCKpDA",
+     "height": 202,
+     "width": 360
+    },
+    {
+     "url": "https://i.ytimg.com/vi/PRmIrFhce04/hq720.jpg?sqp=-oaymwEcCNAFEJQDSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLD1Pcn4PUU-DFVRiai9K1lOctYkzw",
+     "height": 404,
+     "width": 720
+    }
+   ],
+   "duration": 1174,
+   "view_count": 77000,
+   "timestamp": null,
+   "live_status": null,
+   "availability": null,
+   "channel_url": null,
+   "uploader_url": null,
+   "creators": null,
+   "ie_key": "Youtube",
+   "id": "PRmIrFhce04",
+   "_type": "url",
+   "url": "https://www.youtube.com/watch?v=PRmIrFhce04",
+   "__x_forwarded_for_ip": null
+  },
+  {
+   "title": "Why You Fear the Unknown — and What It Can Teach You | Maya Shankar and Simone Stolzoff | TED",
+   "thumbnails": [
+    {
+     "url": "https://i.ytimg.com/vi/SD1MypHgAwc/hq720.jpg?sqp=-oaymwEcCOgCEMoBSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLArhOx7K1qJlg0IAda-42zNmjP-Fw",
+     "height": 202,
+     "width": 360
+    },
+    {
+     "url": "https://i.ytimg.com/vi/SD1MypHgAwc/hq720.jpg?sqp=-oaymwEcCNAFEJQDSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLBgEYs4DV2vxg48f3wd04tvckdvNA",
+     "height": 404,
+     "width": 720
+    }
+   ],
+   "duration": 2943,
+   "view_count": 84000,
+   "timestamp": null,
+   "live_status": null,
+   "availability": null,
+   "channel_url": null,
+   "uploader_url": null,
+   "creators": null,
+   "ie_key": "Youtube",
+   "id": "SD1MypHgAwc",
+   "_type": "url",
+   "url": "https://www.youtube.com/watch?v=SD1MypHgAwc",
+   "__x_forwarded_for_ip": null
+  },
+  {
+   "title": "You Already Know How to Wiggle | Jacob Collier | TED",
+   "thumbnails": [
+    {
+     "url": "https://i.ytimg.com/vi/e0Q_TcQUCks/hq720_custom_3.jpg?sqp=CLC2zNUG-oaymwEcCOgCEMoBSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLCJ3Va0oTHBedV1hyyAMH-4JkVsOA",
+     "height": 202,
+     "width": 360
+    },
+    {
+     "url": "https://i.ytimg.com/vi/e0Q_TcQUCks/hq720_custom_3.jpg?sqp=CLC2zNUG-oaymwEcCNAFEJQDSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLBfVavSUTFJcP77FT5JLmQaJXRp4w",
+     "height": 404,
+     "width": 720
+    }
+   ],
+   "duration": 631,
+   "view_count": 233000,
+   "timestamp": null,
+   "live_status": null,
+   "availability": null,
+   "channel_url": null,
+   "uploader_url": null,
+   "creators": null,
+   "ie_key": "Youtube",
+   "id": "e0Q_TcQUCks",
+   "_type": "url",
+   "url": "https://www.youtube.com/watch?v=e0Q_TcQUCks",
+   "__x_forwarded_for_ip": null
+  },
+  {
+   "title": "Meet the Youngest-Ever Mayor in Japan’s History | Ryosuke Takashima | TED",
+   "thumbnails": [
+    {
+     "url": "https://i.ytimg.com/vi/X6hstmAa0cg/hq720.jpg?sqp=-oaymwEcCOgCEMoBSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLA4j5i8qhMieesrLg6bEm18S-Q9lQ",
+     "height": 202,
+     "width": 360
+    },
+    {
+     "url": "https://i.ytimg.com/vi/X6hstmAa0cg/hq720.jpg?sqp=-oaymwEcCNAFEJQDSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLCOXW2oR9jKwZtxnaGy5uTwk3lz_A",
+     "height": 404,
+     "width": 720
+    }
+   ],
+   "duration": 339,
+   "view_count": 82000,
+   "timestamp": null,
+   "live_status": null,
+   "availability": null,
+   "channel_url": null,
+   "uploader_url": null,
+   "creators": null,
+   "ie_key": "Youtube",
+   "id": "X6hstmAa0cg",
+   "_type": "url",
+   "url": "https://www.youtube.com/watch?v=X6hstmAa0cg",
+   "__x_forwarded_for_ip": null
+  },
+  {
+   "title": "This Is What the Birth of the Universe Sounded Like | Mark Whittle | TED",
+   "thumbnails": [
+    {
+     "url": "https://i.ytimg.com/vi/zc_eKn13GQU/hq720_custom_2.jpg?sqp=CLC2zNUG-oaymwEcCOgCEMoBSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLAqugoW6lBMjh8cGEYvRae-mkPjxQ",
+     "height": 202,
+     "width": 360
+    },
+    {
+     "url": "https://i.ytimg.com/vi/zc_eKn13GQU/hq720_custom_2.jpg?sqp=CLC2zNUG-oaymwEcCNAFEJQDSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLBjCWBQERfds5K-M2ACisG4C-kWNQ",
+     "height": 404,
+     "width": 720
+    }
+   ],
+   "duration": 746,
+   "view_count": 94000,
+   "timestamp": null,
+   "live_status": null,
+   "availability": null,
+   "channel_url": null,
+   "uploader_url": null,
+   "creators": null,
+   "ie_key": "Youtube",
+   "id": "zc_eKn13GQU",
+   "_type": "url",
+   "url": "https://www.youtube.com/watch?v=zc_eKn13GQU",
+   "__x_forwarded_for_ip": null
+  },
+  {
+   "title": "How Tech Will (and Won’t) Replace Your Doctor | TED Intersections",
+   "thumbnails": [
+    {
+     "url": "https://i.ytimg.com/vi/4qtsOh2FwIs/hq720_custom_3.jpg?sqp=CLC2zNUG-oaymwEcCOgCEMoBSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLDeyFxp9W2_FIqkW0TRcPP4TmcIKQ",
+     "height": 202,
+     "width": 360
+    },
+    {
+     "url": "https://i.ytimg.com/vi/4qtsOh2FwIs/hq720_custom_3.jpg?sqp=CLC2zNUG-oaymwEcCNAFEJQDSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLBkezpySYwEk4JjpgR_2RMeBcCyWg",
+     "height": 404,
+     "width": 720
+    }
+   ],
+   "duration": 1555,
+   "view_count": 97000,
+   "timestamp": null,
+   "live_status": null,
+   "availability": null,
+   "channel_url": null,
+   "uploader_url": null,
+   "creators": null,
+   "ie_key": "Youtube",
+   "id": "4qtsOh2FwIs",
+   "_type": "url",
+   "url": "https://www.youtube.com/watch?v=4qtsOh2FwIs",
+   "__x_forwarded_for_ip": null
+  },
+  {
+   "title": "How Bullying Spreads — and How Social Bravery Stops It | Amy Cuddy | TED",
+   "thumbnails": [
+    {
+     "url": "https://i.ytimg.com/vi/zYO9UbpEC9Y/hq720.jpg?sqp=-oaymwEcCOgCEMoBSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLApYjMZtYCQR3yncxG3XYpaodRsxw",
+     "height": 202,
+     "width": 360
+    },
+    {
+     "url": "https://i.ytimg.com/vi/zYO9UbpEC9Y/hq720.jpg?sqp=-oaymwEcCNAFEJQDSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLAfJ_1oNPxnI8FDJONgndDECv2lWQ",
+     "height": 404,
+     "width": 720
+    }
+   ],
+   "duration": 864,
+   "view_count": 95000,
+   "timestamp": null,
+   "live_status": null,
+   "availability": null,
+   "channel_url": null,
+   "uploader_url": null,
+   "creators": null,
+   "ie_key": "Youtube",
+   "id": "zYO9UbpEC9Y",
+   "_type": "url",
+   "url": "https://www.youtube.com/watch?v=zYO9UbpEC9Y",
+   "__x_forwarded_for_ip": null
+  },
+  {
+   "title": "The Four Steps to Hearing Hard Feedback Gracefully | Chris Wheatley | TED",
+   "thumbnails": [
+    {
+     "url": "https://i.ytimg.com/vi/owRN5fVLoEk/hq720_custom_1.jpg?sqp=CLC2zNUG-oaymwEcCOgCEMoBSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLDOsUwlU-sI4G6EmP2PQP9esP9XoA",
+     "height": 202,
+     "width": 360
+    },
+    {
+     "url": "https://i.ytimg.com/vi/owRN5fVLoEk/hq720_custom_1.jpg?sqp=CLC2zNUG-oaymwEcCNAFEJQDSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLBc_j5INyFcvYz4NbWYs1jgPuBfuw",
+     "height": 404,
+     "width": 720
+    }
+   ],
+   "duration": 750,
+   "view_count": 118000,
+   "timestamp": null,
+   "live_status": null,
+   "availability": null,
+   "channel_url": null,
+   "uploader_url": null,
+   "creators": null,
+   "ie_key": "Youtube",
+   "id": "owRN5fVLoEk",
+   "_type": "url",
+   "url": "https://www.youtube.com/watch?v=owRN5fVLoEk",
+   "__x_forwarded_for_ip": null
+  },
+  {
+   "title": "A New Take on an Ancient Sound | Tina Lajevardian | TED",
+   "thumbnails": [
+    {
+     "url": "https://i.ytimg.com/vi/4WUVkpC8MKs/hq720.jpg?sqp=-oaymwEcCOgCEMoBSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLA0XkhOIXJAjVyIOTGqORhupc9R-Q",
+     "height": 202,
+     "width": 360
+    },
+    {
+     "url": "https://i.ytimg.com/vi/4WUVkpC8MKs/hq720.jpg?sqp=-oaymwEcCNAFEJQDSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLBontb-csv3m7eOzSsGxgoe5UyI-A",
+     "height": 404,
+     "width": 720
+    }
+   ],
+   "duration": 201,
+   "view_count": 94000,
+   "timestamp": null,
+   "live_status": null,
+   "availability": null,
+   "channel_url": null,
+   "uploader_url": null,
+   "creators": null,
+   "ie_key": "Youtube",
+   "id": "4WUVkpC8MKs",
+   "_type": "url",
+   "url": "https://www.youtube.com/watch?v=4WUVkpC8MKs",
+   "__x_forwarded_for_ip": null
+  },
+  {
+   "title": "How to Fix Africa’s Learning Crisis | Rapelang Rabana | TED",
+   "thumbnails": [
+    {
+     "url": "https://i.ytimg.com/vi/u3qlbHrB7KI/hq720.jpg?sqp=-oaymwEcCOgCEMoBSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLB7UVm9e9M-ek_EVqXz_BjJw2GUQw",
+     "height": 202,
+     "width": 360
+    },
+    {
+     "url": "https://i.ytimg.com/vi/u3qlbHrB7KI/hq720.jpg?sqp=-oaymwEcCNAFEJQDSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLBoWX7Ova6oppuNK_bozZfTfh28dw",
+     "height": 404,
+     "width": 720
+    }
+   ],
+   "duration": 622,
+   "view_count": 78000,
+   "timestamp": null,
+   "live_status": null,
+   "availability": null,
+   "channel_url": null,
+   "uploader_url": null,
+   "creators": null,
+   "ie_key": "Youtube",
+   "id": "u3qlbHrB7KI",
+   "_type": "url",
+   "url": "https://www.youtube.com/watch?v=u3qlbHrB7KI",
+   "__x_forwarded_for_ip": null
+  },
+  {
+   "title": "The Secret to Deeper Conversations | TED Intersections",
+   "thumbnails": [
+    {
+     "url": "https://i.ytimg.com/vi/1r2fqbD0KZ4/hq720.jpg?sqp=-oaymwEcCOgCEMoBSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLA9ZyQmZxloSFUW5PVx7tlJ9nhpew",
+     "height": 202,
+     "width": 360
+    },
+    {
+     "url": "https://i.ytimg.com/vi/1r2fqbD0KZ4/hq720.jpg?sqp=-oaymwEcCNAFEJQDSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLAf3zq7Pof3i147NFve9QEvhuoWHg",
+     "height": 404,
+     "width": 720
+    }
+   ],
+   "duration": 1687,
+   "view_count": 90000,
+   "timestamp": null,
+   "live_status": null,
+   "availability": null,
+   "channel_url": null,
+   "uploader_url": null,
+   "creators": null,
+   "ie_key": "Youtube",
+   "id": "1r2fqbD0KZ4",
+   "_type": "url",
+   "url": "https://www.youtube.com/watch?v=1r2fqbD0KZ4",
+   "__x_forwarded_for_ip": null
+  }
+ ],
+ "extractor_key": "YoutubeTab",
+ "extractor": "youtube:tab",
+ "webpage_url": "https://www.youtube.com/@TED/videos",
+ "original_url": "https://www.youtube.com/@TED/videos",
+ "webpage_url_basename": "videos",
+ "webpage_url_domain": "youtube.com",
+ "release_year": null,
+ "requested_entries": [
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9,
+  10,
+  11,
+  12
+ ],
+ "epoch": 1790122835,
+ "_version": {
+  "version": "2026.08.19",
+  "current_git_head": null,
+  "release_git_head": "594bd50c2c78ac432f81600d309fdc4e0a92d82c",
+  "repository": "yt-dlp/yt-dlp"
+ }
+}

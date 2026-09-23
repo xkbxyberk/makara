@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/components/ui.tsx","./src/i18n/tr.ts","./src/lib/api.ts","./src/lib/format.test.ts","./src/lib/format.ts","./src/routes/doctorroute.tsx","./src/routes/inspectroute.tsx","./vite.config.ts","./playwright.config.cts","./e2e/doctor.spec.cts","./e2e/inspect.spec.cts"],"version":"5.7.3"}
