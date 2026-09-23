@@ -6,40 +6,196 @@
       "title": "Scaffold, dependency doctor, check.sh",
       "status": "done",
       "criteria": [
-        { "id": "M0.1", "text": "scripts/check.sh runs lint, types, pytest, vitest, build and e2e, and exits 0", "pass": true, "proof": "./scripts/check.sh" },
-        { "id": "M0.2", "text": "GET /api/doctor reports yt-dlp version and channel", "pass": true, "proof": "uv run pytest tests/test_api.py::test_doctor_reports_every_dependency" },
-        { "id": "M0.3", "text": "Doctor detects the JS runtime (deno 2.9.7) and names it", "pass": true, "proof": "npx playwright test e2e/doctor.spec.cts" },
-        { "id": "M0.4", "text": "Doctor reports the ffmpeg capability matrix and explains the missing libass in Turkish", "pass": true, "proof": "npx playwright test e2e/doctor.spec.cts" },
-        { "id": "M0.5", "text": "Server binds 127.0.0.1 only", "pass": true, "proof": "backend/app/main.py HOST constant; no other listener exists" },
-        { "id": "M0.6", "text": "Light and dark themes both render; narrow window stays usable", "pass": true, "proof": "test-results/screenshots/doctor-{light,dark,narrow}.png" },
-        { "id": "M0.7", "text": "VideoDownloader.command opens a desktop window, falling back to the browser", "pass": true, "proof": "open VideoDownloader.command" },
-        { "id": "M0.8", "text": "Every user-facing string lives in frontend/src/i18n/tr.ts", "pass": true, "proof": "backend returns codes only; reviewed in adversarial review" }
+        {
+          "id": "M0.1",
+          "text": "scripts/check.sh runs lint, types, pytest, vitest, build and e2e, and exits 0",
+          "pass": true,
+          "proof": "./scripts/check.sh"
+        },
+        {
+          "id": "M0.2",
+          "text": "GET /api/doctor reports yt-dlp version and channel",
+          "pass": true,
+          "proof": "uv run pytest tests/test_api.py::test_doctor_reports_every_dependency"
+        },
+        {
+          "id": "M0.3",
+          "text": "Doctor detects the JS runtime (deno 2.9.7) and names it",
+          "pass": true,
+          "proof": "npx playwright test e2e/doctor.spec.cts"
+        },
+        {
+          "id": "M0.4",
+          "text": "Doctor reports the ffmpeg capability matrix and explains the missing libass in Turkish",
+          "pass": true,
+          "proof": "npx playwright test e2e/doctor.spec.cts"
+        },
+        {
+          "id": "M0.5",
+          "text": "Server binds 127.0.0.1 only",
+          "pass": true,
+          "proof": "backend/app/main.py HOST constant; no other listener exists"
+        },
+        {
+          "id": "M0.6",
+          "text": "Light and dark themes both render; narrow window stays usable",
+          "pass": true,
+          "proof": "test-results/screenshots/doctor-{light,dark,narrow}.png"
+        },
+        {
+          "id": "M0.7",
+          "text": "VideoDownloader.command opens a desktop window, falling back to the browser",
+          "pass": true,
+          "proof": "open VideoDownloader.command"
+        },
+        {
+          "id": "M0.8",
+          "text": "Every user-facing string lives in frontend/src/i18n/tr.ts",
+          "pass": true,
+          "proof": "backend returns codes only; reviewed in adversarial review"
+        }
       ]
     },
     "M1": {
       "title": "Inspect",
       "status": "done",
       "criteria": [
-        { "id": "M1.1", "text": "Four real info dicts recorded as fixtures; no test touches the network", "pass": true, "proof": "tests/fixtures/infojson/README.md; uv run pytest -q" },
-        { "id": "M1.2", "text": "Audio tracks group by language, the original is badged and sorted first", "pass": true, "proof": "tests/test_normalize.py::test_multi_audio_groups_by_language_original_first" },
-        { "id": "M1.3", "text": "A lone audio language is never labelled a dub", "pass": true, "proof": "tests/test_normalize.py::test_single_audio_language_is_not_labelled_a_dub" },
-        { "id": "M1.4", "text": "Subtitles split into manual, auto-generated and auto-translated, never conflated", "pass": true, "proof": "tests/test_normalize.py::test_subtitles_split_into_three_kinds; e2e 'subtitles are split'" },
-        { "id": "M1.5", "text": "live_chat is never shown as a subtitle track", "pass": true, "proof": "tests/test_normalize.py::test_live_chat_is_never_shown_as_a_subtitle" },
-        { "id": "M1.6", "text": "Sizes are labelled exact vs approximate, and manifest estimates are flagged as unreliable", "pass": true, "proof": "tests/test_normalize.py::test_size_tiers_and_manifest_flags" },
-        { "id": "M1.7", "text": "Formats with unknown codecs (archive.org) are classified, not dropped", "pass": true, "proof": "tests/test_normalize.py::test_non_youtube_site_with_unknown_codecs" },
-        { "id": "M1.8", "text": "Video table shows resolution, fps, codec, HDR, bitrate, container and size", "pass": true, "proof": "npx playwright test e2e/inspect.spec.cts" },
-        { "id": "M1.9", "text": "Chapters, heatmap (100 points) and thumbnails are shown", "pass": true, "proof": "e2e 'inspecting a multi-audio video shows every track group'" },
-        { "id": "M1.10", "text": "The equivalent yt-dlp command can be copied", "pass": true, "proof": "e2e asserts the command panel contains 'yt-dlp -f'" },
-        { "id": "M1.11", "text": "Empty, loading and error states exist; the raw log is one click away", "pass": true, "proof": "e2e 'empty state invites a paste'; e2e 'a bad url produces a Turkish error'" },
-        { "id": "M1.12", "text": "Every technical term has a Turkish tooltip", "pass": true, "proof": "e2e 'a technical term explains itself on hover'" },
-        { "id": "M1.13", "text": "Playlists render as a list and say why track data is missing", "pass": true, "proof": "e2e 'a playlist is shown as a list'" },
-        { "id": "M1.14", "text": "extract_info runs in a child process so a crash cannot take the server down", "pass": true, "proof": "backend/app/inspect_service.py spawns app.workers.inspect_worker" },
-        { "id": "M1.15", "text": "Screenshots reviewed in light, dark and at 420px width", "pass": true, "proof": "test-results/screenshots/inspect-{light,dark,narrow}.png" },
-        { "id": "M1.16", "text": "One opt-in live test hits the real network only with RUN_LIVE_TESTS=1", "pass": true, "proof": "tests/test_live.py (skipped by default)" }
+        {
+          "id": "M1.1",
+          "text": "Four real info dicts recorded as fixtures; no test touches the network",
+          "pass": true,
+          "proof": "tests/fixtures/infojson/README.md; uv run pytest -q"
+        },
+        {
+          "id": "M1.2",
+          "text": "Audio tracks group by language, the original is badged and sorted first",
+          "pass": true,
+          "proof": "tests/test_normalize.py::test_multi_audio_groups_by_language_original_first"
+        },
+        {
+          "id": "M1.3",
+          "text": "A lone audio language is never labelled a dub",
+          "pass": true,
+          "proof": "tests/test_normalize.py::test_single_audio_language_is_not_labelled_a_dub"
+        },
+        {
+          "id": "M1.4",
+          "text": "Subtitles split into manual, auto-generated and auto-translated, never conflated",
+          "pass": true,
+          "proof": "tests/test_normalize.py::test_subtitles_split_into_three_kinds asserts auto == {en, en-orig} exactly"
+        },
+        {
+          "id": "M1.5",
+          "text": "live_chat is never shown as a subtitle track",
+          "pass": true,
+          "proof": "tests/test_normalize.py::test_live_chat_is_never_shown_as_a_subtitle"
+        },
+        {
+          "id": "M1.6",
+          "text": "Sizes are labelled exact vs approximate, and manifest estimates are flagged as unreliable",
+          "pass": true,
+          "proof": "tests/test_normalize.py::test_size_tiers_and_manifest_flags"
+        },
+        {
+          "id": "M1.7",
+          "text": "Formats with unknown codecs (archive.org) are classified, not dropped",
+          "pass": true,
+          "proof": "tests/test_normalize.py::test_non_youtube_site_with_unknown_codecs"
+        },
+        {
+          "id": "M1.8",
+          "text": "Video table shows resolution, fps, codec, HDR, bitrate, container and size",
+          "pass": true,
+          "proof": "npx playwright test e2e/inspect.spec.cts"
+        },
+        {
+          "id": "M1.9",
+          "text": "Chapters, heatmap (100 points) and thumbnails are shown",
+          "pass": true,
+          "proof": "e2e 'inspecting a multi-audio video shows every track group'"
+        },
+        {
+          "id": "M1.10",
+          "text": "The equivalent yt-dlp command can be copied",
+          "pass": true,
+          "proof": "e2e asserts the command panel contains 'yt-dlp -f'"
+        },
+        {
+          "id": "M1.11",
+          "text": "Empty, loading and error states exist; the raw log is one click away",
+          "pass": true,
+          "proof": "e2e 'empty state invites a paste'; e2e 'a bad url produces a Turkish error'"
+        },
+        {
+          "id": "M1.12",
+          "text": "Every technical term has a Turkish tooltip",
+          "pass": true,
+          "proof": "e2e 'every technical column header and codec explains itself' (6 video + 5 audio headers, codec glossary)"
+        },
+        {
+          "id": "M1.13",
+          "text": "Playlists render as a list and say why track data is missing",
+          "pass": true,
+          "proof": "e2e 'a playlist is shown as a list'"
+        },
+        {
+          "id": "M1.14",
+          "text": "extract_info runs in a child process so a crash cannot take the server down",
+          "pass": true,
+          "proof": "backend/app/inspect_service.py spawns app.workers.inspect_worker"
+        },
+        {
+          "id": "M1.15",
+          "text": "Screenshots reviewed in light, dark and at 420px width",
+          "pass": true,
+          "proof": "test-results/screenshots/inspect-{light,dark,narrow}.png"
+        },
+        {
+          "id": "M1.16",
+          "text": "One opt-in live test hits the real network only with RUN_LIVE_TESTS=1",
+          "pass": true,
+          "proof": "tests/test_live.py (skipped by default)"
+        },
+        {
+          "id": "M1.17",
+          "text": "Extraction errors keep their real cause (geo/login/DRM/network), never collapse to 'video unavailable'",
+          "pass": true,
+          "proof": "tests/test_errors_and_command.py::test_inspect_worker_reports_the_real_failure_not_video_unavailable"
+        },
+        {
+          "id": "M1.18",
+          "text": "The copyable command survives hostile URLs (quotes, $(), backticks)",
+          "pass": true,
+          "proof": "tests/test_errors_and_command.py::test_quoted_command_round_trips_hostile_urls"
+        },
+        {
+          "id": "M1.19",
+          "text": "Playlists and channels are always listed flat",
+          "pass": true,
+          "proof": "backend/app/ytdlp/params.py inspect_params extract_flat='in_playlist'"
+        },
+        {
+          "id": "M1.20",
+          "text": "DNS-rebinding hosts and cross-site state-changing requests are rejected",
+          "pass": true,
+          "proof": "tests/test_api.py::test_a_rebinding_hostname_is_rejected, ::test_a_cross_site_post_is_rejected"
+        }
       ]
     },
-    "M2": { "title": "Download engine, queue, track picker", "status": "not started", "criteria": [] },
-    "M3": { "title": "Library", "status": "not started", "criteria": [] },
-    "M4": { "title": "Studio core", "status": "not started", "criteria": [] }
+    "M2": {
+      "title": "Download engine, queue, track picker",
+      "status": "not started",
+      "criteria": []
+    },
+    "M3": {
+      "title": "Library",
+      "status": "not started",
+      "criteria": []
+    },
+    "M4": {
+      "title": "Studio core",
+      "status": "not started",
+      "criteria": []
+    }
   }
 }

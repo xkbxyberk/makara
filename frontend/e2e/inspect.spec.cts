@@ -73,6 +73,28 @@ test('a technical term explains itself on hover', async ({ page }) => {
   await expect(page.getByRole('tooltip')).toContainText('Yüksek dinamik aralık');
 });
 
+test('every technical column header and codec explains itself', async ({ page }) => {
+  await page.goto('/');
+  await inspect(page, MULTI_AUDIO);
+  const videoHead = page.locator('section.panel', { hasText: 'Video kaliteleri' }).first().locator('thead');
+  // Format, FPS, Kodek, HDR, Bit hızı, Kap -- plain words (Çözünürlük, Boyut) need no tooltip.
+  await expect(videoHead.locator('.term')).toHaveCount(6);
+
+  const audioHead = page.locator('section.panel', { hasText: 'Ses parçaları' }).first().locator('thead');
+  await expect(audioHead.locator('.term')).toHaveCount(5);
+
+  await page.locator('tbody .term', { hasText: 'VP9' }).first().hover();
+  await expect(page.getByRole('tooltip')).toContainText('QuickTime');
+});
+
+test('AI-upscaled variants are labelled, and shadowed auto captions explained', async ({ page }) => {
+  await page.goto('/');
+  await inspect(page, MANY_SUBS);
+  await expect(page.getByText('YZ ile büyütülmüş').first()).toBeVisible();
+  const auto = page.locator('section.panel', { hasText: 'Altyazılar' }).first();
+  await expect(auto.locator('tr.dim', { hasText: 'en' }).first()).toBeVisible();
+});
+
 test('a playlist is shown as a list, and says why tracks are missing', async ({ page }) => {
   await page.goto('/');
   await inspect(page, PLAYLIST);

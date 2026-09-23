@@ -38,6 +38,8 @@ src = ["backend", "tests"]
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 ignore = ["B008"]
+# Turkish test data (subtitle text) legitimately contains the dotless i.
+allowed-confusables = ["ı"]
 
 [tool.mypy]
 python_version = "3.12"

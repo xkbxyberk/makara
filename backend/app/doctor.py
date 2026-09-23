@@ -34,6 +34,16 @@ FFMPEG_CAPABILITIES: dict[str, tuple[str, str]] = {
 }
 
 
+def listing_has(listing: str, name: str) -> bool:
+    """`ffmpeg -encoders`/`-filters` lines read " A....D aac   AAC (...)": flags, then the name.
+    Matching any word would let "aac (AudioToolbox) (codec aac)" on the aac_at line claim the
+    native encoder, so only the name column counts."""
+    return any(
+        len(tokens) > 1 and tokens[1] == name
+        for tokens in (line.split() for line in listing.splitlines())
+    )
+
+
 def _run(argv: list[str], timeout: int = 20) -> str:
     try:
         proc = subprocess.run(argv, capture_output=True, text=True, timeout=timeout, check=False)
@@ -102,9 +112,7 @@ def _ffmpeg_check() -> dict[str, Any]:
     capabilities = {}
     for name, (kind, needle) in FFMPEG_CAPABILITIES.items():
         haystack = encoders if kind == "encoder" else filters
-        capabilities[name] = any(
-            needle == token for line in haystack.splitlines() for token in line.split()
-        )
+        capabilities[name] = listing_has(haystack, needle)
     missing_optional = [k for k in ("subtitles_filter", "webp") if not capabilities[k]]
     return {
         "id": "ffmpeg",

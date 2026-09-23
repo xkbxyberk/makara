@@ -15,6 +15,7 @@ import {
   formatBytes,
   formatCount,
   formatDuration,
+  formatSampleRate,
   formatUploadDate,
   languageName,
   sizePrefix,
@@ -40,6 +41,43 @@ function SizeCell({ format }: { format: { filesize: number | null; filesize_kind
   );
 }
 
+function TermHead({
+  term,
+  className,
+}: {
+  term: { label: string; body: string };
+  className?: string;
+}) {
+  return (
+    <th className={className}>
+      <Term label={term.label} body={term.body} />
+    </th>
+  );
+}
+
+function CodecLabel({ label }: { label: string | null }) {
+  if (!label) return <>–</>;
+  const body = tr.codecs[label];
+  return body ? <Term label={label} body={body} /> : <>{label}</>;
+}
+
+function VariantBadges({ format }: { format: { ai_upscaled: boolean; drc: boolean } }) {
+  return (
+    <>
+      {format.ai_upscaled && (
+        <Badge tone="warn">
+          <Term label={tr.terms.aiUpscaled.label} body={tr.terms.aiUpscaled.body} />
+        </Badge>
+      )}
+      {format.drc && (
+        <Badge>
+          <Term label={tr.terms.drc.label} body={tr.terms.drc.body} />
+        </Badge>
+      )}
+    </>
+  );
+}
+
 function DrmBadge({ drm }: { drm: string }) {
   if (drm === 'none') return null;
   return (
@@ -58,15 +96,13 @@ function VideoTable({ formats, title }: { formats: VideoFormat[]; title: string 
         <table className="grid">
           <thead>
             <tr>
-              <th>{tr.table.format}</th>
+              <TermHead term={tr.terms.format} />
               <th>{tr.table.resolution}</th>
-              <th className="num">{tr.table.fps}</th>
-              <th>{tr.table.codec}</th>
-              <th className="optional">
-                <Term label={tr.terms.hdr.label} body={tr.terms.hdr.body} />
-              </th>
-              <th className="num optional">{tr.table.bitrate}</th>
-              <th className="optional">{tr.table.container}</th>
+              <TermHead term={tr.terms.fps} className="num" />
+              <TermHead term={tr.terms.codec} />
+              <TermHead term={tr.terms.hdr} className="optional" />
+              <TermHead term={tr.terms.bitrate} className="num optional" />
+              <TermHead term={tr.terms.container} className="optional" />
               <th className="num">{tr.table.size}</th>
             </tr>
           </thead>
@@ -75,7 +111,8 @@ function VideoTable({ formats, title }: { formats: VideoFormat[]; title: string 
               <tr key={f.format_id}>
                 <td className="mono">
                   {f.format_id} <DrmBadge drm={f.drm} />
-                  {f.has_audio && (
+                  <VariantBadges format={f} />
+                  {f.has_audio === true && (
                     <Badge tone="accent">
                       <Term label={tr.terms.muxed.label} body={tr.terms.muxed.body} />
                     </Badge>
@@ -84,8 +121,13 @@ function VideoTable({ formats, title }: { formats: VideoFormat[]; title: string 
                 <td>{f.resolution ?? '–'}</td>
                 <td className="num">{f.fps ? Math.round(f.fps) : '–'}</td>
                 <td>
-                  {f.vcodec_label ?? '–'}
-                  {f.has_audio && f.acodec_label ? ` + ${f.acodec_label}` : ''}
+                  <CodecLabel label={f.vcodec_label} />
+                  {f.has_audio === true && f.acodec_label ? (
+                    <>
+                      {' + '}
+                      <CodecLabel label={f.acodec_label} />
+                    </>
+                  ) : null}
                 </td>
                 <td className={f.dynamic_range === 'SDR' ? 'dim optional' : 'optional'}>
                   {f.dynamic_range ?? '–'}
@@ -93,7 +135,12 @@ function VideoTable({ formats, title }: { formats: VideoFormat[]; title: string 
                 <td className="num optional">{formatBitrate(f.tbr)}</td>
                 <td className="dim optional">
                   {f.ext ?? '–'}
-                  {f.is_manifest ? ` · ${tr.terms.manifest.label}` : ''}
+                  {f.is_manifest && (
+                    <>
+                      {' · '}
+                      <Term label={tr.terms.manifest.label} body={tr.terms.manifest.body} />
+                    </>
+                  )}
                 </td>
                 <td className="num">
                   <SizeCell format={f} />
@@ -108,7 +155,9 @@ function VideoTable({ formats, title }: { formats: VideoFormat[]; title: string 
 }
 
 function AudioGroups({ groups }: { groups: AudioLanguageGroup[] }) {
-  const [open, setOpen] = useState<string | null>(groups[0]?.language ?? null);
+  const [open, setOpen] = useState<string | null>(
+    groups[0] ? (groups[0].language ?? 'und') : null,
+  );
   return (
     <Panel title={tr.inspect.audioTracks} count={groups.length} flush>
       {groups.length === 0 ? (
@@ -140,11 +189,11 @@ function AudioGroups({ groups }: { groups: AudioLanguageGroup[] }) {
                 <table className="grid">
                   <thead>
                     <tr>
-                      <th>{tr.table.format}</th>
-                      <th>{tr.table.codec}</th>
-                      <th className="num">{tr.table.bitrate}</th>
-                      <th className="num">{tr.table.channels}</th>
-                      <th className="num optional">{tr.table.sampleRate}</th>
+                      <TermHead term={tr.terms.format} />
+                      <TermHead term={tr.terms.codec} />
+                      <TermHead term={tr.terms.bitrate} className="num" />
+                      <TermHead term={tr.terms.channels} className="num" />
+                      <TermHead term={tr.terms.sampleRate} className="num optional" />
                       <th className="optional">{tr.table.note}</th>
                       <th className="num">{tr.table.size}</th>
                     </tr>
@@ -154,13 +203,14 @@ function AudioGroups({ groups }: { groups: AudioLanguageGroup[] }) {
                       <tr key={t.format_id}>
                         <td className="mono">
                           {t.format_id} <DrmBadge drm={t.drm} />
+                          <VariantBadges format={t} />
                         </td>
-                        <td>{t.acodec_label ?? '–'}</td>
+                        <td>
+                          <CodecLabel label={t.acodec_label} />
+                        </td>
                         <td className="num">{formatBitrate(t.abr ?? t.tbr)}</td>
                         <td className="num">{t.channels ?? '–'}</td>
-                        <td className="num optional">
-                          {t.asr ? `${(t.asr / 1000).toFixed(1)} kHz` : '–'}
-                        </td>
+                        <td className="num optional">{formatSampleRate(t.asr)}</td>
                         <td className="dim optional">{t.format_note ?? '–'}</td>
                         <td className="num">
                           <SizeCell format={t} />
@@ -190,10 +240,16 @@ function SubtitleList({ rows }: { rows: SubtitleTrack[] }) {
       </thead>
       <tbody>
         {rows.map((row) => (
-          <tr key={row.key}>
+          <tr key={row.key} className={row.shadowed_by_manual ? 'dim' : undefined}>
             <td>
               {languageName(row.language)} <span className="dim mono">{row.key}</span>
               {row.is_original_track && <Badge tone="ok">{tr.inspect.subOriginalTrack}</Badge>}
+              {row.shadowed_by_manual && (
+                <span className="dim" title={tr.inspect.subShadowed}>
+                  {' '}
+                  ⓘ
+                </span>
+              )}
             </td>
             <td className="muted">
               {row.name ?? '–'}
@@ -300,7 +356,7 @@ function Metadata({ model }: { model: VideoModel }) {
             {meta.channel && <span>{meta.channel}</span>}
             <span>{formatUploadDate(meta.upload_date)}</span>
             <span>{formatDuration(meta.duration)}</span>
-            {meta.view_count ? <span>{formatCount(meta.view_count)} görüntülenme</span> : null}
+            {meta.view_count ? <span>{tr.inspect.views(formatCount(meta.view_count))}</span> : null}
             <span className="dim mono">{meta.extractor}</span>
           </div>
           {meta.description && (
@@ -360,18 +416,21 @@ export function InspectRoute() {
   const [url, setUrl] = useState('');
   const [state, setState] = useState<State>({ phase: 'empty' });
   const inputRef = useRef<HTMLInputElement>(null);
+  const latest = useRef(0);
 
   const run = useCallback(async (target: string) => {
     const trimmed = target.trim();
     if (!trimmed) return;
+    const ticket = ++latest.current;
     setUrl(trimmed);
     setState({ phase: 'loading', url: trimmed });
     try {
       const model = await api.inspect(trimmed);
-      setState({ phase: 'ready', model });
+      if (ticket === latest.current) setState({ phase: 'ready', model });
     } catch (error) {
-      const api_error = error instanceof ApiError ? error : new ApiError('UNKNOWN', String(error));
-      setState({ phase: 'error', code: api_error.code, raw: api_error.raw, url: trimmed });
+      if (ticket !== latest.current) return;
+      const failure = error instanceof ApiError ? error : new ApiError('UNKNOWN', String(error));
+      setState({ phase: 'error', code: failure.code, raw: failure.raw, url: trimmed });
     }
   }, []);
 

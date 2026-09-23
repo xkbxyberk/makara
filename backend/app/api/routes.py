@@ -7,14 +7,13 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from app import doctor, errors, inspect_service, paths
-from app.ytdlp import command, normalize
+from app.ytdlp import command
 
 router = APIRouter(prefix="/api")
 
 
 class InspectRequest(BaseModel):
     url: str = Field(min_length=1, max_length=2048)
-    flat: bool = False
 
 
 class CommandRequest(BaseModel):
@@ -43,7 +42,7 @@ def get_health() -> dict[str, Any]:
 @router.post("/inspect")
 async def post_inspect(request: InspectRequest) -> Any:
     try:
-        return await inspect_service.inspect(request.url, flat=request.flat)
+        return await inspect_service.inspect(request.url)
     except errors.AppError as exc:
         return _error_response(exc)
 
@@ -58,13 +57,3 @@ def post_command(request: CommandRequest) -> dict[str, Any]:
         mode=request.mode,
     )
     return {"argv": argv, "text": command.quote(argv)}
-
-
-class SizeRequest(BaseModel):
-    model: dict[str, Any]
-    format_ids: list[str]
-
-
-@router.post("/estimate-size")
-def post_estimate_size(request: SizeRequest) -> dict[str, Any]:
-    return normalize.estimate_total_size(request.model, request.format_ids)

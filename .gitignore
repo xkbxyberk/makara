@@ -11,3 +11,4 @@ playwright-report/
 .DS_Store
 data/
 tmp/
+tests/fixtures/media/

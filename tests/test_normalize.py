@@ -32,6 +32,8 @@ def test_format_kind_treats_none_and_unknown_codecs_differently() -> None:
     # archive.org reports neither codec but does report geometry.
     assert format_kind({"vcodec": None, "acodec": None, "height": 300}) == "muxed"
     assert format_kind({"vcodec": None, "acodec": None}) == "audio"
+    # A known picture codec with unknown sound must not be advertised as carrying audio.
+    assert format_kind({"vcodec": "avc1", "acodec": None, "height": 720}) == "video"
 
 
 def test_multi_audio_groups_by_language_original_first(multi_audio: dict[str, Any]) -> None:
@@ -67,11 +69,23 @@ def test_subtitles_split_into_three_kinds(many_subs: dict[str, Any]) -> None:
     subs = normalize_subtitles(many_subs)
     assert len(subs["manual"]) == 64
     assert all(row["kind"] == "manual" for row in subs["manual"])
-    assert any(row["is_original_track"] for row in subs["auto"])
+    # Speech recognition only produces the spoken language. Exactly these two keys are ASR.
+    assert {row["key"] for row in subs["auto"]} == {"en", "en-orig"}
     assert subs["auto_translated"], "machine translations must be separated out"
     assert all(row["kind"] == "auto_translated" for row in subs["auto_translated"])
+    # These arrive as bare HLS playlists with no tlang= and no name -- still translations.
+    translated = {row["key"] for row in subs["auto_translated"]}
+    assert {"ckb", "fr-CA", "inh", "pt-BR", "zh-CN", "zh-TW"} <= translated
     # A manual language must never be silently reclassified as automatic.
     assert {row["language"] for row in subs["manual"]} & {"tr", "en"} == {"tr", "en"}
+
+
+def test_auto_track_that_collides_with_a_manual_key_is_marked_shadowed(
+    many_subs: dict[str, Any],
+) -> None:
+    auto = {row["key"]: row for row in normalize_subtitles(many_subs)["auto"]}
+    assert auto["en"]["shadowed_by_manual"] is True
+    assert auto["en-orig"]["shadowed_by_manual"] is False
 
 
 def test_classify_automatic_caption_rules() -> None:
@@ -122,15 +136,34 @@ def test_size_tiers_and_manifest_flags(multi_audio: dict[str, Any]) -> None:
 
 def test_estimate_total_size_sums_the_selection(multi_audio: dict[str, Any]) -> None:
     model = normalize(multi_audio)
-    video = model["video_formats"][0]
-    audio = model["audio_languages"][0]["tracks"][0]
+    video = next(f for f in model["video_formats"] if f["filesize_kind"] == "exact")
+    audio = next(t for t in model["audio_languages"][0]["tracks"] if t["filesize"])
     total = estimate_total_size(model, [video["format_id"], audio["format_id"]])
-    assert total["bytes"] == (video["filesize"] or 0) + (audio["filesize"] or 0)
-    assert estimate_total_size(model, ["nope"]) == {
-        "bytes": None,
-        "kind": "unknown",
-        "unreliable": False,
+    assert total["bytes"] == video["filesize"] + audio["filesize"]
+    assert total["missing"] == 0
+    assert estimate_total_size(model, ["nope"])["kind"] == "unknown"
+
+
+def test_estimate_with_an_unknown_part_is_a_lower_bound() -> None:
+    model = {
+        "video_formats": [
+            {"format_id": "v", "filesize": 1000, "filesize_kind": "exact"},
+            {"format_id": "x", "filesize": None, "filesize_kind": "unknown"},
+        ]
     }
+    total = estimate_total_size(model, ["v", "x"])
+    assert total == {"bytes": 1000, "kind": "partial", "unreliable": False, "missing": 1}
+
+
+def test_estimate_survives_a_malformed_model() -> None:
+    malformed = {"video_formats": None, "audio_languages": [{"language": "en"}]}
+    assert estimate_total_size(malformed, ["a"])["kind"] == "unknown"
+
+
+def test_multi_video_is_listed_not_rendered_as_an_empty_video() -> None:
+    model = normalize({"_type": "multi_video", "id": "m", "entries": [{"id": "a", "title": "A"}]})
+    assert model["kind"] == "playlist"
+    assert model["entries"][0]["title"] == "A"
 
 
 def test_chapters_heatmap_and_thumbnails_survive(multi_audio: dict[str, Any]) -> None:

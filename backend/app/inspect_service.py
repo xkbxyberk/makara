@@ -3,14 +3,17 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import os
 import re
+import signal
 import sys
 from typing import Any
 
 from app import errors, paths
 from app.ytdlp import command, normalize
+from app.ytdlp.params import find_js_runtimes
 
 INSPECT_TIMEOUT_SECONDS = 180
 
@@ -42,7 +45,7 @@ def _fixture_for(url: str) -> dict[str, Any]:
     raise errors.AppError(code="UNSUPPORTED_SITE", raw=f"no fixture matches {url}")
 
 
-async def _run_worker(url: str, *, flat: bool) -> dict[str, Any]:
+async def _run_worker(url: str) -> tuple[dict[str, Any], list[str]]:
     env = dict(os.environ)
     backend_dir = str(paths.PROJECT_ROOT / "backend")
     env["PYTHONPATH"] = (
@@ -57,32 +60,48 @@ async def _run_worker(url: str, *, flat: bool) -> dict[str, Any]:
         stderr=asyncio.subprocess.PIPE,
         env=env,
         cwd=str(paths.PROJECT_ROOT),
+        # Its own process group, so killing it also kills anything it spawned (deno, ffprobe).
+        start_new_session=True,
     )
-    payload = json.dumps({"url": url, "flat": flat}).encode()
+    payload = json.dumps({"url": url}).encode()
     try:
         stdout, stderr = await asyncio.wait_for(
             proc.communicate(payload), timeout=INSPECT_TIMEOUT_SECONDS
         )
     except TimeoutError:
-        proc.kill()
-        await proc.wait()
         raise errors.AppError(
             code="TIMEOUT", raw=f"inspect exceeded {INSPECT_TIMEOUT_SECONDS}s"
         ) from None
-    if not stdout:
-        raise errors.AppError(code=errors.UNKNOWN, raw=stderr.decode()[-2000:])
-    result: dict[str, Any] = json.loads(stdout)
+    finally:
+        # Runs on timeout, on server shutdown (CancelledError) and on success alike.
+        if proc.returncode is None:
+            with contextlib.suppress(ProcessLookupError):
+                os.killpg(proc.pid, signal.SIGKILL)
+            await proc.wait()
+    try:
+        result: dict[str, Any] = json.loads(stdout)
+    except ValueError:
+        raise errors.AppError(
+            code=errors.UNKNOWN, raw=(stderr or stdout).decode(errors="replace")[-4000:]
+        ) from None
     if not result.get("ok"):
         err = result["error"]
         raise errors.AppError(code=err["code"], raw=err["raw"], detail=err.get("detail", {}))
-    info: dict[str, Any] = result["info"]
-    return info
+    return result["info"], list(result.get("warnings") or [])
 
 
-async def inspect(url: str, *, flat: bool = False) -> dict[str, Any]:
+async def inspect(url: str) -> dict[str, Any]:
     url = validate_url(url)
-    info = _fixture_for(url) if paths.fixture_mode() else await _run_worker(url, flat=flat)
+    warnings: list[str] = []
+    if paths.fixture_mode():
+        info = _fixture_for(url)
+    else:
+        info, warnings = await _run_worker(url)
     model = normalize.normalize(info)
+    extractor = str(model["media"].get("extractor") or "").lower()
+    if extractor.startswith("youtube") and not find_js_runtimes():
+        warnings.append("NO_JS_RUNTIME")
+    model["warnings"] = [*model["warnings"], *(w for w in warnings if w not in model["warnings"])]
     model["source_url"] = url
     model["commands"] = {
         "inspect": command.quote(command.inspect_command(url)),

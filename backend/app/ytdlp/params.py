@@ -67,24 +67,26 @@ def base_params(*, ffmpeg_location: str | None = None) -> dict[str, Any]:
         "noprogress": True,
         "skip_download": True,
         "js_runtimes": js_runtimes_param(),
-        # A playlist should not abort on its first bad entry.
-        "ignoreerrors": "only_download",
+        # Any truthy value here makes yt-dlp *report* extraction errors and return None instead
+        # of raising -- which would turn every geo/login/DRM failure into "video unavailable".
+        "ignoreerrors": False,
     }
     if ffmpeg_location:
         params["ffmpeg_location"] = ffmpeg_location
     return params
 
 
-def inspect_params(*, flat: bool = False, ffmpeg_location: str | None = None) -> dict[str, Any]:
+def inspect_params(*, ffmpeg_location: str | None = None) -> dict[str, Any]:
     params = base_params(ffmpeg_location=ffmpeg_location)
     params.update(
         {
-            "noplaylist": not flat,
+            # A watch URL that also names a playlist means "this video"; a playlist or channel
+            # URL is listed flat, otherwise a big channel would extract every video in turn.
+            "noplaylist": True,
+            "extract_flat": "in_playlist",
             # Both flags are what make yt-dlp build the machine-translated caption list.
             "writesubtitles": True,
             "writeautomaticsub": True,
         }
     )
-    if flat:
-        params["extract_flat"] = "in_playlist"
     return params

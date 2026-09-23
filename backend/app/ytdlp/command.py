@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shlex
 from typing import Any
 
 MODE_SEPARATE = "separate"
@@ -48,11 +49,9 @@ def inspect_command(url: str) -> list[str]:
 
 
 def quote(argv: list[str]) -> str:
-    """Shell-quote for display only. Nothing in this app ever executes a shell string."""
-    out = []
-    for arg in argv:
-        out.append(arg if all(c.isalnum() or c in "-_./:=+," for c in arg) else f"'{arg}'")
-    return " ".join(out)
+    """Shell-quote for display. Nothing in this app executes a shell string, but Berk will paste
+    this into a terminal, so a hostile URL must not be able to break out of its quotes."""
+    return shlex.join(argv)
 
 
 def command_for_model(model: dict[str, Any], url: str) -> list[str]:

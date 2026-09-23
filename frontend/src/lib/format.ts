@@ -19,6 +19,7 @@ export function formatBytes(bytes: number | null | undefined): string {
 export function sizePrefix(kind: string): string {
   if (kind === 'approx') return '≈';
   if (kind === 'estimated') return '~';
+  if (kind === 'partial') return '≥';
   return '';
 }
 
@@ -34,7 +35,9 @@ export function formatDuration(seconds: number | null | undefined): string {
 
 export function formatBitrate(kbps: number | null | undefined): string {
   if (!kbps || !Number.isFinite(kbps)) return '–';
-  return kbps >= 1000 ? `${(kbps / 1000).toFixed(1)} Mbps` : `${Math.round(kbps)} kbps`;
+  return kbps >= 1000
+    ? `${(kbps / 1000).toFixed(1)} ${tr.units.mbps}`
+    : `${Math.round(kbps)} ${tr.units.kbps}`;
 }
 
 /** yt-dlp gives upload_date as YYYYMMDD. */
@@ -43,6 +46,11 @@ export function formatUploadDate(value: string | null | undefined): string {
   return new Intl.DateTimeFormat('tr-TR', { dateStyle: 'medium' }).format(
     new Date(Number(value.slice(0, 4)), Number(value.slice(4, 6)) - 1, Number(value.slice(6, 8))),
   );
+}
+
+export function formatSampleRate(hz: number | null | undefined): string {
+  if (!hz || !Number.isFinite(hz)) return '–';
+  return `${(hz / 1000).toFixed(1)} ${tr.units.khz}`;
 }
 
 export function formatCount(value: number | null | undefined): string {

@@ -1,20 +1,22 @@
 from __future__ import annotations
 
-import os
 from collections.abc import Iterator
 
 import pytest
 from fastapi.testclient import TestClient
 
-os.environ["VD_FIXTURE_MODE"] = "1"
-
 
 @pytest.fixture(scope="module")
-def client() -> Iterator[TestClient]:
-    from app.main import app
+def client(tmp_path_factory: pytest.TempPathFactory) -> Iterator[TestClient]:
+    # Scoped to this module so the opt-in live test is not forced into fixture mode.
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setenv("VD_FIXTURE_MODE", "1")
+        mp.setenv("VD_DATA_DIR", str(tmp_path_factory.mktemp("data")))
+        mp.setenv("VD_DOWNLOAD_DIR", str(tmp_path_factory.mktemp("downloads")))
+        from app.main import create_app
 
-    with TestClient(app) as test_client:
-        yield test_client
+        with TestClient(create_app(), base_url="http://127.0.0.1:8787") as test_client:
+            yield test_client
 
 
 def test_health_reports_fixture_mode(client: TestClient) -> None:
@@ -65,3 +67,27 @@ def test_command_endpoint_builds_a_multi_audio_selector(client: TestClient) -> N
     ).json()
     assert "--audio-multistreams" in body["argv"]
     assert "--sub-langs" in body["argv"]
+
+
+def test_a_rebinding_hostname_is_rejected(client: TestClient) -> None:
+    response = client.get("/api/doctor", headers={"host": "evil.example:8787"})
+    assert response.status_code == 400
+
+
+def test_a_cross_site_post_is_rejected(client: TestClient) -> None:
+    response = client.post(
+        "/api/inspect",
+        json={"url": "https://www.youtube.com/watch?v=0e3GPea1Tyg"},
+        headers={"origin": "https://evil.example"},
+    )
+    assert response.status_code == 403
+    assert response.json()["error"]["code"] == "FORBIDDEN_ORIGIN"
+
+
+def test_our_own_origin_may_post(client: TestClient) -> None:
+    response = client.post(
+        "/api/inspect",
+        json={"url": "https://www.youtube.com/watch?v=0e3GPea1Tyg"},
+        headers={"origin": "http://127.0.0.1:8787"},
+    )
+    assert response.status_code == 200

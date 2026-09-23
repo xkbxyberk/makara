@@ -27,6 +27,7 @@ describe('sizePrefix', () => {
     expect(sizePrefix('exact')).toBe('');
     expect(sizePrefix('approx')).toBe('≈');
     expect(sizePrefix('estimated')).toBe('~');
+    expect(sizePrefix('partial')).toBe('≥');
   });
 });
 

@@ -44,4 +44,33 @@ Size column (now hides HDR/bitrate/container instead), the metadata thumbnail co
 zero height before loading, the theme toggle mislabelled itself under "system", and the
 per-check doctor badges reused the global status wording.
 
-**Next:** M2 — download engine, queue and track picker.
+## 2026-09-23 (later) — adversarial review of M0+M1
+
+A fresh-context reviewer found 17 gaps. The M1 criteria had been marked passing on the strength
+of tests that were too weak to catch them, which is the lesson worth keeping. All fixed, each with
+a regression test:
+
+- **Every extraction error became "Video yok".** `ignoreerrors="only_download"` is truthy, so
+  yt-dlp *reported* extractor errors and returned `None`. Now `False`; the worker also collects
+  yt-dlp's log through a `logger` so the raw tail reaches the UI.
+- **Shell injection through the copyable command.** `quote()` did not escape `'`. Now
+  `shlex.join`, tested by round-tripping hostile URLs through `shlex.split`.
+- **Playlists were extracted in full** (a channel would time out). Inspect is always
+  `extract_flat="in_playlist"` with `noplaylist=True`.
+- **6 of 8 "auto" subtitles were machine translations** delivered as bare HLS playlists without
+  `tlang=`. Auto-generated now means exactly the spoken language (from the `-orig` key).
+- Missing JS runtime / signature-solving warnings are now surfaced as model warnings.
+- More precise error codes: `BOT_CHECK` (YouTube's "confirm you're not a bot" is not a login
+  problem), `RATE_LIMITED`, `FORBIDDEN`, HTTP 404 → unavailable.
+- Host-header allowlist (DNS rebinding) and a cross-site request guard for non-GET methods.
+- Inspect child runs in its own process group and is killed in a `finally`; garbage stdout
+  becomes `UNKNOWN` with the stderr tail instead of an HTTP 500.
+- Frontend: remaining hardcoded strings moved to `tr.ts`; every technical column header and
+  codec now has a tooltip; a slow earlier inspect can no longer overwrite a newer one.
+- `multi_video` renders as a list; `vcodec` known + `acodec` None is no longer called "ses dahil";
+  a size total with an unknown part is labelled a lower bound (`≥`).
+- Also found while starting M2: YouTube's AI-upscaled (`-sr`) formats. For the TED fixture the
+  real source is 240p and every 360p–720p option is upscaled. They are now badged, and the
+  archive default picks the original.
+
+**Next:** M2 — download engine, queue and track picker (in progress).

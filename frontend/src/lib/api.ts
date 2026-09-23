@@ -1,4 +1,4 @@
-export type SizeKind = 'exact' | 'approx' | 'estimated' | 'unknown';
+export type SizeKind = 'exact' | 'approx' | 'estimated' | 'partial' | 'unknown';
 export type AudioRole = 'original' | 'default' | 'dub' | 'descriptive' | 'unknown';
 
 export interface BaseFormat {
@@ -13,6 +13,8 @@ export interface BaseFormat {
   tbr: number | null;
   drm: 'none' | 'maybe' | 'yes';
   format_note: string | null;
+  ai_upscaled: boolean;
+  drc: boolean;
 }
 
 export interface VideoFormat extends BaseFormat {
@@ -24,7 +26,8 @@ export interface VideoFormat extends BaseFormat {
   vcodec_label: string | null;
   vbr: number | null;
   dynamic_range: string | null;
-  has_audio: boolean;
+  /** true: carries sound; false: silent; null: unknown. */
+  has_audio: boolean | null;
   acodec_label: string | null;
 }
 
@@ -53,6 +56,7 @@ export interface SubtitleTrack {
   kind: 'manual' | 'auto' | 'auto_translated';
   source_language: string | null;
   is_original_track?: boolean;
+  shadowed_by_manual?: boolean;
 }
 
 export interface Chapter { start_time: number | null; end_time: number | null; title: string | null }

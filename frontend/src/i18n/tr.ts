@@ -73,6 +73,9 @@ export const tr = {
     playlistBody: (n: number) =>
       `${n} video bulundu. Liste görünümünde kalite ve altyazı bilgisi yoktur — bir videoyu incelemek için satırına tıkla.`,
     playlistInspectEntry: 'Bu videoyu incele',
+    views: (count: string) => `${count} görüntülenme`,
+    subShadowed:
+      'Aynı dilde insan yazımı altyazı da var; yt-dlp bu dili istediğinde her zaman onu verir.',
   },
   table: {
     format: 'Format',
@@ -106,7 +109,8 @@ export const tr = {
     dub:
       'Başka bir dile seslendirilmiş parça. Dikkat: yt-dlp bunun insan seslendirmesi mi yoksa yapay zekâ dublajı mı olduğunu bildirmiyor — bu ayrımı yapmak mümkün değil.',
     descriptive: 'Görme engelliler için sahneleri anlatan ek anlatım içeren ses.',
-    unknown: 'Bu videoda tek bir ses parçası var; site bir dil bilgisi vermiyor.',
+    unknown:
+      'Bu videoda tek bir ses dili var. Karşılaştırılacak başka parça olmadığı için orijinal mi dublaj mı olduğu bilinmiyor.',
   },
   terms: {
     hdr: {
@@ -134,12 +138,61 @@ export const tr = {
       body:
         'Bu formatın içinde hem görüntü hem ses var. Ayrı ses parçası seçmene gerek kalmaz ama kalite seçeneği daha azdır.',
     },
+    format: {
+      label: 'Format',
+      body: 'yt-dlp’nin bu parçaya verdiği kimlik. Aynı video farklı kalite ve kodeklerde birden çok format olarak sunulur.',
+    },
+    fps: {
+      label: 'FPS',
+      body: 'Saniyedeki kare sayısı. 60 FPS hareketi daha akıcı gösterir; dosya biraz büyür.',
+    },
+    codec: {
+      label: 'Kodek',
+      body: 'Görüntünün veya sesin sıkıştırılma yöntemi. Aynı kalitede AV1 en küçük, H.264 en uyumlu olandır.',
+    },
+    bitrate: {
+      label: 'Bit hızı',
+      body: 'Saniyede kullanılan veri miktarı. Aynı kodekte daha yüksek bit hızı genelde daha iyi kalite ve daha büyük dosya demektir.',
+    },
+    container: {
+      label: 'Kap',
+      body: 'Parçaları taşıyan dosya türü (mp4, webm, mkv). Kodekten farklıdır: aynı görüntü farklı kaplara konabilir.',
+    },
+    sampleRate: {
+      label: 'Örnekleme',
+      body: 'Sesin saniyede kaç kez ölçüldüğü. 44,1 ve 48 kHz ikisi de CD kalitesi veya üstüdür.',
+    },
+    channels: {
+      label: 'Kanal',
+      body: 'Ses kanalı sayısı: 1 mono, 2 stereo, 6 ise 5.1 çevresel ses.',
+    },
+    aiUpscaled: {
+      label: 'YZ ile büyütülmüş',
+      body: 'YouTube bu çözünürlüğü yapay zekâ ile daha düşük çözünürlüklü orijinalden üretmiş. Daha net görünebilir ama gerçek bir kayıt değildir; arşiv için orijinal seçilir.',
+    },
+    drc: {
+      label: 'DRC',
+      body: 'Dinamik aralığı sıkıştırılmış ses: sessiz ve yüksek yerler birbirine yaklaştırılmış. Telefon hoparlöründe rahat duyulur ama orijinal değildir.',
+    },
+    partialSize: {
+      label: 'en az',
+      body: 'Seçtiğin parçaların bazılarının boyutu bilinmiyor; gösterilen değer yalnızca bilinenlerin toplamı.',
+    },
     remux: {
       label: 'remux',
       body:
         'Yeniden kodlamadan, yalnızca kap (container) değiştirme. Hızlıdır ve kalite kaybı olmaz.',
     },
   },
+  codecs: {
+    'H.264': 'En yaygın video kodeği. Her Mac, iPhone ve tarayıcıda oynar; aynı kalite için AV1 ve VP9’dan daha büyük dosya üretir.',
+    HEVC: 'H.265. H.264’ün yaklaşık yarı boyutunda aynı kalite. Apple cihazlarında oynar, bazı tarayıcılarda oynamaz.',
+    AV1: 'En yeni ve en verimli video kodeği. Donanımla çözme M3 ve sonrası Mac’lerde, A17 Pro ve sonrası iPhone’larda var; eskilerde işlemciyi yorar.',
+    VP9: 'Google’ın video kodeği. Tarayıcılarda ve VLC/IINA’da oynar; QuickTime ve iPhone Fotoğraflar açmaz.',
+    'Dolby Vision': 'Dolby’nin HDR biçimi. Desteklemeyen ekran ve oynatıcılarda renkler yanlış görünebilir.',
+    AAC: 'En uyumlu ses kodeği. Apple cihazlarının hepsinde oynar.',
+    Opus: 'Aynı bit hızında AAC’den daha iyi ses kalitesi veren modern kodek. QuickTime ve iPhone’da MP4 içinde oynamaz.',
+  } as Record<string, string>,
   doctor: {
     title: 'Sistem durumu',
     subtitle: 'Uygulamanın dayandığı araçlar ve bu makinedeki yetenekleri.',
@@ -247,6 +300,22 @@ export const tr = {
       title: 'Çözümleme çok uzun sürdü',
       body: 'Site yanıt vermedi. Tekrar denemek genelde işe yarar.',
     },
+    BOT_CHECK: {
+      title: 'YouTube bot doğrulaması istedi',
+      body: 'Video herkese açık, ama YouTube bu bağlantıyı şüpheli buldu. Biraz bekleyip tekrar dene; sürerse tarayıcı çerezleriyle giriş (sonraki aşama) çözer.',
+    },
+    RATE_LIMITED: {
+      title: 'Çok fazla istek',
+      body: 'Site istekleri geçici olarak sınırladı. Birkaç dakika bekleyip tekrar dene.',
+    },
+    FORBIDDEN: {
+      title: 'Site erişimi reddetti',
+      body: 'Bu genelde yt-dlp’nin eskidiği anlamına gelir. Sistem sekmesinden yt-dlp’yi güncelle ve tekrar dene.',
+    },
+    FORBIDDEN_ORIGIN: {
+      title: 'İstek reddedildi',
+      body: 'Bu istek uygulamanın kendi penceresinden gelmedi.',
+    },
     UNKNOWN: {
       title: 'Beklenmeyen bir hata',
       body: 'Ham hata kaydını açıp ne olduğuna bakabilirsin.',
@@ -261,8 +330,21 @@ export const tr = {
     LIVE_CONTENT: 'Bu bir canlı yayın. Canlı yayın desteği sonraki aşamalarda geliyor.',
     PLAYLIST_TRACKS_NEED_PER_VIDEO_INSPECT:
       'Liste görünümü hızlı olsun diye kalite ve altyazı bilgisi çekilmedi.',
+    NO_JS_RUNTIME:
+      'JavaScript çalıştırıcı bulunamadı; YouTube’un bazı kaliteleri bu listede hiç görünmüyor olabilir. Sistem sekmesine bak.',
+    FORMATS_MAY_BE_MISSING:
+      'yt-dlp YouTube’un imza bulmacasını çözemedi; bazı kaliteler eksik. Genelde yt-dlp’yi güncellemek düzeltir.',
   },
-  units: { bytes: 'B', kib: 'KB', mib: 'MB', gib: 'GB', tib: 'TB' },
+  units: {
+    bytes: 'B',
+    kib: 'KB',
+    mib: 'MB',
+    gib: 'GB',
+    tib: 'TB',
+    kbps: 'kbps',
+    mbps: 'Mbps',
+    khz: 'kHz',
+  },
 } as const;
 
 export type Strings = typeof tr;
