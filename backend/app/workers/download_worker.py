@@ -17,6 +17,7 @@ Pipeline:
 
 from __future__ import annotations
 
+import contextlib
 import copy
 import json
 import os
@@ -28,7 +29,7 @@ import time
 from pathlib import Path
 from typing import Any, TextIO
 
-from app import errors
+from app import errors, paths
 from app.doctor import listing_has
 from app.ffmpeg import mux
 from app.ffmpeg.probe import probe
@@ -221,14 +222,16 @@ def _stream_pass(req: dict[str, Any], info: dict[str, Any], work: Path, log: Col
         "postprocessor_hooks": [_pp_hook],
     }
     if req["mode"] == "audio":
+        extras = req.get("extras") or {}
         codec = req.get("audio_codec") or "mp3"
-        cover = bool((req.get("extras") or {}).get("thumbnail")) and codec != "wav"
+        cover = bool(extras.get("thumbnail")) and codec != "wav"
+        keep_thumbnail = bool(extras.get("thumbnail_file"))
         options["format"] = selected[0]
-        options["writethumbnail"] = cover
+        options["writethumbnail"] = cover or keep_thumbnail
         options["postprocessors"] = [
             *(
                 [{"key": "FFmpegThumbnailsConvertor", "format": "jpg", "when": "before_dl"}]
-                if cover
+                if cover or keep_thumbnail
                 else []
             ),
             {
@@ -238,18 +241,16 @@ def _stream_pass(req: dict[str, Any], info: dict[str, Any], work: Path, log: Col
                 "nopostoverwrites": False,
             },
             {"key": "FFmpegMetadata", "add_metadata": True, "add_chapters": True},
-            *([{"key": "EmbedThumbnail", "already_have_thumbnail": False}] if cover else []),
+            # already_have_thumbnail keeps the JPEG after embedding when it is wanted as a file.
+            *(
+                [{"key": "EmbedThumbnail", "already_have_thumbnail": keep_thumbnail}]
+                if cover
+                else []
+            ),
         ]
     emit({"t": "stage", "stage": "downloading"})
     with yt_dlp.YoutubeDL(options) as ydl:
         ydl.process_ie_result(copy.deepcopy(info), download=True)
-
-
-def _dest(stem: Path, suffix: str) -> Path:
-    # Not with_suffix(): titles are full of dots ("v1.2 release") that it would eat.
-    target = naming.unique(stem.parent / f"{stem.name}{suffix}")
-    target.parent.mkdir(parents=True, exist_ok=True)
-    return target
 
 
 def _metadata(info: dict[str, Any]) -> dict[str, str]:
@@ -262,28 +263,67 @@ def _metadata(info: dict[str, Any]) -> dict[str, str]:
     }
 
 
+def _ffmpeg_quiet(*args: str) -> bool:
+    argv = [
+        shutil.which("ffmpeg") or "ffmpeg",
+        "-hide_banner",
+        "-nostdin",
+        "-loglevel",
+        "error",
+        "-y",
+        *args,
+    ]
+    try:
+        return subprocess.run(argv, capture_output=True, timeout=120, check=False).returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        return False
+
+
+READABLE_SUBTITLES = {".srt", ".vtt", ".ass", ".ssa"}
+
+
+def _usable_subtitle(path: Path, *, prefer_srt: bool) -> Path | None:
+    """A subtitle FFmpeg can actually read, converting when it has to; None if impossible.
+
+    Sites occasionally hand over formats FFmpeg cannot decode (TTML, srv3, json3). One such
+    track must cost that track -- with a warning -- not the whole finished download.
+    """
+    if path.suffix in READABLE_SUBTITLES and not (prefer_srt and path.suffix == ".vtt"):
+        try:
+            if any(s.get("codec_type") == "subtitle" for s in probe(path).get("streams", [])):
+                return path
+        except (OSError, subprocess.SubprocessError, ValueError):
+            return None
+        return None
+    converted = path.with_name(path.name + ".converted.srt")
+    return converted if _ffmpeg_quiet("-i", str(path), "-c:s", "srt", str(converted)) else None
+
+
 def _finalize(
     req: dict[str, Any], info: dict[str, Any], work: Path
-) -> tuple[list[str], dict[str, Any]]:
+) -> tuple[list[str], dict[str, Any], list[dict[str, Any]]]:
+    """Build every output inside the scratch directory, then claim names and move them in."""
     mode = req["mode"]
     root = Path(req["download_dir"])
     extras = req.get("extras") or {}
     final_ext = {"mkv": "mkv", "compat_mp4": "mp4", "separate": "mkv"}.get(
         mode, AUDIO_EXT.get(req.get("audio_codec") or "mp3", "mp3")
     )
-    stem = naming.resolve_inside(
-        root, naming.render_relative(req["filename_template"], info, final_ext)
-    )
+    stem = naming.render_relative(req["filename_template"], info, final_ext)
     audio_langs = {t["format_id"]: t.get("language") for t in req.get("audio_tracks") or []}
     sub_langs = {t["key"]: t.get("language") for t in req.get("subtitle_tracks") or []}
-    files: list[Path] = []
     plan: dict[str, Any] = {}
+    warnings: list[dict[str, Any]] = []
+    outputs: list[tuple[Path, str]] = []  # (finished file in the scratch dir, name suffix)
 
     subtitle_files: list[tuple[str, Path]] = []
     for key in req.get("subtitle_keys") or []:
         found = _find_side(work, f"sub.{key}")
-        if found is not None:
-            subtitle_files.append((key, found))
+        usable = _usable_subtitle(found, prefer_srt=mode == "separate") if found else None
+        if usable is None:
+            warnings.append({"code": "SUBTITLE_SKIPPED", "key": key})
+        else:
+            subtitle_files.append((key, usable))
     thumb = next(iter(sorted(work.glob("thumb*.jpg"))), None)
 
     if mode in ("mkv", "compat_mp4"):
@@ -332,74 +372,46 @@ def _finalize(
                 emit({"t": "progress", "stage": stage, "progress": round(fraction, 4)})
 
         mux.run_with_progress(argv, duration, report)
-        target = _dest(stem, f".{container}")
-        shutil.move(output, target)
-        files.append(target)
+        outputs.append((output, f".{container}"))
     elif mode == "separate":
         seen: set[str] = set()
         video_id = req.get("video_format_id")
         if video_id:
             path = _stream_file(work, video_id)
-            target = _dest(stem, path.suffix)
-            shutil.move(path, target)
-            files.append(target)
+            outputs.append((path, path.suffix))
         for fid in req.get("audio_format_ids") or []:
             path = _stream_file(work, fid)
             label = audio_langs.get(fid) or fid
             label = f"{label}.{fid}" if label in seen else label
             seen.add(label)
-            target = _dest(stem, f".{label}{path.suffix}")
-            shutil.move(path, target)
-            files.append(target)
+            outputs.append((path, f".{label}{path.suffix}"))
         for key, path in subtitle_files:
             # "<video>.<lang>.srt" next to "<video>.<ext>" is what IINA and VLC auto-load.
-            # SRT is the sidecar every player reads; ASS is kept as-is so styling survives.
-            if path.suffix == ".vtt":
-                converted = path.with_suffix(".srt")
-                mux.run_with_progress(
-                    [
-                        "ffmpeg",
-                        "-hide_banner",
-                        "-nostdin",
-                        "-loglevel",
-                        "error",
-                        "-y",
-                        "-i",
-                        str(path),
-                        "-c:s",
-                        "srt",
-                        "-progress",
-                        "pipe:1",
-                        str(converted),
-                    ],
-                    None,
-                    lambda _fraction: None,
-                )
-                path = converted
-            target = _dest(stem, f".{key}{path.suffix}")
-            shutil.move(path, target)
-            files.append(target)
+            outputs.append((path, f".{key}{path.suffix}"))
     else:  # audio
-        fid = _selected(req)[0]
-        path = _stream_file(work, fid)
-        target = _dest(stem, path.suffix)
-        shutil.move(path, target)
-        files.append(target)
+        path = _stream_file(work, _selected(req)[0])
+        outputs.append((path, path.suffix))
 
     if extras.get("thumbnail_file") and thumb is not None and thumb.exists():
-        target = _dest(stem, ".jpg")
-        shutil.copy2(thumb, target)
-        files.append(target)
+        outputs.append((thumb, ".jpg"))
     for name, suffix, wanted in (
         ("meta.description", ".description.txt", extras.get("description")),
         ("meta.info.json", ".info.json", extras.get("info_json")),
     ):
         source = work / name
         if wanted and source.exists():
-            target = _dest(stem, suffix)
-            shutil.move(source, target)
-            files.append(target)
-    return [str(f) for f in files], plan
+            outputs.append((source, suffix))
+
+    targets = naming.claim(root, stem, [suffix for _, suffix in outputs])
+    try:
+        for (source, _), target in zip(outputs, targets, strict=True):
+            # Same volume (the scratch dir lives inside the root), so this is an atomic rename
+            # onto the placeholder we reserved -- never onto somebody else's file.
+            os.replace(source, target)
+    except BaseException:
+        naming.release(targets)
+        raise
+    return [str(t) for t in targets], plan, warnings
 
 
 def _cleanup(req: dict[str, Any], work: Path) -> None:
@@ -418,7 +430,7 @@ def run(req: dict[str, Any]) -> int:
         info = req.get("info") or _extract(req["url"], log)
         _side_pass(req, info, work, log)
         _stream_pass(req, info, work, log)
-        files, plan = _finalize(req, info, work)
+        files, plan, warnings = _finalize(req, info, work)
     except errors.AppError as exc:
         emit({"t": "error", "code": exc.code, "raw": exc.raw or log.raw()})
         return 1
@@ -433,15 +445,102 @@ def run(req: dict[str, Any]) -> int:
         emit({"t": "error", "code": errors.classify(str(exc)), "raw": log.raw(exc)})
         return 1
     _cleanup(req, work)
-    emit({"t": "done", "files": files, "plan": plan})
+    outputs = _describe(files, req["job_id"])
+    emit(
+        {
+            "t": "done",
+            "files": files,
+            "plan": plan,
+            "outputs": outputs,
+            "meta": _meta(info),
+            "warnings": warnings,
+        }
+    )
     return 0
+
+
+def _meta(info: dict[str, Any]) -> dict[str, Any]:
+    keys = (
+        "id",
+        "title",
+        "channel",
+        "uploader",
+        "extractor_key",
+        "webpage_url",
+        "upload_date",
+        "duration",
+    )
+    meta = {k: info.get(k) for k in keys}
+    meta["channel"] = meta["channel"] or meta.pop("uploader", None)
+    return meta
+
+
+def _describe(files: list[str], job_id: str) -> list[dict[str, Any]]:
+    """What the library needs, measured here so the server never has to run ffprobe itself."""
+    from app.library import summarize_streams
+
+    described: list[dict[str, Any]] = []
+    for index, name in enumerate(files):
+        path = Path(name)
+        entry: dict[str, Any] = {
+            "path": name,
+            "size": path.stat().st_size,
+            "role": "primary" if index == 0 else "sidecar",
+        }
+        if index == 0:
+            with contextlib.suppress(OSError, subprocess.SubprocessError, ValueError):
+                entry.update(summarize_streams(path))
+            has_picture = bool((entry.get("tracks") or {}).get("video"))
+            entry["thumbnail"] = _library_thumbnail(
+                path, entry.get("duration") if has_picture else 0, job_id
+            )
+        described.append(entry)
+    return described
+
+
+def _library_thumbnail(path: Path, duration: float | None, job_id: str) -> str | None:
+    """A small JPEG for the library grid: a frame 10% in, or an audio file's embedded cover.
+
+    Cover art is a single frame at t=0, so for audio the caller passes duration 0 (no seek)."""
+    target = paths.data_dir() / "thumbs" / f"{job_id}.jpg"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    # Only seek into real video. An input seek, even to 0, drops an audio file's single
+    # cover-art packet -- and FFmpeg then exits 0 without writing anything.
+    seek = ["-ss", f"{min(duration * 0.1, 30):.2f}"] if duration else []
+    argv = [
+        shutil.which("ffmpeg") or "ffmpeg",
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-y",
+        *seek,
+        "-i",
+        str(path),
+        "-map",
+        "0:v:0",
+        "-frames:v",
+        "1",
+        "-vf",
+        "scale=480:-2",
+        "-q:v",
+        "4",
+        str(target),
+    ]
+    try:
+        ok = subprocess.run(argv, capture_output=True, timeout=60, check=False).returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        ok = False
+    return str(target) if ok and target.exists() else None
 
 
 def main() -> int:
     global OUT
     request = json.loads(sys.stdin.read())
     OUT = os.fdopen(os.dup(1), "w")
-    sys.stdout = sys.stderr  # yt-dlp or a library printing must not corrupt the event stream
+    # Point fd 1 itself at stderr: FFmpeg children started by yt-dlp inherit it, and anything
+    # they print would otherwise land in the middle of the JSON-lines event stream.
+    os.dup2(2, 1)
+    sys.stdout = sys.stderr
     return run(request)
 
 

@@ -145,6 +145,53 @@ export function CopyButton({ value, label }: { value: string; label?: string }) 
   );
 }
 
+/** Native <dialog>: focus is trapped, Esc cancels, and the safe choice has initial focus. */
+export function ConfirmDialog({
+  open,
+  title,
+  body,
+  confirmLabel,
+  cancelLabel,
+  danger,
+  onConfirm,
+  onCancel,
+}: {
+  open: boolean;
+  title: string;
+  body: string;
+  confirmLabel: string;
+  cancelLabel: string;
+  danger?: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const dialog = ref.current;
+    if (!dialog) return;
+    if (open && !dialog.open) dialog.showModal();
+    if (!open && dialog.open) dialog.close();
+  }, [open]);
+  return (
+    <dialog ref={ref} className="confirm" onCancel={onCancel} aria-labelledby="confirm-title">
+      <h2 id="confirm-title">{title}</h2>
+      <p className="muted">{body}</p>
+      <div className="confirm-actions">
+        <button type="button" className="btn" onClick={onCancel} autoFocus>
+          {cancelLabel}
+        </button>
+        <button
+          type="button"
+          className={danger ? 'btn btn-danger' : 'btn btn-primary'}
+          onClick={onConfirm}
+        >
+          {confirmLabel}
+        </button>
+      </div>
+    </dialog>
+  );
+}
+
 export function Notice({
   tone = 'neutral',
   children,

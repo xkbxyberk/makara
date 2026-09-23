@@ -138,7 +138,14 @@ On start-up, jobs left `running` are requeued; each job's scratch directory
 | `GET` | `/api/events` | SSE: `snapshot` on connect, then `job` / `removed` events |
 | `GET`/`PUT` | `/api/settings` | download folder, template, concurrency (1–6), default mode |
 | `POST` | `/api/notify` | macOS notification; text comes from the UI, passed as AppleScript argv |
-| `POST` | `/api/reveal` | select a file in Finder (only inside the download folder) |
+| `POST` | `/api/jobs/{id}/reveal` | `{index}` → select that job's output file in Finder (checked against that job's own folder) |
+| `GET` | `/api/library` | items + facets; `search`, `site`, `kind`, `status`, `sort` |
+| `POST` | `/api/library/scan` | re-check files on disk; returns checked/missing/repaired/restored |
+| `GET` | `/api/library/{id}/thumbnail` | the item's JPEG (only from the app's thumbnail folder) |
+| `POST` | `/api/library/{id}/open` · `/reveal` · `/trash` | default player · Finder · macOS Trash |
+| `POST` | `/api/settings/preview-template` | template + sample values → rendered path |
+| `POST` | `/api/system/pick-folder` | native folder picker (prompt text from the UI, passed as argv) |
+| `POST` | `/api/system/update-ytdlp` | `uv lock --upgrade-package yt-dlp …` + `uv sync` |
 
 Inspect results carry an `inspect_id` (server-side cache of the last 8) and `defaults` per
 mode. All non-GET requests from another origin are rejected, and the Host header must be
@@ -193,8 +200,29 @@ are not offered.
   "Finder'da göster"; the coded error with its raw log; cancel / retry / remove.
 - The sidebar shows the number of active jobs.
 
-### Library, Studio, Settings
-Present in the sidebar, disabled, labelled "yakında". Specified in PLAN.md milestones M3–M8.
+### Kütüphane (M3, built)
+- Toolbar: search (title/channel), site, kind and "only missing" filters, sort, grid/list toggle;
+  a summary line (count · total size · missing) and "Dosyaları denetle".
+- **Grid:** thumbnail, title, channel · duration · size, mode badge, "Eksik" badge. Opening a card
+  shows tracks (from ffprobe), files, source and date, with Oynat / Finder'da göster / Çöp
+  Kutusu'na taşı. **List:** the same data as a table; the Trash action appears only for an opened
+  row.
+- **Loading / error / empty** ("Kütüphane boş") and **no-match** ("Eşleşen öğe yok") states.
+- Trash asks first in a native `<dialog>` whose initial focus is "Vazgeç"; files go to the macOS
+  Trash (in fixture mode to `<data dir>/simulated-trash`) and the record is kept as trashed.
+- A missing item's actions are disabled; the scan re-links it when the file turns up.
+
+### Ayarlar (M3, built)
+- Download folder (text + native "Seç…" picker; `/` and system folders refused), filename
+  template with a live preview rendered from sample values in `tr.ts`, concurrency (1–6),
+  default mode, theme (system/light/dark, stored locally), clipboard watcher (opt-in, default
+  off), notifications. Save is disabled until something changes; unsaved changes are flagged.
+
+### Clipboard banner (M3, built)
+When the opt-in watcher sees a link copied, a banner offers "İncele" / "Yoksay".
+
+### Studio
+Present in the sidebar, disabled, labelled "yakında". Specified in PLAN.md milestone M4.
 
 ## 6. Feature → tool mapping
 

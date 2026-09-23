@@ -275,13 +275,128 @@
           "text": "Screenshots of the download panel and queue reviewed in light, dark and at 420px",
           "pass": true,
           "proof": "test-results/screenshots/{download,queue}-{light,dark,narrow}.png"
+        },
+        {
+          "id": "M2.16",
+          "text": "A hostile title ('..', '.', leading dot, 800-byte) can never write outside the download folder or exceed the filename limit",
+          "pass": true,
+          "proof": "tests/test_naming.py; test_a_title_of_dot_dot_cannot_escape_the_download_folder; test_a_very_long_title_still_downloads"
+        },
+        {
+          "id": "M2.17",
+          "text": "A retry started within the cancel grace period is not killed",
+          "pass": true,
+          "proof": "tests/test_jobs_api.py::test_a_retry_within_the_kill_grace_period_is_not_killed"
+        },
+        {
+          "id": "M2.18",
+          "text": "Parallel submissions never exceed the concurrency limit; an immediate cancel is never lost",
+          "pass": true,
+          "proof": "test_parallel_submissions_never_exceed_the_concurrency_limit; test_a_cancel_right_after_submitting_is_never_lost"
+        },
+        {
+          "id": "M2.19",
+          "text": "A job interrupted by a server restart is requeued and resumes its partial download",
+          "pass": true,
+          "proof": "test_a_job_interrupted_by_a_restart_is_requeued_and_resumed"
+        },
+        {
+          "id": "M2.20",
+          "text": "The plan never claims 'copy' when the worker may re-encode; audio mode states copy vs re-encode",
+          "pass": true,
+          "proof": "test_compat_plan_is_honest_when_the_site_gives_no_codecs; test_audio_mode_says_whether_it_copies_or_reencodes"
+        },
+        {
+          "id": "M2.21",
+          "text": "An unreadable subtitle is skipped with a warning instead of failing the job",
+          "pass": true,
+          "proof": "test_an_unreadable_subtitle_is_skipped_with_a_warning_not_a_failed_job"
+        },
+        {
+          "id": "M2.22",
+          "text": "⌘↵ downloads only from Inspect, once per press, and only on a current plan",
+          "pass": true,
+          "proof": "e2e '⌘↵ downloads from Inspect only, once per press'"
         }
       ]
     },
     "M3": {
-      "title": "Library",
-      "status": "not started",
-      "criteria": []
+      "title": "Library and Settings",
+      "status": "done",
+      "criteria": [
+        {
+          "id": "M3.1",
+          "text": "Every finished download appears in the library with tracks from ffprobe and a thumbnail (video frame or audio cover)",
+          "pass": true,
+          "proof": "e2e 'a finished download shows up in the library...'; test_a_finished_download_appears_in_the_library"
+        },
+        {
+          "id": "M3.2",
+          "text": "Grid and list views, search (LIKE wildcards literal), site/kind/missing filters, sort",
+          "pass": true,
+          "proof": "e2e 'list view, search and the kind filter'; tests/test_library.py::test_search_sort_and_filters"
+        },
+        {
+          "id": "M3.3",
+          "text": "A file deleted in Finder is marked missing, never forgotten",
+          "pass": true,
+          "proof": "e2e 'a file deleted in Finder is marked missing'; test_a_deleted_file_is_marked_missing_never_forgotten"
+        },
+        {
+          "id": "M3.4",
+          "text": "A moved file is re-linked only on matching size and duration, never to another item's file",
+          "pass": true,
+          "proof": "test_a_moved_file_is_relinked_by_size_and_duration; test_a_same_size_file_with_another_duration_is_not_mistaken; test_identical_downloads_keep_their_own_files_when_one_is_deleted"
+        },
+        {
+          "id": "M3.5",
+          "text": "Move to Trash asks first (default Vazgeç), moves every file of the item, keeps the record",
+          "pass": true,
+          "proof": "e2e 'move to Trash asks first, and Cancel really cancels'; test_trash_moves_every_file_of_the_item_to_the_trash"
+        },
+        {
+          "id": "M3.6",
+          "text": "Library actions work by item id only; no endpoint reveals or opens an arbitrary path",
+          "pass": true,
+          "proof": "test_library_actions_work_by_item_id_only; test_reveal_works_by_job_and_file_index_only"
+        },
+        {
+          "id": "M3.7",
+          "text": "Library is safe under concurrent use from several threads",
+          "pass": true,
+          "proof": "tests/test_library.py::test_concurrent_use_from_many_threads_is_safe (fails 7/8 threads without the lock)"
+        },
+        {
+          "id": "M3.8",
+          "text": "Settings: template live preview, unsafe folders refused, save survives reload, theme switch",
+          "pass": true,
+          "proof": "e2e settings.spec.cts; test_the_disk_root_is_refused_as_a_download_folder"
+        },
+        {
+          "id": "M3.9",
+          "text": "Clipboard watcher is opt-in, ignores what was already copied, offers only links",
+          "pass": true,
+          "proof": "tests/test_system.py; e2e 'a copied link is offered for inspection'"
+        },
+        {
+          "id": "M3.10",
+          "text": "yt-dlp update upgrades uv.lock (survives the next launch); disabled in fixture mode",
+          "pass": true,
+          "proof": "test_the_updater_upgrades_the_lock_file_not_just_the_venv; e2e 'system actions degrade clearly'"
+        },
+        {
+          "id": "M3.11",
+          "text": "No test writes to the real app folders; the gate fails on any e2e server exception",
+          "pass": true,
+          "proof": "tests/conftest.py isolated_app_dirs + pytest_sessionfinish; scripts/check.sh 'server log is clean'"
+        },
+        {
+          "id": "M3.12",
+          "text": "Screenshots of library (grid, list) and settings reviewed in light, dark and at 420px",
+          "pass": true,
+          "proof": "test-results/screenshots/{library,settings}-*.png"
+        }
+      ]
     },
     "M4": {
       "title": "Studio core",

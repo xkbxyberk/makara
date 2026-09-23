@@ -24,7 +24,39 @@ function Capabilities({ capabilities }: { capabilities: Record<string, boolean> 
   );
 }
 
-function CheckRow({ check }: { check: DoctorCheck }) {
+function UpdateYtdlp({ onDone }: { onDone: () => void }) {
+  const [state, setState] = useState<
+    { phase: 'idle' } | { phase: 'running' } | { phase: 'done'; text: string } | { phase: 'error'; code: string; raw: string }
+  >({ phase: 'idle' });
+  const run = async () => {
+    setState({ phase: 'running' });
+    try {
+      const result = await api.updateYtdlp();
+      setState({
+        phase: 'done',
+        text: result.changed
+          ? tr.doctor.updated(result.before.version, result.after.version)
+          : tr.doctor.upToDate(result.after.version),
+      });
+      onDone();
+    } catch (error) {
+      const failure = error instanceof ApiError ? error : new ApiError('UNKNOWN', String(error));
+      setState({ phase: 'error', code: failure.code, raw: failure.raw });
+    }
+  };
+  return (
+    <div className="update-row">
+      <button type="button" className="btn" disabled={state.phase === 'running'} onClick={() => void run()}>
+        {state.phase === 'running' ? tr.doctor.updating : tr.doctor.updateYtdlp}
+      </button>
+      <span className="dim">{tr.doctor.updateHelp}</span>
+      {state.phase === 'done' && <Notice>{state.text}</Notice>}
+      {state.phase === 'error' && <ErrorState code={state.code} raw={state.raw} />}
+    </div>
+  );
+}
+
+function CheckRow({ check, onReload }: { check: DoctorCheck; onReload: () => void }) {
   const names = tr.doctor.checks as Record<string, string>;
   const help = tr.doctor.checkHelp as Record<string, string>;
   const labels = tr.doctor.labels as Record<string, string>;
@@ -68,6 +100,7 @@ function CheckRow({ check }: { check: DoctorCheck }) {
             <Notice tone="warn">{explained[key] ?? key}</Notice>
           </div>
         ))}
+        {check.id === 'yt_dlp' && <UpdateYtdlp onDone={onReload} />}
         {check.status !== 'ok' && check.fix.kind === 'command' && (
           <div style={{ marginTop: 'var(--space-2)' }}>
             <div className="muted">{tr.doctor.fixHint}</div>
@@ -118,7 +151,9 @@ export function DoctorRoute() {
           <ErrorState code={state.code} raw={state.raw} onRetry={() => void load()} />
         )}
         {state.phase === 'ready' &&
-          state.report.checks.map((check) => <CheckRow key={check.id} check={check} />)}
+          state.report.checks.map((check) => (
+            <CheckRow key={check.id} check={check} onReload={() => void load()} />
+          ))}
       </Panel>
     </div>
   );

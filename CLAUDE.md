@@ -14,7 +14,7 @@ Local-only media workstation on yt-dlp + FFmpeg. macOS arm64, single user (Berk)
 | End-to-end + screenshots | `cd frontend && npx playwright test` |
 | Dev servers | `PYTHONPATH=backend uv run python -m app.main` + `cd frontend && npm run dev` |
 | Desktop app | `open VideoDownloader.command` |
-| Update yt-dlp | `uv pip install -U "yt-dlp[default]"` (see gotcha 2) |
+| Update yt-dlp | `uv lock --upgrade-package yt-dlp --upgrade-package yt-dlp-ejs && uv sync` (see gotcha 2) |
 | Re-record fixtures (network!) | `uv run python scripts/capture_fixtures.py [name ...]` |
 
 ## Architecture decisions
@@ -37,9 +37,13 @@ Local-only media workstation on yt-dlp + FFmpeg. macOS arm64, single user (Berk)
    JavaScript engine. The `YoutubeDL` key is the top-level **`js_runtimes`**, and passing a
    dict *replaces* the deno-only default. Without a runtime yt-dlp does **not** fail — it
    silently drops the `web` client and some formats vanish. Deno 2.9.7 is installed here.
-2. **`yt-dlp -U` does not work for pip/uv installs** (`detect_variant()` returns `"unknown"`).
-   Update by rerunning the install. Nightly is *not* a separate PyPI package; it is a `.devN`
-   pre-release of `yt-dlp` itself (`--pre` / `--prerelease=allow`).
+2. **Updating yt-dlp means updating `uv.lock`.** `yt-dlp -U` refuses pip/uv installs
+   (`detect_variant()` is `"unknown"`), and `uv pip install -U` is silently reverted because
+   `uv run` syncs the venv to the lock on every launch. Use
+   `uv lock --upgrade-package yt-dlp --upgrade-package yt-dlp-ejs && uv sync` (the Doctor's
+   button does exactly this). Nightly is not a separate PyPI package; it is a `.devN`
+   pre-release of `yt-dlp` itself. Report versions from `importlib.metadata`, not the imported
+   module, which is stale in the server after an update.
 3. **YouTube splits subtitles three ways, not two.** `subtitles` = human. `automatic_captions`
    mixes the ASR track for the spoken language (key has an `-orig` twin, or URL has `kind=asr`)
    with hundreds of machine translations (URL has `tlang=`, or the name reads "X from Y").
@@ -74,6 +78,18 @@ Local-only media workstation on yt-dlp + FFmpeg. macOS arm64, single user (Berk)
     them and starts with an empty database on every run.
 15. Scratch files live in `<download dir>/.vd-work/<job id>/` so a retry resumes `.part` files;
     only that directory is ever deleted, and only after the final file is in place.
+16. **Filenames are untrusted input.** Use `naming.render_relative` + `naming.claim`: a title of
+    `..` becomes `_`, components are trimmed to 200 bytes (APFS limit is 255), and a whole set
+    of files gets one base name reserved atomically with O_EXCL placeholders. Never build an
+    output path any other way.
+17. **SQLite connections are not thread-safe.** The job store is used only on the event loop;
+    the library has its own connection and a lock because it is also used from threads.
+18. **Tests never touch Berk's folders.** An autouse fixture points `VD_DATA_DIR` and
+    `VD_DOWNLOAD_DIR` at tmp dirs; fixture mode sends Trash to `simulated-trash`, and the
+    folder picker and yt-dlp updater refuse to run. `scripts/check.sh` fails if the e2e server
+    logged a traceback.
+19. An FFmpeg input seek (`-ss`), even to 0, drops an audio file's single cover-art packet, and
+    FFmpeg then exits 0 without writing anything. Check that outputs exist, not just exit codes.
 
 ## Rules
 

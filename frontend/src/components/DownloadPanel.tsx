@@ -50,10 +50,13 @@ function trackLabel(track: AudioFormat): string {
 
 export function DownloadPanel({
   model,
+  active,
   onQueued,
   onReinspect,
 }: {
   model: VideoModel;
+  /** Whether the Inspect screen is the one on show; ⌘↵ only works there. */
+  active: boolean;
   onQueued: () => void;
   onReinspect: () => void;
 }) {
@@ -66,6 +69,9 @@ export function DownloadPanel({
   const [defaultTemplate, setDefaultTemplate] = useState('');
   const [pickerOpen, setPickerOpen] = useState(false);
   const [plan, setPlan] = useState<Plan | null>(null);
+  // Which selection the plan on screen was computed for. İndir stays disabled until they match,
+  // so a job can never start on a selection whose warnings were not shown.
+  const [planKey, setPlanKey] = useState('');
   const [failure, setFailure] = useState<ApiError | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [queued, setQueued] = useState(false);
@@ -99,6 +105,9 @@ export function DownloadPanel({
     [model.inspect_id, mode, current, audioCodec, audioQuality, template, extras],
   );
 
+  const selectionKey = useMemo(() => JSON.stringify(selection), [selection]);
+  const planIsCurrent = plan !== null && planKey === selectionKey;
+
   useEffect(() => {
     const ticket = ++planTicket.current;
     const timer = setTimeout(() => {
@@ -107,6 +116,7 @@ export function DownloadPanel({
         .then((next) => {
           if (ticket !== planTicket.current) return;
           setPlan(next);
+          setPlanKey(selectionKey);
           setFailure(null);
         })
         .catch((error: unknown) => {
@@ -116,13 +126,13 @@ export function DownloadPanel({
     }, 150);
     setQueued(false);
     return () => clearTimeout(timer);
-  }, [selection]);
+  }, [selection, selectionKey]);
 
   const update = (patch: Partial<TrackSelection>) =>
     setTracks((all) => ({ ...all, [mode]: { ...all[mode], ...patch } }));
 
   const submit = useCallback(async () => {
-    if (submitting || !plan || plan.blocking) return;
+    if (submitting || !plan || !planIsCurrent || plan.blocking) return;
     setSubmitting(true);
     try {
       await api.createJob(selection);
@@ -132,19 +142,20 @@ export function DownloadPanel({
     } finally {
       setSubmitting(false);
     }
-  }, [plan, selection, submitting]);
+  }, [plan, planIsCurrent, selection, submitting]);
 
-  // ⌘↵ downloads from anywhere on the Inspect screen.
+  // ⌘↵ downloads -- only while Inspect is on screen, and once per press (not per key repeat).
   useEffect(() => {
+    if (!active) return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+      if (event.key === 'Enter' && (event.metaKey || event.ctrlKey) && !event.repeat) {
         event.preventDefault();
         void submit();
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [submit]);
+  }, [active, submit]);
 
   const videos = useMemo(
     () => [...model.video_formats, ...model.muxed_formats],
@@ -294,7 +305,7 @@ export function DownloadPanel({
           <button
             type="button"
             className="btn btn-primary btn-large"
-            disabled={!plan || plan.blocking || submitting}
+            disabled={!planIsCurrent || plan.blocking || submitting}
             onClick={() => void submit()}
           >
             {submitting ? tr.download.submitting : tr.download.submit}
@@ -412,10 +423,24 @@ function TrackPicker(props: {
                   onChange={() => update({ video_format_id: format.format_id })}
                 />
                 <span className="pick-main">{videoLabel(format)}</span>
-                <span className="dim">{format.fps ? `${Math.round(format.fps)} fps` : ''}</span>
-                {format.dynamic_range && format.dynamic_range !== 'SDR' && <Badge tone="accent">{format.dynamic_range}</Badge>}
-                {format.ai_upscaled && <Badge tone="warn">{tr.terms.aiUpscaled.label}</Badge>}
-                {format.has_audio === true && <Badge tone="accent">{tr.terms.muxed.label}</Badge>}
+                <span className="dim">
+                  {format.fps ? `${Math.round(format.fps)} ${tr.units.fps}` : ''}
+                </span>
+                {format.dynamic_range && format.dynamic_range !== 'SDR' && (
+                  <Badge tone="accent">
+                    <Term label={format.dynamic_range} body={tr.terms.hdr.body} />
+                  </Badge>
+                )}
+                {format.ai_upscaled && (
+                  <Badge tone="warn">
+                    <Term label={tr.terms.aiUpscaled.label} body={tr.terms.aiUpscaled.body} />
+                  </Badge>
+                )}
+                {format.has_audio === true && (
+                  <Badge tone="accent">
+                    <Term label={tr.terms.muxed.label} body={tr.terms.muxed.body} />
+                  </Badge>
+                )}
                 <span className="toolbar-spacer" />
                 <span className="dim mono">{format.format_id}</span>
                 <span className="num">
@@ -475,7 +500,9 @@ function TrackPicker(props: {
                   onChange={() => update({ audio_format_ids: [format.format_id] })}
                 />
                 <span className="pick-main">{videoLabel(format)}</span>
-                <Badge tone="accent">{tr.terms.muxed.label}</Badge>
+                <Badge tone="accent">
+                  <Term label={tr.terms.muxed.label} body={tr.terms.muxed.body} />
+                </Badge>
               </label>
             ))}
         </div>

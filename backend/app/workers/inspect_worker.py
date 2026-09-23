@@ -72,6 +72,7 @@ def main() -> int:
     request = json.loads(sys.stdin.read())
     # Anything yt-dlp or a library prints must not corrupt the one JSON line we answer with.
     out = os.fdopen(os.dup(1), "w")
+    os.dup2(2, 1)  # child processes inherit fd 1; keep them off the answer channel too
     sys.stdout = sys.stderr
     out.write(json.dumps(run(request)))
     out.flush()

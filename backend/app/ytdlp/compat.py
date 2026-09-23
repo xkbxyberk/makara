@@ -85,6 +85,8 @@ def advise(
             note("WAV_NO_COVER", INFO)
         if len(audios) > 1:
             note("AUDIO_MODE_ONE_TRACK", ERROR)
+        if audios and audio_codec in AUDIO_CODECS:
+            plan["audio"] = [_audio_extract_step(audios[0], audio_codec, note)]
         return {"notices": notices, "plan": plan, "blocking": _blocking(notices)}
 
     if video is None:
@@ -101,11 +103,17 @@ def advise(
         note("MKV_PLAYERS", INFO)
         if video and codec_family(video.get("vcodec")) == "av01":
             note("AV1_HARDWARE", INFO)
-        plan.update(video="copy", audio=["copy"] * len(audios), subtitles="srt")
+        own_audio = ["copy"] if video and video.get("has_audio") and not audios else []
+        plan.update(video="copy", audio=own_audio + ["copy"] * len(audios), subtitles="srt")
     elif mode == "compat_mp4":
         plan["subtitles"] = "mov_text"
         if video:
-            if is_compatible_video(video) or video.get("vcodec") is None:
+            if video.get("vcodec") is None:
+                # The site did not say. The worker probes the real file and re-encodes only if
+                # it has to -- so say "may", never a confident "copy".
+                plan["video"] = "probe"
+                note("CODEC_UNKNOWN", WARN)
+            elif is_compatible_video(video):
                 plan["video"] = "copy"
             else:
                 plan["video"] = "transcode"
@@ -121,8 +129,14 @@ def advise(
                 if video.get("dynamic_range") not in (None, "SDR"):
                     note("HDR_TONEMAP", WARN, range=video.get("dynamic_range"))
         plan["audio"] = []
-        for audio in audios:
-            if is_compatible_audio(audio):
+        # A muxed format's own sound is used when no separate track was chosen.
+        sources = audios or ([video] if video and video.get("has_audio") else [])
+        for audio in sources:
+            if audio.get("acodec") is None:
+                plan["audio"].append("probe")
+                if not any(n["code"] == "CODEC_UNKNOWN" for n in notices):
+                    note("CODEC_UNKNOWN", WARN)
+            elif is_compatible_audio(audio):
                 plan["audio"].append("copy")
             else:
                 plan["audio"].append("transcode")
@@ -133,6 +147,25 @@ def advise(
         plan.update(video="copy", audio=["copy"] * len(audios))
 
     return {"notices": notices, "plan": plan, "blocking": _blocking(notices)}
+
+
+# What yt-dlp's FFmpegExtractAudio copies without re-encoding, per target.
+_EXTRACT_COPIES = {"m4a": {"mp4a", "aac"}, "mp3": {"mp3"}, "opus": {"opus"}, "flac": {"flac"}}
+_LOSSLESS = {"flac", "alac", "wav", "pcm_s16le"}
+
+
+def _audio_extract_step(source: dict[str, Any], target: str, note: Any) -> str:
+    family = codec_family(source.get("acodec"))
+    if not family:
+        return "probe"
+    if family in _EXTRACT_COPIES.get(target, set()):
+        note("AUDIO_MODE_COPY", INFO, codec=_label(source.get("acodec")))
+        return "copy"
+    if target in ("flac", "wav") and family not in _LOSSLESS:
+        note("LOSSLESS_FROM_LOSSY", INFO, codec=_label(source.get("acodec")))
+    else:
+        note("AUDIO_MODE_REENCODE", INFO, codec=_label(source.get("acodec")), target=target)
+    return "transcode"
 
 
 def _best_compatible_video(model: dict[str, Any]) -> dict[str, Any] | None:

@@ -36,14 +36,20 @@ orada listelenir. Bir sorun varsa yanında kopyalanabilir çözüm komutu çıka
 YouTube sık değişir; format listesi eksildiğinde ilk yapılacak şey budur.
 
 ```bash
-uv pip install -U "yt-dlp[default]"
+uv lock --upgrade-package yt-dlp --upgrade-package yt-dlp-ejs && uv sync
 ```
 
-`yt-dlp -U` bu kurulumda **çalışmaz** (pip/uv ile kurulduğu için). Kararlı sürüm sorun
-çıkarırsa gecelik sürüme geçebilirsin:
+En kolayı: **Sistem** sekmesindeki "yt-dlp'yi güncelle" düğmesi aynı komutu çalıştırır.
+
+Neden `pip install -U` değil: proje `uv.lock` ile sabitleniyor ve `uv run` her açılışta ortamı
+bu dosyaya göre eşitliyor; kilit dosyası güncellenmezse güncelleme bir sonraki açılışta geri
+alınır. `yt-dlp -U` ise bu kurulum türünde hiç çalışmaz.
+
+Kararlı sürüm bir sorunu çözmezse gecelik (nightly) sürüme geçmek için `pyproject.toml` içinde
+`"yt-dlp[default]>=2026.8.19"` satırını `"yt-dlp[default]>=2026.8.19.dev0"` yap ve:
 
 ```bash
-uv pip install -U --prerelease=allow "yt-dlp[default]"
+uv lock --upgrade-package yt-dlp --prerelease=allow && uv sync
 ```
 
 ## Geliştirme

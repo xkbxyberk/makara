@@ -157,6 +157,14 @@ export const tr = {
       DRM_MAYBE_SELECTED: 'Seçilen parçalardan biri DRM korumalı olabilir; indirme başarısız olabilir.',
       MACHINE_TRANSLATED_SUBS: 'Makine çevirisi altyazı seçtin; hatalar içerebilir.',
       UNKNOWN_SELECTION: 'Seçimde artık bulunmayan bir parça var. Yeniden incele.',
+      CODEC_UNKNOWN:
+        'Bu site kodek bilgisi vermiyor. Dosya indirildikten sonra incelenecek; QuickTime’da oynamayacaksa yeniden kodlanacak.',
+      AUDIO_MODE_COPY: (p: { codec?: string }) =>
+        `${p.codec ?? 'Ses'} olduğu gibi kopyalanacak — kalite kaybı yok, kalite seçimi uygulanmaz.`,
+      AUDIO_MODE_REENCODE: (p: { codec?: string; target?: string }) =>
+        `${p.codec ?? 'Ses'} → ${String(p.target ?? '').toUpperCase()} yeniden kodlanacak. Kayıplı bir biçimden diğerine geçiş küçük bir kalite kaybı demektir.`,
+      LOSSLESS_FROM_LOSSY: (p: { codec?: string }) =>
+        `Kaynak ${p.codec ?? 'kayıplı'}; kayıpsız biçime çevirmek kaybolan kaliteyi geri getirmez, yalnızca dosyayı büyütür.`,
     } as Record<string, string | ((p: Record<string, unknown>) => string)>,
   },
   queue: {
@@ -194,8 +202,102 @@ export const tr = {
       failed: 'Başarısız',
       cancelled: 'İptal edildi',
     } as Record<string, string>,
+    warnings: {
+      SUBTITLE_SKIPPED: (key: string) =>
+        `“${key}” altyazısı FFmpeg’in okuyamadığı bir biçimde geldi; dosyaya eklenmedi.`,
+    } as Record<string, (key: string) => string>,
     notifyDone: 'İndirme tamamlandı',
     notifyFailed: 'İndirme başarısız',
+  },
+  library: {
+    title: 'Kütüphane',
+    search: 'Başlık veya kanal ara',
+    grid: 'Izgara',
+    list: 'Liste',
+    view: 'Görünüm',
+    sortLabel: 'Sırala',
+    sorts: {
+      added: 'Eklenme tarihi',
+      uploaded: 'Yayın tarihi',
+      title: 'Başlık',
+      size: 'Boyut',
+      duration: 'Süre',
+    } as Record<string, string>,
+    allSites: 'Tüm siteler',
+    kinds: { all: 'Tümü', video: 'Video', audio: 'Ses' } as Record<string, string>,
+    kindLabel: 'Tür',
+    siteLabel: 'Site',
+    onlyMissing: 'Yalnızca eksikler',
+    scan: 'Dosyaları denetle',
+    scanning: 'Denetleniyor…',
+    scanResult: (c: { checked: number; missing: number; repaired: number; restored: number }) =>
+      `${c.checked} öğe denetlendi · ${c.repaired} dosyanın yeni yeri bulundu · ${c.restored} geri geldi · ${c.missing} eksik`,
+    summary: (count: number, size: string, missing: number) =>
+      missing ? `${count} öğe · ${size} · ${missing} eksik` : `${count} öğe · ${size}`,
+    loading: 'Kütüphane yükleniyor',
+    emptyTitle: 'Kütüphane boş',
+    emptyBody: 'Bitirdiğin her indirme burada, bilgileriyle birlikte listelenir.',
+    noMatchTitle: 'Eşleşen öğe yok',
+    noMatchBody: 'Aramayı veya filtreleri değiştir.',
+    missing: 'Eksik',
+    missingHelp:
+      'Dosya kaydedildiği yerde yok. Finder’da taşındıysa “Dosyaları denetle” aynı boyut ve süreye sahip dosyayı bulup bağlantıyı düzeltir. Kayıt hiçbir zaman kendiliğinden silinmez.',
+    play: 'Oynat',
+    playHelp: 'Varsayılan oynatıcıda açar (IINA, QuickTime…).',
+    reveal: 'Finder’da göster',
+    trash: 'Çöp Kutusu’na taşı',
+    trashTitle: 'Çöp Kutusu’na taşınsın mı?',
+    trashBody: (n: number) =>
+      n === 1
+        ? 'Bu dosya Çöp Kutusu’na taşınacak. Çöp Kutusu’nu boşaltana kadar geri alabilirsin.'
+        : `Bu öğenin ${n} dosyası Çöp Kutusu’na taşınacak. Çöp Kutusu’nu boşaltana kadar geri alabilirsin.`,
+    confirmTrash: 'Çöp Kutusu’na taşı',
+    cancel: 'Vazgeç',
+    details: 'Ayrıntılar',
+    source: 'Kaynak',
+    files: 'Dosyalar',
+    audioTracks: 'Ses',
+    subtitleTracks: 'Altyazı',
+    added: 'Eklendi',
+    noTracks: '–',
+    video: 'Görüntü',
+  },
+  settings: {
+    title: 'Ayarlar',
+    save: 'Kaydet',
+    saved: 'Kaydedildi.',
+    unsaved: 'Kaydedilmemiş değişiklikler var.',
+    loading: 'Ayarlar yükleniyor',
+    downloadDir: 'İndirme klasörü',
+    downloadDirHelp: 'Bütün indirmeler bu klasörün içine, aşağıdaki şablona göre yerleşir.',
+    chooseFolder: 'Seç…',
+    choosePrompt: 'İndirmelerin kaydedileceği klasörü seç',
+    template: 'Dosya adı şablonu',
+    templatePreview: 'Örnek',
+    templateReset: 'Varsayılana dön',
+    sample: {
+      title: 'Örnek video başlığı',
+      channel: 'Örnek Kanal',
+      id: 'dQw4w9WgXcQ',
+      extractor_key: 'Youtube',
+      upload_date: '20260923',
+    },
+    concurrency: 'Aynı anda indirme',
+    concurrencyHelp:
+      'Aynı anda kaç indirme çalışsın. Yüksek değer bağlantını paylaştırır; sitelerin hız sınırına takılma riski artar.',
+    defaultMode: 'Varsayılan çıktı',
+    theme: 'Görünüm',
+    themes: { system: 'Sistem', light: 'Açık', dark: 'Koyu' } as Record<string, string>,
+    clipboard: 'Pano izleyici',
+    clipboardHelp:
+      'Uygulama açıkken desteklenen bir bağlantı kopyaladığında incelemeyi önerir. Pano yalnızca içeriği değiştiğinde okunur.',
+    notifications: 'Sistem bildirimleri',
+    notificationsHelp: 'Pencere arka plandayken bir indirme bitince veya başarısız olunca bildirim gösterir.',
+  },
+  clipboard: {
+    offer: 'Panoya bir bağlantı kopyaladın:',
+    inspect: 'İncele',
+    dismiss: 'Yoksay',
   },
   table: {
     format: 'Format',
@@ -369,6 +471,12 @@ export const tr = {
         'Bu FFmpeg derlemesinde libwebp yok; animasyonlu WebP çıktısı üretilemez. GIF çıktısı çalışıyor.',
     },
     fixHint: 'Bunu düzeltmek için terminalde şunu çalıştır:',
+    updateYtdlp: 'yt-dlp’yi güncelle',
+    updating: 'Güncelleniyor… (bir dakika sürebilir)',
+    updated: (from: string, to: string) => `yt-dlp ${from} → ${to} güncellendi.`,
+    upToDate: (version: string) => `yt-dlp zaten güncel (${version}).`,
+    updateHelp:
+      'YouTube sık değişir; indirmeler bozulursa ilk yapılacak şey budur. Kilit dosyasını günceller, böylece güncelleme kalıcı olur.',
     noFix: 'Düzeltme gerekmiyor.',
   },
   placeholder: {
@@ -452,6 +560,10 @@ export const tr = {
       title: 'Uygun bir dosya adı bulunamadı',
       body: 'Aynı adla çok fazla dosya var. Şablonu değiştir.',
     },
+    DOWNLOAD_DIR_UNSAFE: {
+      title: 'Bu klasör indirme için kullanılamaz',
+      body: 'Diskin kökü veya bir sistem klasörü seçilemez. Filmler veya Belgeler altında bir klasör seç.',
+    },
     DOWNLOAD_DIR_NOT_ABSOLUTE: {
       title: 'İndirme klasörü tam yol olmalı',
       body: '/ veya ~ ile başlayan bir klasör seç.',
@@ -485,6 +597,19 @@ export const tr = {
       title: 'Dosya yerinde değil',
       body: 'Finder’da taşınmış veya silinmiş olabilir.',
     },
+    ITEM_NOT_FOUND: { title: 'Öğe bulunamadı', body: 'Kütüphaneden kaldırılmış olabilir.' },
+    PICKER_UNAVAILABLE: {
+      title: 'Klasör seçici açılamadı',
+      body: 'Klasör yolunu elle yazabilirsin.',
+    },
+    UPDATE_UNAVAILABLE: {
+      title: 'Güncelleme bu modda kapalı',
+      body: 'Test modunda Python ortamına dokunulmaz.',
+    },
+    UPDATE_FAILED: {
+      title: 'Güncelleme başarısız',
+      body: 'Ham kayda bak. İnternet bağlantısı gerekir.',
+    },
     FORBIDDEN_ORIGIN: {
       title: 'İstek reddedildi',
       body: 'Bu istek uygulamanın kendi penceresinden gelmedi.',
@@ -517,6 +642,7 @@ export const tr = {
     kbps: 'kbps',
     mbps: 'Mbps',
     khz: 'kHz',
+    fps: 'fps',
   },
 } as const;
 

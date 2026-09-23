@@ -48,14 +48,22 @@ Proof: `./scripts/check.sh`. The e2e suite downloads generated test media throug
 yt-dlp + FFmpeg pipeline and checks every output with `ffprobe`; `tests/test_jobs_api.py`
 proves a cancelled download *resumes* (the retry sends an HTTP Range request).
 
-## M3 — Library and Settings
+## M3 — Library and Settings ✅ done
 
-- [ ] Settings screen (download folder, naming template, concurrency, default mode, theme);
-      the API (`GET/PUT /api/settings`) already exists since M2
-- [ ] SQLite catalogue of every finished job (source, site, uploader, tracks, paths, size, preset)
-- [ ] Grid and list views, search, sort, filters, reveal in Finder, open in external player
-- [ ] Missing-file scan with a badge, path repair on size+duration match
-- [ ] Move to Trash behind a confirmation
+- [x] SQLite catalogue of every finished download: source, site, channel, dates, tracks (from
+      ffprobe), files, size, thumbnail (a video frame, or an audio file's cover)
+- [x] Grid and list views, search, sort, site/kind/missing filters, open in the default player,
+      reveal in Finder — by item id, never by arbitrary path
+- [x] Missing-file scan (on start-up and on demand): "Eksik" badge; a moved file is re-linked
+      when size *and* duration match (download folder by size, then Spotlight by name), never
+      to a file another item already owns
+- [x] Move to Trash behind a native confirmation dialog whose default is "Vazgeç"
+- [x] Settings screen: download folder (native macOS picker), naming template with live
+      preview, concurrency, default mode, theme, clipboard watcher (opt-in), notifications
+- [x] One-click yt-dlp update in Sistem (upgrades `uv.lock`, so it survives the next launch)
+- [x] Opt-in clipboard watcher offering to inspect a copied link
+
+Proof: `./scripts/check.sh` (now also fails if the e2e server logged an exception).
 
 ## M4 — Studio core
 

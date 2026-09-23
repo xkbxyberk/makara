@@ -138,6 +138,7 @@ export interface Job {
   item_index: number | null;
   item_count: number | null;
   output_files: string[];
+  warnings: { code: string; key?: string }[];
   error_code: string | null;
   error_raw: string | null;
   created_at: number;
@@ -149,6 +150,64 @@ export interface Settings {
   filename_template: string;
   concurrency: number;
   default_mode: Mode;
+  clipboard_watch: boolean;
+  notifications: boolean;
+}
+
+export interface LibraryTrack {
+  codec: string | null;
+  language: string | null;
+  default: boolean;
+  width: number | null;
+  height: number | null;
+  channels: number | null;
+}
+
+export interface LibraryItem {
+  id: string;
+  job_id: string | null;
+  title: string | null;
+  source_url: string | null;
+  site: string | null;
+  channel: string | null;
+  upload_date: string | null;
+  mode: Mode | null;
+  kind: 'video' | 'audio';
+  status: 'ok' | 'missing' | 'trashed';
+  primary_path: string;
+  size: number | null;
+  duration: number | null;
+  files: { path: string; size: number | null; role: string }[];
+  tracks: { video: LibraryTrack[]; audio: LibraryTrack[]; subtitle: LibraryTrack[] };
+  thumbnail: string | null;
+  added_at: number;
+}
+
+export interface LibraryPage {
+  items: LibraryItem[];
+  facets: { sites: string[]; count: number; total_size: number; missing: number };
+}
+
+export interface LibraryQuery {
+  search: string;
+  site: string;
+  kind: string;
+  status: string;
+  sort: string;
+}
+
+export interface ScanResult {
+  checked: number;
+  missing: number;
+  repaired: number;
+  restored: number;
+}
+
+export interface UpdateResult {
+  before: { version: string };
+  after: { version: string };
+  changed: boolean;
+  log: string;
 }
 
 export interface VideoModel {
@@ -246,7 +305,29 @@ export const api = {
   remove: (id: string) =>
     request<{ ok: boolean }>(`/api/jobs/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   settings: () => request<Settings>('/api/settings'),
+  saveSettings: (settings: Settings) =>
+    request<Settings>('/api/settings', { method: 'PUT', body: JSON.stringify(settings) }),
+  previewTemplate: (template: string, sample: Record<string, string>) =>
+    request<{ filename: string }>('/api/settings/preview-template', post({ template, sample })),
+  pickFolder: (prompt: string) =>
+    request<{ path: string | null }>('/api/system/pick-folder', post({ prompt })),
+  updateYtdlp: () => request<UpdateResult>('/api/system/update-ytdlp', post({})),
+  library: (query: LibraryQuery) => {
+    const params = new URLSearchParams(
+      Object.entries(query).filter(([, value]) => value !== '') as [string, string][],
+    );
+    return request<LibraryPage>(`/api/library?${params.toString()}`);
+  },
+  scanLibrary: () => request<ScanResult>('/api/library/scan', post({})),
+  openItem: (id: string) =>
+    request<{ opened: boolean }>(`/api/library/${encodeURIComponent(id)}/open`, post({})),
+  revealItem: (id: string) =>
+    request<{ shown: boolean }>(`/api/library/${encodeURIComponent(id)}/reveal`, post({})),
+  trashItem: (id: string) =>
+    request<LibraryItem>(`/api/library/${encodeURIComponent(id)}/trash`, post({})),
+  thumbnailUrl: (id: string) => `/api/library/${encodeURIComponent(id)}/thumbnail`,
   notify: (title: string, body: string) =>
     request<{ shown: boolean }>('/api/notify', post({ title, body })),
-  reveal: (path: string) => request<{ shown: boolean }>('/api/reveal', post({ path })),
+  revealJobFile: (id: string, index: number) =>
+    request<{ shown: boolean }>(`/api/jobs/${encodeURIComponent(id)}/reveal`, post({ index })),
 };

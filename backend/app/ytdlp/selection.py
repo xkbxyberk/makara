@@ -25,6 +25,13 @@ def is_compatible_video(fmt: dict[str, Any]) -> bool:
     return codec_family(fmt.get("vcodec")) in _COMPAT_VIDEO
 
 
+def _compat_rank(fmt: dict[str, Any]) -> int:
+    """2: known to play on Apple devices. 1: codec unknown but an .mp4 -- probably does."""
+    if is_compatible_video(fmt):
+        return 2
+    return 1 if fmt.get("vcodec") is None and fmt.get("ext") == "mp4" else 0
+
+
 def is_compatible_audio(fmt: dict[str, Any]) -> bool:
     return codec_family(fmt.get("acodec")) in _COMPAT_AUDIO
 
@@ -47,7 +54,7 @@ def pick_video(model: dict[str, Any], mode: str) -> dict[str, Any] | None:
 
         def key(f: dict[str, Any]) -> tuple[Any, ...]:
             return (
-                is_compatible_video(f),
+                _compat_rank(f),
                 -_variant_penalty(f),
                 f.get("height") or 0,
                 not f.get("is_manifest"),

@@ -98,16 +98,26 @@ function JobRow({ job }: { job: Job }) {
       {job.status === 'failed' && <JobError job={job} />}
       {job.status === 'done' && job.output_files.length > 0 && (
         <ul className="job-files">
-          {job.output_files.map((file) => (
+          {job.output_files.map((file, index) => (
             <li key={file}>
               <span className="mono path">{file.split('/').slice(-2).join('/')}</span>
-              <button type="button" className="btn btn-quiet" onClick={act(() => api.reveal(file))}>
+              <button
+                type="button"
+                className="btn btn-quiet"
+                onClick={act(() => api.revealJobFile(job.id, index))}
+              >
                 {tr.queue.reveal}
               </button>
             </li>
           ))}
         </ul>
       )}
+      {job.status === 'done' &&
+        (job.warnings ?? []).map((warning) => (
+          <Notice key={`${warning.code}-${warning.key}`} tone="warn">
+            {tr.queue.warnings[warning.code]?.(warning.key ?? '') ?? warning.code}
+          </Notice>
+        ))}
       {failure && (
         <Notice tone="danger">
           {(tr.errors as Record<string, { title: string }>)[failure]?.title ?? failure}

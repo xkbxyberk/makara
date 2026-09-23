@@ -14,5 +14,16 @@ step "eslint";             (cd frontend && npx eslint .)
 step "vitest";             (cd frontend && npx vitest run)
 step "frontend build";     (cd frontend && npm run build)
 step "playwright (e2e)";   (cd frontend && npx playwright test)
+step "server log is clean"
+# A request can fail inside the server while every UI assertion still passes; don't let it hide.
+if ! grep -q "VideoDownloader listening" test-results/e2e-server.log; then
+  echo "The e2e server log was not captured, so it cannot be checked." >&2
+  exit 1
+fi
+if grep -n "Traceback\|Exception in ASGI" test-results/e2e-server.log; then
+  echo "The server logged an exception during the e2e run (see above)." >&2
+  exit 1
+fi
+echo "no exceptions in test-results/e2e-server.log"
 
 printf '\n\033[32m\033[1mALL CHECKS PASSED\033[0m\n'

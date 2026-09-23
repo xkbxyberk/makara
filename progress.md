@@ -103,4 +103,45 @@ endpoint lets a test cancel mid-download and prove the retry *resumed*.
 **Deviations from the plan:** SQLAlchemy was dropped in favour of plain `sqlite3` — one small
 table does not earn an ORM. The Settings *screen* moves to M3 (its API exists).
 
-**Next:** adversarial review of M2, then M3 — Library and Settings.
+## 2026-09-23 — adversarial review of M2, and M3: library and settings
+
+**The M2 review found 16 gaps; the reviewer reproduced most of them against the real code.**
+All fixed, each with a regression test:
+- **HIGH — a title of `..` wrote outside the download folder** (the `..` check ran before the
+  extension was stripped). Naming now neutralises `.`/`..` from fields, refuses them in the
+  template, trims components to 200 bytes, and claims a whole set of names atomically.
+- **HIGH — cancel's delayed SIGKILL killed a retry started within 5 s**; the timer looked the
+  job up by id. It is now bound to the process object and cancelled when that process exits.
+- The concurrency limit could be exceeded, and a cancel lost, in the window before a worker
+  process exists. Jobs are counted from the moment they are picked; a pending cancel is acted
+  on as soon as the process appears. An exception inside `_run` no longer strands a job.
+- The compatible-MP4 plan claimed "copy" for unknown codecs; it now says "probe" and warns.
+  Audio-only mode states whether it copies or re-encodes.
+- ⌘↵ worked from other screens and on key repeat; İndir could start on a plan computed for an
+  older selection. Repeat separate-file downloads kept sidecars on the old base name. Audio mode
+  ignored "keep cover as file". Unreadable subtitles (TTML) sank the whole job; they are now
+  skipped with a warning. FFmpeg children could write into the event stream (`dup2`).
+
+**Three bugs found by our own tests during M3:**
+- The e2e suite caught the missing-file scan re-linking a deleted download to *another item's*
+  byte-identical copy. Candidates owned by another item are now excluded.
+- The e2e server log showed `sqlite3.InterfaceError` while every UI assertion passed: the
+  library's connection was used from several threads. It now has its own connection and a lock;
+  a test hammering it from 8 threads fails 7 of 8 without the lock. `check.sh` now fails on any
+  server traceback during e2e, and verifies the log was actually captured.
+- Audio items had no library thumbnail: an input seek to 0 drops the cover-art packet and
+  FFmpeg exits 0 having written nothing. The worker test now asserts the thumbnail exists.
+
+**A mistake in my own docs, corrected:** the README said to update yt-dlp with
+`uv pip install -U`. `uv run` syncs the venv to `uv.lock` on every launch, so that update would
+be silently reverted. The Doctor's button and all docs now upgrade the lock file.
+
+**Test hygiene:** worker tests had been writing thumbnails into the real
+`~/Library/Application Support/VideoDownloader`. That folder held only test artefacts (an empty
+database and 82 `job<n>.jpg` files; the app had never been run for real) and was removed. An
+autouse fixture now isolates every test, and the session fails if a real folder is touched.
+
+**Not done, deliberately:** requeued jobs whose old worker survived a server crash are not killed
+by pid (pid reuse could kill an unrelated process); the orphan dies on its broken pipe instead.
+
+**Next:** adversarial review of M3, then M4 — Studio core.

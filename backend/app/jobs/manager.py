@@ -16,6 +16,7 @@ import shutil
 import signal
 import sys
 import time
+import traceback
 from collections import deque
 from collections.abc import Callable
 from pathlib import Path
@@ -45,11 +46,20 @@ def public(job: dict[str, Any]) -> dict[str, Any]:
 
 
 class JobManager:
-    def __init__(self, store: JobStore, get_settings: Callable[[], Settings]) -> None:
+    def __init__(
+        self,
+        store: JobStore,
+        get_settings: Callable[[], Settings],
+        on_done: Callable[[dict[str, Any], dict[str, Any]], None] | None = None,
+    ) -> None:
         self.store = store
         self.get_settings = get_settings
+        self.on_done = on_done
         self.procs: dict[str, asyncio.subprocess.Process] = {}
+        # Jobs from "picked" to "process exited" -- includes the window before a process exists.
+        self.active: set[str] = set()
         self.cancelling: set[str] = set()
+        self._kill_timers: dict[str, asyncio.TimerHandle] = {}
         self.subscribers: set[asyncio.Queue[dict[str, Any]]] = set()
         self._wake = asyncio.Event()
         self._event_loop: asyncio.AbstractEventLoop | None = None
@@ -116,11 +126,15 @@ class JobManager:
         while True:
             await self._wake.wait()
             self._wake.clear()
-            free = self.get_settings().concurrency - len(self.procs)
+            # `active`, not `procs`: a worker only appears in `procs` once its process has
+            # spawned, and several wake-ups can land in that window.
+            free = self.get_settings().concurrency - len(self.active)
             if free <= 0:
                 continue
             for job in self.store.next_queued(free):
-                # Mark it running *before* the task starts, so it cannot be picked twice.
+                # Claim it *before* the task starts, so it can be neither picked twice nor
+                # miscounted.
+                self.active.add(job["id"])
                 self._update(
                     job["id"],
                     status="running",
@@ -135,6 +149,40 @@ class JobManager:
 
     async def _run(self, job: dict[str, Any]) -> None:
         job_id = job["id"]
+        try:
+            await self._run_worker(job)
+        except asyncio.CancelledError:
+            raise  # server shutdown: the row stays "running" and is requeued on the next start
+        except Exception:
+            # Nothing may leave a job stuck in "running" where it can be neither cancelled,
+            # retried nor removed.
+            proc = self.procs.get(job_id)
+            if proc is not None:
+                self._signal_proc(proc, signal.SIGKILL)
+            self._update(
+                job_id,
+                status="failed",
+                stage="failed",
+                speed=None,
+                eta=None,
+                error_code="WORKER_CRASHED",
+                error_raw=traceback.format_exc()[-8000:],
+                finished_at=time.time(),
+            )
+        finally:
+            self.active.discard(job_id)
+            self.procs.pop(job_id, None)
+            self.cancelling.discard(job_id)
+            timer = self._kill_timers.pop(job_id, None)
+            if timer is not None:
+                timer.cancel()
+            self.wake()
+
+    async def _run_worker(self, job: dict[str, Any]) -> None:
+        job_id = job["id"]
+        if job_id in self.cancelling:  # cancelled while it was being picked
+            self._finish_cancelled(job_id)
+            return
         env = dict(os.environ)
         backend_dir = str(paths.PROJECT_ROOT / "backend")
         env["PYTHONPATH"] = backend_dir + (
@@ -164,9 +212,10 @@ class JobManager:
                 error_raw=str(exc),
                 finished_at=time.time(),
             )
-            self.wake()
             return
         self.procs[job_id] = proc
+        if job_id in self.cancelling:  # a cancel arrived while the process was spawning
+            self._terminate(job_id, proc)
         assert proc.stdin and proc.stdout and proc.stderr
         proc.stdin.write(json.dumps(job["request"]).encode())
         await proc.stdin.drain()
@@ -183,26 +232,19 @@ class JobManager:
                 try:
                     event = json.loads(raw)
                 except ValueError:
+                    event = None
+                if not isinstance(event, dict):
                     stderr_tail.append(raw.decode(errors="replace").rstrip())
                     continue
                 self._apply(job_id, event, outcome)
             await proc.wait()
             await stderr_task
         finally:
-            self.procs.pop(job_id, None)
             if proc.returncode is None:
                 self._signal_proc(proc, signal.SIGKILL)
 
         if job_id in self.cancelling:
-            self.cancelling.discard(job_id)
-            self._update(
-                job_id,
-                status="cancelled",
-                stage="cancelled",
-                speed=None,
-                eta=None,
-                finished_at=time.time(),
-            )
+            self._finish_cancelled(job_id)
         elif "files" in outcome:
             self._update(
                 job_id,
@@ -212,8 +254,14 @@ class JobManager:
                 speed=None,
                 eta=None,
                 output_files=outcome["files"],
+                warnings=outcome.get("warnings") or [],
                 finished_at=time.time(),
             )
+            if self.on_done is not None:
+                try:
+                    self.on_done(job, outcome)
+                except Exception as exc:  # the file is safely on disk either way
+                    self.publish({"type": "library_error", "id": job_id, "raw": str(exc)})
         else:
             code = outcome.get("code") or "WORKER_CRASHED"
             detail = outcome.get("raw") or "\n".join(stderr_tail) or f"exit {proc.returncode}"
@@ -227,7 +275,16 @@ class JobManager:
                 error_raw=str(detail)[-8000:],
                 finished_at=time.time(),
             )
-        self.wake()
+
+    def _finish_cancelled(self, job_id: str) -> None:
+        self._update(
+            job_id,
+            status="cancelled",
+            stage="cancelled",
+            speed=None,
+            eta=None,
+            finished_at=time.time(),
+        )
 
     def _apply(self, job_id: str, event: dict[str, Any], outcome: dict[str, Any]) -> None:
         kind = event.get("t")
@@ -247,6 +304,9 @@ class JobManager:
             )
         elif kind == "done":
             outcome["files"] = event.get("files") or []
+            outcome["outputs"] = event.get("outputs") or []
+            outcome["meta"] = event.get("meta") or {}
+            outcome["warnings"] = event.get("warnings") or []
         elif kind == "error":
             outcome.update(code=event.get("code"), raw=event.get("raw"))
 
@@ -259,19 +319,31 @@ class JobManager:
             return self._update(
                 job_id, status="cancelled", stage="cancelled", finished_at=time.time()
             )
-        if job["status"] == "running" and job_id in self.procs:
+        if job["status"] == "running" and job_id not in self.cancelling:
             self.cancelling.add(job_id)
             self._update(job_id, stage="cancelling")
-            self._signal(job_id, signal.SIGTERM)
-            if self._event_loop is not None:
-                self._on_loop(
-                    self._event_loop.call_later,
-                    CANCEL_GRACE_SECONDS,
-                    self._signal,
-                    job_id,
-                    signal.SIGKILL,
-                )
+            proc = self.procs.get(job_id)
+            if proc is not None:
+                self._terminate(job_id, proc)
+            # No process yet: _run_worker acts on the flag the moment the process exists.
         return self.store.get(job_id)
+
+    def _terminate(self, job_id: str, proc: asyncio.subprocess.Process) -> None:
+        self._signal_proc(proc, signal.SIGTERM)
+        self._on_loop(self._arm_kill_timer, job_id, proc)
+
+    def _arm_kill_timer(self, job_id: str, proc: asyncio.subprocess.Process) -> None:
+        if self._event_loop is None:
+            return
+        # Bound to *this* process object, and cancelled when it exits: a retry started within
+        # the grace period runs in a new process that this timer must never touch.
+        self._kill_timers[job_id] = self._event_loop.call_later(
+            CANCEL_GRACE_SECONDS, self._kill_if_alive, proc
+        )
+
+    def _kill_if_alive(self, proc: asyncio.subprocess.Process) -> None:
+        if proc.returncode is None:
+            self._signal_proc(proc, signal.SIGKILL)
 
     def retry(self, job_id: str) -> dict[str, Any] | None:
         job = self.store.get(job_id)

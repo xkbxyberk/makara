@@ -22,6 +22,8 @@ class Settings:
     filename_template: str = DEFAULT_TEMPLATE
     concurrency: int = 2
     default_mode: str = "mkv"
+    clipboard_watch: bool = False  # opt-in, agreed with Berk
+    notifications: bool = True
 
     def __post_init__(self) -> None:
         if not self.download_dir:

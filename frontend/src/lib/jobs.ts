@@ -8,12 +8,20 @@ export type Connection = 'connecting' | 'open' | 'reconnecting';
  * then one event per change; EventSource reconnects by itself, and each reconnect brings a
  * fresh snapshot, so nothing is ever missed or double-applied.
  */
-export function useJobs(onTransition?: (job: Job, previous: Job | undefined) => void) {
+export interface ServerEventHandlers {
+  onTransition?: (job: Job, previous: Job | undefined) => void;
+  /** The opt-in clipboard watcher saw a link being copied. */
+  onClipboard?: (url: string) => void;
+  /** A finished download was added to the library. */
+  onLibrary?: () => void;
+}
+
+export function useJobs(handlers: ServerEventHandlers = {}) {
   const [jobs, setJobs] = useState<Job[] | null>(null);
   const [connection, setConnection] = useState<Connection>('connecting');
   const known = useRef(new Map<string, Job>());
-  const transition = useRef(onTransition);
-  transition.current = onTransition;
+  const latest = useRef(handlers);
+  latest.current = handlers;
 
   useEffect(() => {
     const source = new EventSource('/api/events');
@@ -32,7 +40,7 @@ export function useJobs(onTransition?: (job: Job, previous: Job | undefined) => 
       const { job } = JSON.parse((event as MessageEvent<string>).data) as { job: Job };
       const previous = known.current.get(job.id);
       known.current.set(job.id, job);
-      if (previous?.status !== job.status) transition.current?.(job, previous);
+      if (previous?.status !== job.status) latest.current.onTransition?.(job, previous);
       publish();
     });
     source.addEventListener('removed', (event) => {
@@ -40,6 +48,11 @@ export function useJobs(onTransition?: (job: Job, previous: Job | undefined) => 
       known.current.delete(id);
       publish();
     });
+    source.addEventListener('clipboard', (event) => {
+      const { url } = JSON.parse((event as MessageEvent<string>).data) as { url: string };
+      latest.current.onClipboard?.(url);
+    });
+    source.addEventListener('library', () => latest.current.onLibrary?.());
     return () => source.close();
   }, []);
 

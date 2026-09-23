@@ -244,9 +244,32 @@ def test_settings_reject_a_template_that_escapes_the_root(app_env: Any) -> None:
     assert response.json()["error"]["code"] == "INVALID_TEMPLATE"
 
 
-def test_reveal_refuses_paths_outside_the_download_root(app_env: Any) -> None:
-    response = app_env().post("/api/reveal", json={"path": "/etc/hosts"})
-    assert response.json()["error"]["code"] == "PATH_OUTSIDE_ROOT"
+def test_reveal_works_by_job_and_file_index_only(app_env: Any) -> None:
+    client = app_env()
+    model = inspect(client)
+    job = client.post(
+        "/api/jobs",
+        json={
+            "inspect_id": model["inspect_id"],
+            "mode": "audio",
+            "audio_format_ids": ["a-en-m4a"],
+            "audio_codec": "m4a",
+        },
+    ).json()
+    wait_for(client, job["id"], lambda j: j["status"] == "done")
+    assert client.post(f"/api/jobs/{job['id']}/reveal", json={"index": 0}).status_code == 200
+    assert client.post(f"/api/jobs/{job['id']}/reveal", json={"index": 5}).status_code == 404
+    assert client.post("/api/jobs/nope/reveal", json={"index": 0}).status_code == 404
+    # There is no endpoint that reveals an arbitrary path any more.
+    assert client.post("/api/reveal", json={"path": "/etc/hosts"}).status_code in (404, 405)
+
+
+def test_the_disk_root_is_refused_as_a_download_folder(app_env: Any) -> None:
+    client = app_env()
+    settings = client.get("/api/settings").json()
+    for unsafe in ("/", "/System", "/Users"):
+        response = client.put("/api/settings", json={**settings, "download_dir": unsafe})
+        assert response.json()["error"]["code"] == "DOWNLOAD_DIR_UNSAFE"
 
 
 def test_events_stream_snapshot_then_live_updates(
@@ -306,3 +329,128 @@ def test_events_stream_snapshot_then_live_updates(
         server.should_exit = True
         thread.join(timeout=10)
     assert not thread.is_alive(), "server did not shut down with an event stream attached"
+
+
+def test_a_retry_within_the_kill_grace_period_is_not_killed(
+    app_env: Any, media_server: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The delayed SIGKILL of a cancel must hit the cancelled process, never its retry."""
+    from app.jobs import manager as manager_module
+
+    monkeypatch.setattr(manager_module, "CANCEL_GRACE_SECONDS", 0.4)
+    client = app_env(f"{media_server}/slow")
+    model = inspect(client)
+    job = client.post(
+        "/api/jobs",
+        json={
+            "inspect_id": model["inspect_id"],
+            "mode": "separate",
+            "video_format_id": "v-vp9",
+            "extras": {"thumbnail": False},
+        },
+    ).json()
+    wait_for(client, job["id"], lambda j: j["stage"] == "downloading")
+    client.post(f"/api/jobs/{job['id']}/cancel")
+    wait_for(client, job["id"], lambda j: j["status"] == "cancelled")
+    client.post(f"/api/jobs/{job['id']}/retry")
+    done = wait_for(client, job["id"], lambda j: j["status"] in ("done", "failed"))
+    assert done["status"] == "done", done["error_raw"]
+
+
+def test_parallel_submissions_never_exceed_the_concurrency_limit(
+    app_env: Any, media_server: str
+) -> None:
+    import threading
+
+    client = app_env(f"{media_server}/slow")
+    settings = client.get("/api/settings").json()
+    client.put("/api/settings", json={**settings, "concurrency": 1})
+    model = inspect(client)
+    body = {
+        "inspect_id": model["inspect_id"],
+        "mode": "separate",
+        "video_format_id": "v-vp9",
+        "extras": {"thumbnail": False},
+    }
+    threads = [
+        threading.Thread(target=lambda: client.post("/api/jobs", json=body)) for _ in range(6)
+    ]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    peak = 0
+    deadline = time.monotonic() + 2.5
+    while time.monotonic() < deadline:
+        jobs = client.get("/api/jobs").json()
+        peak = max(peak, sum(1 for j in jobs if j["status"] == "running"))
+        time.sleep(0.02)
+    assert len(client.get("/api/jobs").json()) == 6
+    assert peak == 1
+    for job in client.get("/api/jobs").json():
+        client.post(f"/api/jobs/{job['id']}/cancel")
+
+
+def test_a_cancel_right_after_submitting_is_never_lost(app_env: Any, media_server: str) -> None:
+    client = app_env(f"{media_server}/slow")
+    model = inspect(client)
+    job = client.post(
+        "/api/jobs",
+        json={
+            "inspect_id": model["inspect_id"],
+            "mode": "separate",
+            "video_format_id": "v-vp9",
+            "extras": {"thumbnail": False},
+        },
+    ).json()
+    client.post(f"/api/jobs/{job['id']}/cancel")
+    final = wait_for(client, job["id"], lambda j: j["status"] in ("cancelled", "done", "failed"))
+    assert final["status"] == "cancelled"
+    assert final["output_files"] == []
+
+
+def test_a_job_interrupted_by_a_restart_is_requeued_and_resumed(
+    app_env: Any, media_server: str
+) -> None:
+    client = app_env(f"{media_server}/slow")
+    model = inspect(client)
+    MEDIA_REQUESTS.clear()
+    job = client.post(
+        "/api/jobs",
+        json={
+            "inspect_id": model["inspect_id"],
+            "mode": "separate",
+            "video_format_id": "v-vp9",
+            "extras": {"thumbnail": False},
+        },
+    ).json()
+    wait_for(client, job["id"], lambda j: j["stage"] == "downloading" and j["progress"] > 0.2)
+    client.__exit__(None, None, None)  # the server stops mid-download
+    restarted = app_env(f"{media_server}/slow")
+    done = wait_for(restarted, job["id"], lambda j: j["status"] in ("done", "failed"))
+    assert done["status"] == "done", done["error_raw"]
+    assert any(r["range_start"] for r in MEDIA_REQUESTS if r["path"].endswith("video_vp9.webm"))
+
+
+def test_identical_downloads_keep_their_own_files_when_one_is_deleted(app_env: Any) -> None:
+    client = app_env()
+    model = inspect(client)
+    body = {
+        "inspect_id": model["inspect_id"],
+        "mode": "audio",
+        "audio_format_ids": ["a-en-m4a"],
+        "audio_codec": "m4a",
+    }
+    first = wait_for(
+        client, client.post("/api/jobs", json=body).json()["id"], lambda j: j["status"] == "done"
+    )
+    wait_for(
+        client, client.post("/api/jobs", json=body).json()["id"], lambda j: j["status"] == "done"
+    )
+    deleted = first["output_files"][0]
+    Path(deleted).unlink()
+    client.post("/api/library/scan")
+    items = client.get("/api/library").json()["items"]
+    primaries = [i["primary_path"] for i in items]
+    assert len(set(primaries)) == 2, "two records now point at the same file"
+    assert any(i["status"] == "missing" for i in items)

@@ -23,6 +23,21 @@ router = APIRouter(prefix="/api")
 Mode = Literal["mkv", "compat_mp4", "separate", "audio"]
 AudioCodec = Literal["mp3", "m4a", "opus", "flac", "wav"]
 SSE_KEEPALIVE_SECONDS = 5
+# Downloads create folders and the library reveals files under this root; never the disk itself.
+UNSAFE_DOWNLOAD_DIRS = {
+    Path(p).resolve()
+    for p in (
+        "/",
+        "/System",
+        "/Library",
+        "/Applications",
+        "/usr",
+        "/bin",
+        "/etc",
+        "/private",
+        "/Users",
+    )
+}
 
 
 class Extras(BaseModel):
@@ -49,6 +64,8 @@ class SettingsBody(BaseModel):
     filename_template: str = Field(min_length=1, max_length=500)
     concurrency: int = Field(ge=1, le=6)
     default_mode: Mode
+    clipboard_watch: bool = False
+    notifications: bool = True
 
 
 class NotifyBody(BaseModel):
@@ -57,7 +74,7 @@ class NotifyBody(BaseModel):
 
 
 class RevealBody(BaseModel):
-    path: str = Field(min_length=1, max_length=4096)
+    index: int = Field(ge=0, lt=1000)
 
 
 def _manager(request: Request) -> JobManager:
@@ -162,6 +179,8 @@ async def put_settings(body: SettingsBody, request: Request) -> Any:
     directory = Path(body.download_dir).expanduser()
     if not directory.is_absolute():
         return _error(errors.AppError(code="DOWNLOAD_DIR_NOT_ABSOLUTE", raw=body.download_dir))
+    if directory.resolve() in UNSAFE_DOWNLOAD_DIRS:
+        return _error(errors.AppError(code="DOWNLOAD_DIR_UNSAFE", raw=body.download_dir))
     saved = settings_store.save(
         settings_store.Settings(**{**body.model_dump(), "download_dir": str(directory)})
     )
@@ -174,9 +193,16 @@ def post_notify(body: NotifyBody) -> dict[str, bool]:
     return {"shown": notify.notify(body.title, body.body)}
 
 
-@router.post("/reveal")
-def post_reveal(body: RevealBody) -> Any:
+@router.post("/jobs/{job_id}/reveal")
+async def post_reveal(job_id: str, body: RevealBody, request: Request) -> Any:
+    """Select one of a job's output files in Finder -- checked against *that job's* folder, so
+    it keeps working after the download folder setting changes, and reveals nothing else."""
+    job = _manager(request).store.get(job_id)
+    files = (job or {}).get("output_files") or []
+    if job is None or body.index >= len(files):
+        return _error(errors.AppError(code="JOB_NOT_FOUND"), 404)
+    root = Path(job["request"]["download_dir"])
     try:
-        return {"shown": notify.reveal(body.path, Path(settings_store.load().download_dir))}
+        return {"shown": notify.reveal(files[body.index], root)}
     except errors.AppError as exc:
-        return _error(exc)
+        return _error(exc, 409)

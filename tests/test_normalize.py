@@ -190,3 +190,38 @@ def test_non_youtube_site_with_unknown_codecs(other_site: dict[str, Any]) -> Non
     assert len(model["muxed_formats"]) == 3
     assert model["video_formats"] == []
     assert model["subtitles"]["manual"] == []
+
+
+def test_compat_plan_is_honest_when_the_site_gives_no_codecs(other_site: dict[str, Any]) -> None:
+    from app.ytdlp import compat, selection
+
+    model = normalize(other_site)
+    chosen = selection.default_selection(model, "compat_mp4")
+    advice = compat.advise(model, mode="compat_mp4", **chosen)
+    assert advice["plan"]["video"] == "probe"  # never a confident "copy"
+    assert advice["plan"]["audio"] == ["probe"]  # the muxed format's own sound is planned for
+    assert "CODEC_UNKNOWN" in {n["code"] for n in advice["notices"]}
+
+
+def test_audio_mode_says_whether_it_copies_or_reencodes(multi_audio: dict[str, Any]) -> None:
+    from app.ytdlp import compat
+
+    model = normalize(multi_audio)
+    opus = next(t for t in model["audio_languages"][0]["tracks"] if t["acodec_label"] == "Opus")
+    aac = next(t for t in model["audio_languages"][0]["tracks"] if t["acodec_label"] == "AAC")
+
+    def plan(track: dict[str, Any], codec: str) -> tuple[list[str], set[str]]:
+        advice = compat.advise(
+            model,
+            mode="audio",
+            video_format_id=None,
+            audio_format_ids=[track["format_id"]],
+            subtitle_keys=[],
+            audio_codec=codec,
+        )
+        return advice["plan"]["audio"], {n["code"] for n in advice["notices"]}
+
+    assert plan(aac, "m4a") == (["copy"], {"AUDIO_MODE_COPY"})
+    assert plan(opus, "opus") == (["copy"], {"AUDIO_MODE_COPY"})
+    assert plan(opus, "mp3") == (["transcode"], {"AUDIO_MODE_REENCODE"})
+    assert plan(aac, "flac") == (["transcode"], {"LOSSLESS_FROM_LOSSY"})

@@ -17,6 +17,19 @@ MEDIA_DIR = Path(__file__).parent / "fixtures" / "media"
 MEDIA_REQUESTS: list[dict[str, Any]] = []  # what the throttled endpoint was asked for
 
 
+@pytest.fixture(autouse=True)
+def isolated_app_dirs(
+    tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """No test may write to Berk's real ~/Library/Application Support or ~/Movies folders.
+
+    Tests that need specific folders set these again themselves; this is the safety net.
+    """
+    base = tmp_path_factory.mktemp("app")
+    monkeypatch.setenv("VD_DATA_DIR", str(base / "data"))
+    monkeypatch.setenv("VD_DOWNLOAD_DIR", str(base / "downloads"))
+
+
 def load_fixture(name: str) -> dict[str, Any]:
     return json.loads((FIXTURE_DIR / f"{name}.json").read_text())
 
@@ -44,8 +57,15 @@ def other_site() -> dict[str, Any]:
 @pytest.fixture(scope="session")
 def test_media() -> Path:
     """FFmpeg-generated clips (testsrc/sine). Built on demand, never downloaded."""
-    if not (MEDIA_DIR / "info.json").exists():
-        script = Path(__file__).parent.parent / "scripts" / "make_test_media.py"
+    script = Path(__file__).parent.parent / "scripts" / "make_test_media.py"
+    wanted = next(
+        int(line.split("=")[1].split("#")[0])
+        for line in script.read_text().splitlines()
+        if line.startswith("MEDIA_VERSION")
+    )
+    info = MEDIA_DIR / "info.json"
+    current = json.loads(info.read_text()).get("_media_version") if info.exists() else None
+    if current != wanted:
         subprocess.run([sys.executable, str(script)], check=True)
     return MEDIA_DIR
 
@@ -100,3 +120,17 @@ def media_server(test_media: Path) -> Iterator[str]:
 def local_info(media_server: str, test_media: Path) -> dict[str, Any]:
     text = (test_media / "info.json").read_text()
     return json.loads(text.replace("{base}", media_server))
+
+
+def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
+    """Fail loudly if anything still leaked into the real app folders."""
+    from app import paths
+
+    for real in (paths.APP_SUPPORT_DIR, paths.DEFAULT_DOWNLOAD_DIR):
+        if real.exists() and real.stat().st_mtime > session.config._vd_started:  # type: ignore[attr-defined]
+            session.exitstatus = pytest.ExitCode.TESTS_FAILED
+            print(f"\nERROR: the test run wrote to {real}")
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    config._vd_started = time.time()  # type: ignore[attr-defined]

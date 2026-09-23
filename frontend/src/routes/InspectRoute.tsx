@@ -413,7 +413,16 @@ function PlaylistView({ model, onInspect }: { model: PlaylistModel; onInspect: (
   );
 }
 
-export function InspectRoute({ onOpenQueue }: { onOpenQueue: () => void }) {
+export function InspectRoute({
+  active,
+  onOpenQueue,
+  request,
+}: {
+  active: boolean;
+  onOpenQueue: () => void;
+  /** An inspect started from elsewhere (the clipboard banner). */
+  request: { url: string; n: number } | null;
+}) {
   const [url, setUrl] = useState('');
   const [state, setState] = useState<State>({ phase: 'empty' });
   const inputRef = useRef<HTMLInputElement>(null);
@@ -435,8 +444,13 @@ export function InspectRoute({ onOpenQueue }: { onOpenQueue: () => void }) {
     }
   }, []);
 
+  useEffect(() => {
+    if (request) void run(request.url);
+  }, [request, run]);
+
   // Cmd+V anywhere starts an inspect, as long as the user is not typing in a field.
   useEffect(() => {
+    if (!active) return;
     const onPaste = (event: ClipboardEvent) => {
       const target = event.target as HTMLElement | null;
       if (target && ['INPUT', 'TEXTAREA'].includes(target.tagName)) return;
@@ -448,7 +462,7 @@ export function InspectRoute({ onOpenQueue }: { onOpenQueue: () => void }) {
     };
     window.addEventListener('paste', onPaste);
     return () => window.removeEventListener('paste', onPaste);
-  }, [run]);
+  }, [run, active]);
 
   return (
     <div
@@ -505,6 +519,7 @@ export function InspectRoute({ onOpenQueue }: { onOpenQueue: () => void }) {
       {state.phase === 'ready' && state.model.kind === 'video' && (
         <ResultView
           model={state.model}
+          active={active}
           onQueued={onOpenQueue}
           onReinspect={() => void run(state.model.source_url)}
         />
@@ -515,10 +530,12 @@ export function InspectRoute({ onOpenQueue }: { onOpenQueue: () => void }) {
 
 function ResultView({
   model,
+  active,
   onQueued,
   onReinspect,
 }: {
   model: VideoModel;
+  active: boolean;
   onQueued: () => void;
   onReinspect: () => void;
 }) {
@@ -535,6 +552,7 @@ function ResultView({
       <DownloadPanel
         key={model.inspect_id}
         model={model}
+        active={active}
         onQueued={onQueued}
         onReinspect={onReinspect}
       />

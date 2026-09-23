@@ -17,8 +17,11 @@ export default defineConfig({
   webServer: {
     // Fresh database and download folder for every run; test media is generated, not fetched.
     command:
-      'rm -rf test-results/e2e-data test-results/e2e-downloads && ' +
-      'uv run python scripts/make_test_media.py && uv run python -m app.main',
+      'rm -rf test-results/e2e-data test-results/e2e-downloads test-results/e2e-server.log && ' +
+      'mkdir -p test-results && ' +
+      'uv run python scripts/make_test_media.py && ' +
+      // Everything the server logs is kept, so check.sh can fail the run on a hidden traceback.
+      'uv run python -m app.main 2>&1 | tee test-results/e2e-server.log',
     cwd: '..',
     url: 'http://127.0.0.1:8787/api/health',
     reuseExistingServer: false,

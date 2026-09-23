@@ -10,6 +10,7 @@ import shutil
 import subprocess
 from typing import Any
 
+from app.system import installed_ytdlp
 from app.ytdlp.params import find_js_runtimes
 
 OK, WARN, ERROR = "ok", "warn", "error"
@@ -66,18 +67,22 @@ def _ytdlp_check() -> dict[str, Any]:
         ejs = importlib.metadata.version("yt-dlp-ejs")
     except importlib.metadata.PackageNotFoundError:
         ejs = ""
+    installed = installed_ytdlp()
     return {
         "id": "yt_dlp",
         "status": OK if ejs else WARN,
         "values": {
-            "version": ytv.__version__,
-            "channel": ytv.CHANNEL,
+            "version": installed["version"],
+            "channel": installed["channel"],
             "origin": ytv.ORIGIN,
-            "package_version": ytv._pkg_version,
             "ejs_version": ejs,
         },
-        # pip/uv installs cannot self-update: yt-dlp reports variant "unknown" and refuses.
-        "fix": {"kind": "command", "command": 'uv pip install -U "yt-dlp[default]"'},
+        # `yt-dlp -U` refuses pip/uv installs, and `uv pip install -U` would be reverted by the
+        # next `uv run` (it syncs to uv.lock). Upgrading the lock is what sticks.
+        "fix": {
+            "kind": "command",
+            "command": "uv lock --upgrade-package yt-dlp --upgrade-package yt-dlp-ejs && uv sync",
+        },
     }
 
 

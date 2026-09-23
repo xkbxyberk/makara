@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS jobs (
     output_files  TEXT NOT NULL DEFAULT '[]',
     error_code    TEXT,
     error_raw     TEXT,
+    warnings      TEXT NOT NULL DEFAULT '[]',
     created_at    REAL NOT NULL,
     started_at    REAL,
     finished_at   REAL
@@ -34,7 +35,9 @@ CREATE TABLE IF NOT EXISTS jobs (
 CREATE INDEX IF NOT EXISTS jobs_status ON jobs(status, created_at);
 """
 
-JSON_COLUMNS = ("request", "output_files")
+JSON_COLUMNS = ("request", "output_files", "warnings")
+# Columns added after the first release, applied to existing databases on start-up.
+MIGRATIONS = {"warnings": "ALTER TABLE jobs ADD COLUMN warnings TEXT NOT NULL DEFAULT '[]'"}
 
 
 def connect() -> sqlite3.Connection:
@@ -42,6 +45,11 @@ def connect() -> sqlite3.Connection:
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.executescript(SCHEMA)
+    existing = {row["name"] for row in conn.execute("PRAGMA table_info(jobs)")}
+    for column, statement in MIGRATIONS.items():
+        if column not in existing:
+            conn.execute(statement)
+    conn.commit()
     return conn
 
 

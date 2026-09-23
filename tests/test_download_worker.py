@@ -111,6 +111,8 @@ def test_archive_mkv_with_two_audio_languages_and_two_subtitles(
     assert progress == sorted(progress) and progress[-1] == 1.0
     # The scratch directory is gone once the file is in place.
     assert list((tmp_path / "out" / ".vd-work").iterdir()) == []
+    thumbnail = next(e for e in events if e["t"] == "done")["outputs"][0]["thumbnail"]
+    assert thumbnail and Path(thumbnail).stat().st_size > 0  # a frame from the video
 
 
 def test_compat_mp4_reencodes_only_what_quicktime_cannot_play(
@@ -174,6 +176,10 @@ def test_audio_only_mp3_with_cover_art_and_metadata(
     assert [a["codec_name"] for a in streams(output, "audio")] == ["mp3"]
     assert len(cover_art(output)) == 1
     assert info["format"]["tags"]["title"] == "Local test clip"
+    # The library grid shows the embedded cover.
+    done = next(e for e in events if e["t"] == "done")
+    thumbnail = done["outputs"][0]["thumbnail"]
+    assert thumbnail and Path(thumbnail).stat().st_size > 0
 
 
 def test_separate_files_are_named_for_players_to_autoload(
@@ -238,3 +244,88 @@ def test_an_unreachable_stream_fails_with_a_code(
     )
     assert code == 1
     assert events[-1]["t"] == "error" and events[-1]["code"] == "NETWORK"
+
+
+def test_a_title_of_dot_dot_cannot_escape_the_download_folder(
+    tmp_path: Path, local_info: dict[str, Any]
+) -> None:
+    hostile = {**local_info, "title": ".."}
+    code, events = run_job(
+        tmp_path,
+        hostile,
+        mode="audio",
+        audio_format_ids=["a-en-m4a"],
+        audio_codec="m4a",
+        filename_template="%(channel)s/%(title)s.%(ext)s",
+    )
+    assert code == 0, events[-1]
+    [output] = done_files(events)
+    root = (tmp_path / "out").resolve()
+    assert output.resolve().is_relative_to(root) and output.resolve().parent != root.parent
+    assert not (tmp_path / "out.m4a").exists()
+
+
+def test_a_very_long_title_still_downloads(tmp_path: Path, local_info: dict[str, Any]) -> None:
+    long = {**local_info, "title": "Çok uzun başlık " * 40}
+    code, events = run_job(
+        tmp_path,
+        long,
+        mode="audio",
+        audio_format_ids=["a-en-m4a"],
+        audio_codec="m4a",
+        extras={"description": True},
+    )
+    assert code == 0, events[-1]
+    assert all(len(p.name.encode()) <= 255 for p in done_files(events))
+
+
+def test_repeating_separate_files_keeps_one_matching_base_name(
+    tmp_path: Path, local_info: dict[str, Any]
+) -> None:
+    kwargs = {
+        "mode": "separate",
+        "video_format_id": "v-h264",
+        "audio_format_ids": ["a-tr-m4a"],
+        "subtitle_keys": ["tr"],
+    }
+    run_job(tmp_path, local_info, **kwargs)
+    _, second = run_job(tmp_path, local_info, **{**kwargs, "audio_quality": "1"})
+    stem = "2026-09-01 - Local test clip [localclip01] (2)"
+    assert sorted(p.name for p in done_files(second)) == sorted(
+        [f"{stem}.mp4", f"{stem}.tr.m4a", f"{stem}.tr.srt"]
+    )
+
+
+def test_audio_mode_can_also_keep_the_cover_as_a_file(
+    tmp_path: Path, local_info: dict[str, Any]
+) -> None:
+    code, events = run_job(
+        tmp_path,
+        local_info,
+        mode="audio",
+        audio_format_ids=["a-en-m4a"],
+        audio_codec="m4a",
+        extras={"thumbnail": True, "thumbnail_file": True},
+    )
+    assert code == 0
+    files = done_files(events)
+    assert [p.suffix for p in files] == [".m4a", ".jpg"]
+    assert len(cover_art(files[0])) == 1  # embedded *and* kept
+
+
+def test_an_unreadable_subtitle_is_skipped_with_a_warning_not_a_failed_job(
+    tmp_path: Path, local_info: dict[str, Any]
+) -> None:
+    code, events = run_job(
+        tmp_path,
+        local_info,
+        mode="mkv",
+        video_format_id="v-h264",
+        audio_format_ids=["a-en-m4a"],
+        subtitle_keys=["ja", "tr"],
+    )
+    assert code == 0, events[-1]
+    done = next(e for e in events if e["t"] == "done")
+    assert done["warnings"] == [{"code": "SUBTITLE_SKIPPED", "key": "ja"}]
+    [output] = done_files(events)
+    assert [s["tags"]["language"] for s in streams(output, "subtitle")] == ["tur"]

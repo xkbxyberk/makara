@@ -188,3 +188,20 @@ test('screenshots: download panel and queue in light, dark and narrow', async ({
   await page.setViewportSize({ width: 420, height: 900 });
   await page.screenshot({ path: `${SHOTS}/queue-narrow.png` });
 });
+
+test('⌘↵ downloads from Inspect only, once per press', async ({ page }) => {
+  const posts: string[] = [];
+  page.on('request', (r) => {
+    if (r.method() === 'POST' && r.url().endsWith('/api/jobs')) posts.push(r.url());
+  });
+  await inspectLocal(page);
+  await expect(page.getByRole('button', { name: 'İndir', exact: true })).toBeEnabled();
+  await page.keyboard.press('Meta+Enter');
+  await expect.poll(() => posts.length).toBe(1);
+
+  // On another screen the shortcut must do nothing.
+  await page.getByRole('navigation').getByRole('button', { name: 'Kütüphane' }).click();
+  await page.keyboard.press('Meta+Enter');
+  await page.waitForTimeout(500);
+  expect(posts).toHaveLength(1);
+});
