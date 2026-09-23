@@ -317,6 +317,12 @@
           "text": "⌘↵ downloads only from Inspect, once per press, and only on a current plan",
           "pass": true,
           "proof": "e2e '⌘↵ downloads from Inspect only, once per press'"
+        },
+        {
+          "id": "M2.23",
+          "text": "Real YouTube downloads work (no HTTP 403): extraction and download share one YoutubeDL instance",
+          "pass": true,
+          "proof": "RUN_LIVE_TESTS=1 uv run pytest -m live (2 passed on 2026-09-23); verified on xnP7qKxwzjg"
         }
       ]
     },
@@ -400,8 +406,63 @@
     },
     "M4": {
       "title": "Studio core",
-      "status": "not started",
-      "criteria": []
+      "status": "done",
+      "criteria": [
+        {
+          "id": "M4.1",
+          "text": "Lossless trim of a local file; duration verified with ffprobe (never shorter, at most a few frames longer)",
+          "pass": true,
+          "proof": "e2e 'lossless trim of a local file, verified with ffprobe'; tests/test_studio.py::test_lossless_trim_keeps_codecs_and_the_requested_length"
+        },
+        {
+          "id": "M4.2",
+          "text": "The keyframe a lossless start will snap to is predicted and shown before the run",
+          "pass": true,
+          "proof": "test_a_lossless_cut_off_a_keyframe_is_predicted_and_explained; test_plan_shows_the_exact_command_and_the_keyframe_shift"
+        },
+        {
+          "id": "M4.3",
+          "text": "Frame-accurate trim within one frame; joins (lossless and accurate); separate segment files",
+          "pass": true,
+          "proof": "test_frame_accurate_trim_*; test_several_segments_*"
+        },
+        {
+          "id": "M4.4",
+          "text": "Audio convert with bitrate/sample rate/channels; EBU R128 lands within 1 LU of -16 LUFS",
+          "pass": true,
+          "proof": "test_convert_audio_to_mp3_with_bitrate_and_mono; test_loudness_normalisation_hits_the_ebu_r128_target"
+        },
+        {
+          "id": "M4.5",
+          "text": "Remux: drop/reorder tracks, set languages, convert subtitles for MP4; refuse what MP4 cannot carry",
+          "pass": true,
+          "proof": "test_remux_to_mp4_*; test_remux_refuses_what_mp4_cannot_carry; e2e 'remux'"
+        },
+        {
+          "id": "M4.6",
+          "text": "Subtitle convert/shift/clean; YouTube rolling captions cleaned to each line once and auto-detected",
+          "pass": true,
+          "proof": "tests/test_subtitles.py; test_clean_youtube_auto_captions_to_srt; e2e 'YouTube auto captions are recognised and cleaned'"
+        },
+        {
+          "id": "M4.7",
+          "text": "Source never modified; outputs next to the source or in the download folder only; never overwrites; scratch removed",
+          "pass": true,
+          "proof": "digest check in test_lossless_trim_*; test_output_may_only_go_next_to_the_source_or_the_download_folder; test_studio_never_overwrites_an_existing_output; test_a_studio_job_writes_next_to_the_source_and_joins_the_library"
+        },
+        {
+          "id": "M4.8",
+          "text": "Exact FFmpeg commands previewed; blocking plans are never queued",
+          "pass": true,
+          "proof": "test_plan_shows_the_exact_command_and_the_keyframe_shift; test_a_blocking_plan_is_never_queued"
+        },
+        {
+          "id": "M4.9",
+          "text": "Screenshots of the Studio reviewed in light, dark and at 420px",
+          "pass": true,
+          "proof": "test-results/screenshots/studio-*.png"
+        }
+      ]
     }
   }
 }

@@ -15,6 +15,7 @@ import pytest
 FIXTURE_DIR = Path(__file__).parent / "fixtures" / "infojson"
 MEDIA_DIR = Path(__file__).parent / "fixtures" / "media"
 MEDIA_REQUESTS: list[dict[str, Any]] = []  # what the throttled endpoint was asked for
+REFUSED_ONCE: set[str] = set()  # files the /flaky403/ endpoint has already refused
 
 
 @pytest.fixture(autouse=True)
@@ -86,6 +87,14 @@ def media_server(test_media: Path) -> Iterator[str]:
             return str(test_media / path.split("?")[0].removeprefix("/slow").lstrip("/"))
 
         def do_GET(self) -> None:
+            if self.path.startswith("/flaky403/"):
+                # Refuse each file once, like YouTube's transient 403s, then serve it.
+                name = self.path.split("?")[0]
+                if name not in REFUSED_ONCE:
+                    REFUSED_ONCE.add(name)
+                    self.send_error(403)
+                    return
+                self.path = self.path.replace("/flaky403", "", 1)
             if not self.path.startswith("/slow/"):
                 super().do_GET()
                 return

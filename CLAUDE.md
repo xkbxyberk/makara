@@ -90,6 +90,15 @@ Local-only media workstation on yt-dlp + FFmpeg. macOS arm64, single user (Berk)
     logged a traceback.
 19. An FFmpeg input seek (`-ss`), even to 0, drops an audio file's single cover-art packet, and
     FFmpeg then exits 0 without writing anything. Check that outputs exist, not just exit codes.
+20. **Never download from a sanitized/re-processed YouTube info dict.** Format URLs are finished
+    lazily (the "n" JS challenge is solved at download time via callbacks sanitize_info drops),
+    so extracting with one YoutubeDL and downloading with another gives HTTP 403 on every real
+    YouTube video. Each pass calls `extract_info(url, download=True)` (see `_fetch`). The offline
+    suite cannot catch this; run `RUN_LIVE_TESTS=1 uv run pytest -m live` after touching the
+    download path.
+21. Lossless (stream-copy) cuts start on the previous keyframe *and* can end a few frames late
+    (B-frame reordering: 27 frames instead of 25 per 1 s piece at 25 fps). Tests state that bound;
+    frame-accurate cuts are within one frame.
 
 ## Rules
 

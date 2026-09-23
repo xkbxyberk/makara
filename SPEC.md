@@ -145,7 +145,11 @@ On start-up, jobs left `running` are requeued; each job's scratch directory
 | `POST` | `/api/library/{id}/open` · `/reveal` · `/trash` | default player · Finder · macOS Trash |
 | `POST` | `/api/settings/preview-template` | template + sample values → rendered path |
 | `POST` | `/api/system/pick-folder` | native folder picker (prompt text from the UI, passed as argv) |
-| `POST` | `/api/system/update-ytdlp` | `uv lock --upgrade-package yt-dlp …` + `uv sync` |
+| `POST` | `/api/system/update-ytdlp` | `uv lock --upgrade-package yt-dlp …` + `uv sync` (409 while jobs run) |
+| `POST` | `/api/studio/probe` | `{path}` or `{item_id}` → streams, duration, chapters |
+| `POST` | `/api/studio/plan` | operation → exact commands, notices, output paths |
+| `POST` | `/api/studio/jobs` | operation → a queued studio job |
+| `POST` | `/api/system/pick-file` | native file picker |
 
 Inspect results carry an `inspect_id` (server-side cache of the last 8) and `defaults` per
 mode. All non-GET requests from another origin are rejected, and the Host header must be
@@ -221,8 +225,32 @@ are not offered.
 ### Clipboard banner (M3, built)
 When the opt-in watcher sees a link copied, a banner offers "İncele" / "Yoksay".
 
-### Studio
-Present in the sidebar, disabled, labelled "yakında". Specified in PLAN.md milestone M4.
+### Stüdyo (M4, built)
+- **Source panel:** pick a library item, type a path, or "Dosya seç…" (native picker). Probing
+  shows name · duration · stream counts · size. **Empty** state explains that the source is
+  never modified; **loading** while probing; **error** for a missing or non-media file.
+- **Operation panel** (segmented; subtitle files only get "Altyazı", media files the rest):
+  - *Ses*: track (if several), format, bitrate, sample rate, channels, "Ses seviyesini eşitle"
+    (two-pass EBU R128 to -16 LUFS). Cover art is kept for MP3/M4A/FLAC.
+  - *Kes*: Kayıpsız / Kare hassas with tooltips (and "anahtar kare"); segments as start → end
+    in seconds or m:ss(.ms), invalid entries outlined; add/remove segments; join when there
+    are several; the source's chapters as quick picks.
+  - *Remux ve izler*: container MKV/MP4/MOV; a track table (keep, kind, codec, language, title,
+    default, move up/down); add external audio/subtitle files.
+  - *Altyazı*: convert, shift (seconds, negative = earlier), or clean YouTube auto captions
+    (pre-selected when the file looks like one).
+  - Output name, defaulting to "<source> (kesit|ses|remux|altyazı)" from `tr.ts`.
+- **Command panel:** notices (e.g. "Başlangıç 1.5 sn yerine 1 sn olacak"), the exact output
+  path(s), every FFmpeg command with a copy button, and the in-app steps described in words.
+  "Çalıştır" is disabled until the plan matches the current form and nothing blocks.
+
+**Studio pipeline:** the worker re-probes the source, builds the same plan, runs each step in the
+job's scratch folder (`<output folder>/.vd-work/<id>`, same volume), claims the final names
+atomically and renames the results in, then removes the scratch folder (and `.vd-work` if empty).
+Loudness: pass 1 `loudnorm=print_format=json` measures; pass 2 applies the measured values with
+`linear=true`. Lossless trim: `-ss S -to E -i src -map 0 -c copy`; joins via the concat demuxer.
+Frame-accurate: libx264 CRF 18 + AAC; joins via `trim`/`atrim` + `concat` (first video and
+audio track only). Shift/clean run on parsed cues in Python and write SRT.
 
 ## 6. Feature → tool mapping
 

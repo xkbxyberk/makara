@@ -144,4 +144,27 @@ autouse fixture now isolates every test, and the session fails if a real folder 
 **Not done, deliberately:** requeued jobs whose old worker survived a server crash are not killed
 by pid (pid reuse could kill an unrelated process); the orphan dies on its broken pipe instead.
 
-**Next:** adversarial review of M3, then M4 — Studio core.
+## 2026-09-23 (later) — M3 review, a real-world YouTube failure, and M4
+
+**The M3 review** found three ways "Move to Trash" could trash *another item's* file (two missing
+items re-linked to one file; a new file at an old path counted as "restored"; trashing an item
+twice). Fixed with regression tests, plus Spotlight results from the Trash/backups ignored, tests
+no longer querying the real Spotlight index, stricter download-folder validation, and a graceful
+server shutdown when the desktop window closes.
+
+**Berk's first real test failed** on https://www.youtube.com/watch?v=xnP7qKxwzjg with
+"Site erişimi reddetti" (HTTP 403). Root cause was mine: the worker extracted with one
+YoutubeDL, sanitized the info dict, and downloaded with another. YouTube URLs are signed lazily
+at download time through callbacks that do not survive sanitize_info. Proven with a two-way
+experiment (A: separate instances → 403; B: same instance → OK), fixed by extracting and
+downloading in one instance per pass, and verified on that exact video and by the live tests.
+The UI's advice ("update yt-dlp") was wrong for this case. Lesson recorded as CLAUDE.md gotcha 20:
+the offline suite cannot see this class of bug; the live tests must be run after touching the
+download path.
+
+**M4 — Studio** (see SPEC "Stüdyo"). Found along the way: YouTube's rolling VTT cues start with
+a line containing a single space, which a naive parser treats as the end of the cue and drops the
+first sentence; stream-copy joins run a couple of frames long per piece (B-frames), which the
+tests now state as an explicit bound instead of pretending otherwise.
+
+**Next:** adversarial review of M4 (running), then stop for Berk before M5.

@@ -199,6 +199,7 @@ export const tr = {
       postprocessing: 'İşleniyor',
       processing: 'İşleniyor',
       finalizing: 'Dosyalar yerleştiriliyor',
+      retrying: 'Site reddetti, yeniden deneniyor',
       merging: 'Birleştiriliyor',
       converting: 'Dönüştürülüyor',
       cancelling: 'İptal ediliyor',
@@ -691,7 +692,7 @@ export const tr = {
     },
     FORBIDDEN: {
       title: 'Site erişimi reddetti',
-      body: 'Bu genelde yt-dlp’nin eskidiği anlamına gelir. Sistem sekmesinden yt-dlp’yi güncelle ve tekrar dene.',
+      body: 'Uygulama bir kez kendiliğinden yeniden denedi. Bu çoğu zaman geçicidir: birkaç dakika sonra “Tekrar dene”. Sürerse Sistem sekmesinden yt-dlp’yi güncelle.',
     },
     INSPECT_EXPIRED: {
       title: 'İnceleme bilgisi eskidi',

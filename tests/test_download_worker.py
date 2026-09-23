@@ -329,3 +329,20 @@ def test_an_unreadable_subtitle_is_skipped_with_a_warning_not_a_failed_job(
     assert done["warnings"] == [{"code": "SUBTITLE_SKIPPED", "key": "ja"}]
     [output] = done_files(events)
     assert [s["tags"]["language"] for s in streams(output, "subtitle")] == ["tur"]
+
+
+def test_a_transient_403_is_retried_once_with_a_fresh_pass(
+    tmp_path: Path, local_info: dict[str, Any], media_server: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(download_worker, "FORBIDDEN_RETRY_DELAY", 0.0)
+    flaky = json.loads(json.dumps(local_info).replace(media_server, f"{media_server}/flaky403"))
+    code, events = run_job(
+        tmp_path,
+        flaky,
+        mode="audio",
+        audio_format_ids=["a-en-m4a"],
+        audio_codec="m4a",
+        extras={"thumbnail": False},
+    )
+    assert code == 0, events[-1]
+    assert {"t": "stage", "stage": "retrying"} in events

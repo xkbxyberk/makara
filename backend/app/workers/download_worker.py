@@ -211,6 +211,22 @@ def _side_pass(req: dict[str, Any], work: Path, log: Collector) -> dict[str, Any
         return _fetch(ydl, req)
 
 
+FORBIDDEN_RETRY_DELAY = 3.0
+
+
+def _stream_pass_with_retry(req: dict[str, Any], work: Path, log: Collector) -> dict[str, Any]:
+    """YouTube occasionally answers a freshly signed stream URL with 403 for a short while.
+    One fresh extraction a moment later usually succeeds, and the .part file resumes."""
+    try:
+        return _stream_pass(req, work, log)
+    except Exception as exc:
+        if errors.classify(str(exc)) != "FORBIDDEN":
+            raise
+        emit({"t": "stage", "stage": "retrying"})
+        time.sleep(FORBIDDEN_RETRY_DELAY)
+        return _stream_pass(req, work, log)
+
+
 def _selected(req: dict[str, Any]) -> list[str]:
     ids = [req.get("video_format_id"), *(req.get("audio_format_ids") or [])]
     return [str(i) for i in ids if i]
@@ -438,7 +454,7 @@ def run(req: dict[str, Any]) -> int:
         emit({"t": "stage", "stage": "preparing"})
         _side_pass(req, work, log)
         # Names, chapters and metadata come from the pass that actually downloaded the streams.
-        info = _stream_pass(req, work, log)
+        info = _stream_pass_with_retry(req, work, log)
         files, plan, warnings = _finalize(req, info, work)
     except errors.AppError as exc:
         emit({"t": "error", "code": exc.code, "raw": exc.raw or log.raw()})

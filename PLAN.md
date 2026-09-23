@@ -65,13 +65,23 @@ proves a cancelled download *resumes* (the retry sends an HTTP Range request).
 
 Proof: `./scripts/check.sh` (now also fails if the e2e server logged an exception).
 
-## M4 — Studio core
+## M4 — Studio core ✅ done
 
-- [ ] Convert and extract audio, including EBU R128 loudness normalisation
-- [ ] Lossless (keyframe) cut vs frame-accurate (re-encode) cut, both explained in the UI
-- [ ] Remux and a track editor: add/remove/reorder, set language and default flags
-- [ ] Subtitle tools: VTT/SRT/ASS conversion, time shift, YouTube auto-caption VTT cleanup
-- [ ] Exact FFmpeg command preview before every run
+- [x] Source: a library item ("Stüdyo'da aç") or any local file (path or native picker);
+      the source is only read, outputs are new files next to it
+- [x] Convert and extract audio, including two-pass EBU R128 loudness normalisation
+- [x] Lossless (keyframe) cut vs frame-accurate (re-encode) cut, both explained in the UI; the
+      keyframe a lossless start will snap to is shown before the run; several segments,
+      joined or separate; chapters as quick picks
+- [x] Remux and a track editor: keep/drop, reorder, language and default flags, add external
+      audio/subtitle files; MP4 restrictions refused with an explanation
+- [x] Subtitle tools: VTT/SRT/ASS conversion, time shift, YouTube auto-caption VTT cleanup
+      (auto-detected)
+- [x] Exact FFmpeg command preview before every run; runs in the shared queue; results join
+      the library
+
+Proof: `./scripts/check.sh`; `frontend/e2e/studio.spec.cts` trims a local file losslessly and
+checks the duration with ffprobe.
 
 ## M5 — Sections and SponsorBlock · M6 — Playlists and channels
 ## M7 — Presets and browser cookies · M8 — Transcode and target size
