@@ -105,7 +105,15 @@ def probe_source(path: Path) -> dict[str, Any]:
     if not streams:
         raise errors.AppError(code="SOURCE_NOT_MEDIA", raw=proc.stderr[-2000:])
     duration = data.get("format", {}).get("duration")
+    youtube_auto = False
+    if path.suffix.lower() == ".vtt" and path.stat().st_size < 5_000_000:
+        from app.studio.subtitles import looks_like_youtube_auto_captions
+
+        youtube_auto = looks_like_youtube_auto_captions(
+            path.read_text(encoding="utf-8", errors="replace")
+        )
     return {
+        "youtube_auto_captions": youtube_auto,
         "path": str(path),
         "name": path.name,
         "ext": path.suffix.lstrip(".").lower(),

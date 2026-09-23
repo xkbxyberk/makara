@@ -131,7 +131,7 @@ export interface Job {
   stage: string;
   title: string | null;
   source_url: string | null;
-  mode: Mode;
+  mode: Mode | 'studio';
   progress: number;
   speed: number | null;
   eta: number | null;
@@ -173,7 +173,7 @@ export interface LibraryItem {
   site: string | null;
   channel: string | null;
   upload_date: string | null;
-  mode: Mode | null;
+  mode: Mode | 'studio' | null;
   kind: 'video' | 'audio';
   status: 'ok' | 'missing' | 'trashed';
   primary_path: string;
@@ -294,6 +294,48 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
+export type StudioOp = 'audio' | 'trim' | 'remux' | 'subtitle';
+
+export interface StudioStream {
+  index: number;
+  type: 'video' | 'audio' | 'subtitle' | string;
+  codec: string | null;
+  language: string | null;
+  title: string | null;
+  default: boolean;
+  attached_pic: boolean;
+  width: number | null;
+  height: number | null;
+  channels: number | null;
+}
+
+export interface StudioSource {
+  youtube_auto_captions: boolean;
+  path: string;
+  name: string;
+  ext: string;
+  size: number;
+  duration: number | null;
+  streams: StudioStream[];
+  chapters: { start: number; end: number; title: string | null }[];
+}
+
+export interface StudioRequest {
+  source_path: string;
+  op: StudioOp;
+  options: Record<string, unknown>;
+  output_name: string;
+  extra_paths: string[];
+}
+
+export interface StudioPlan {
+  steps: { kind: 'ffmpeg' | 'python'; action: string; command: string }[];
+  notices: Notice[];
+  blocking: boolean;
+  outputs: string[];
+  ext: string;
+}
+
 const post = (body: unknown): RequestInit => ({ method: 'POST', body: JSON.stringify(body) });
 
 export const api = {
@@ -327,6 +369,12 @@ export const api = {
     request<{ shown: boolean }>(`/api/library/${encodeURIComponent(id)}/reveal`, post({})),
   trashItem: (id: string) =>
     request<LibraryItem>(`/api/library/${encodeURIComponent(id)}/trash`, post({})),
+  studioProbe: (body: { path?: string; item_id?: string }) =>
+    request<StudioSource>('/api/studio/probe', post(body)),
+  studioPlan: (body: StudioRequest) => request<StudioPlan>('/api/studio/plan', post(body)),
+  studioJob: (body: StudioRequest) => request<Job>('/api/studio/jobs', post(body)),
+  pickFile: (prompt: string) =>
+    request<{ path: string | null }>('/api/system/pick-file', post({ prompt })),
   thumbnailUrl: (id: string) => `/api/library/${encodeURIComponent(id)}/thumbnail`,
   notify: (title: string, body: string) =>
     request<{ shown: boolean }>('/api/notify', post({ title, body })),

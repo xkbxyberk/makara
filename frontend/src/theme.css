@@ -422,3 +422,13 @@ dialog.confirm h2 { font-size: 15px; margin: 0 0 var(--space-2); }
   .lib-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); padding: var(--space-3); }
   .clipboard-banner { flex-wrap: wrap; padding: var(--space-2) var(--space-3); }
 }
+
+/* ---- studio ---- */
+.studio-source { display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: var(--space-3); }
+.studio-grid { display: flex; flex-direction: column; gap: var(--space-3); }
+.studio-field { display: flex; flex-direction: column; gap: var(--space-1); }
+.studio-help { margin: 0; }
+.studio-tracks input.input { padding: 3px 6px; }
+.studio-move { white-space: nowrap; }
+.input.invalid { border-color: var(--danger); box-shadow: 0 0 0 1px var(--danger); }
+.studio-segment .input { flex: 0 1 160px; }

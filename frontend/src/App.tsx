@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import './theme.css';
 import { tr } from './i18n/tr';
-import { EmptyState, Panel } from './components/ui';
 import { InspectRoute } from './routes/InspectRoute';
 import { DoctorRoute } from './routes/DoctorRoute';
 import { QueueRoute } from './routes/QueueRoute';
 import { LibraryRoute } from './routes/LibraryRoute';
 import { SettingsRoute, type Theme } from './routes/SettingsRoute';
+import { StudioRoute } from './routes/StudioRoute';
 import { api, type Job } from './lib/api';
 import { isActive, useJobs } from './lib/jobs';
 
@@ -16,7 +16,7 @@ const NAV: { id: RouteId; ready: boolean }[] = [
   { id: 'inspect', ready: true },
   { id: 'download', ready: true },
   { id: 'library', ready: true },
-  { id: 'studio', ready: false },
+  { id: 'studio', ready: true },
   { id: 'doctor', ready: true },
   { id: 'settings', ready: true },
 ];
@@ -47,6 +47,7 @@ export function App() {
   const [clipboardUrl, setClipboardUrl] = useState<string | null>(null);
   const [catalogueFailed, setCatalogueFailed] = useState(false);
   const [inspectRequest, setInspectRequest] = useState<{ url: string; n: number } | null>(null);
+  const [studioRequest, setStudioRequest] = useState<{ itemId: string; n: number } | null>(null);
   const notifications = useRef(true);
 
   useEffect(() => {
@@ -145,7 +146,15 @@ export function App() {
             />
           </div>
           {route === 'download' && <QueueRoute jobs={jobs} connection={connection} />}
-          {route === 'library' && <LibraryRoute refreshKey={libraryVersion} />}
+          {route === 'library' && (
+            <LibraryRoute
+              refreshKey={libraryVersion}
+              onOpenInStudio={(itemId) => {
+                setStudioRequest((r) => ({ itemId, n: (r?.n ?? 0) + 1 }));
+                setRoute('studio');
+              }}
+            />
+          )}
           {route === 'doctor' && <DoctorRoute />}
           {route === 'settings' && (
             <SettingsRoute
@@ -155,11 +164,7 @@ export function App() {
             />
           )}
           {route === 'studio' && (
-            <div className="content-inner">
-              <Panel title={tr.nav[route]}>
-                <EmptyState glyph="→" title={tr.placeholder.title(tr.nav[route])} body={tr.placeholder.body} />
-              </Panel>
-            </div>
+            <StudioRoute onOpenQueue={() => setRoute('download')} request={studioRequest} />
           )}
         </div>
       </main>

@@ -19,7 +19,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app import db, errors, paths
 from app import settings as settings_store
-from app.api import jobs_api, library_api
+from app.api import jobs_api, library_api, studio_api
 from app.api.routes import router
 from app.jobs.manager import JobManager
 from app.library import Library
@@ -95,6 +95,7 @@ def create_app() -> FastAPI:
     app.include_router(router)
     app.include_router(jobs_api.router)
     app.include_router(library_api.router)
+    app.include_router(studio_api.router)
 
     if paths.fixture_mode():
         # Test-only: serve the generated clips so downloads run offline against this server.

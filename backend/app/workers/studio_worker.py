@@ -7,6 +7,7 @@ moved next to the source. The source file itself is only ever read.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import re
@@ -141,6 +142,8 @@ def run(req: dict[str, Any]) -> int:
         emit({"t": "error", "code": code, "raw": repr(exc)})
         return 1
     shutil.rmtree(work, ignore_errors=True)
+    with contextlib.suppress(OSError):
+        work.parent.rmdir()  # the hidden .vd-work next to Berk's file, if nothing else is in it
     media = [f for f in files if Path(f).suffix.lstrip(".") not in ops.SUBTITLE_FORMATS]
     outputs = _describe(media, req["job_id"]) if media else []
     meta = {"title": Path(files[0]).stem, "extractor_key": "Studio", "channel": None}

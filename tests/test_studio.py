@@ -329,3 +329,10 @@ def test_a_non_media_source_is_refused(workspace: Path) -> None:
     code, events = run_op(workspace, text, "audio", {"codec": "mp3"})
     assert code == 1
     assert events[-1]["code"] == "SOURCE_NOT_MEDIA"
+
+
+def test_probe_recognises_youtube_auto_captions(workspace: Path) -> None:
+    vtt = workspace / "asr.vtt"
+    vtt.write_text(YOUTUBE_ASR, encoding="utf-8")
+    assert ops.probe_source(vtt)["youtube_auto_captions"] is True
+    assert ops.probe_source(workspace / "sub_en.vtt")["youtube_auto_captions"] is False

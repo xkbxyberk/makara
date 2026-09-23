@@ -123,3 +123,12 @@ test('screenshots: library grid and list in light, dark and narrow', async ({ pa
   await page.getByRole('radio', { name: 'Izgara' }).click();
   await page.screenshot({ path: `${SHOTS}/library-narrow.png` });
 });
+
+test('a library item opens in the Studio', async ({ page, request }) => {
+  const item = await downloadToLibrary(page, request, 'Sadece ses');
+  await openLibrary(page);
+  const card = page.locator(`[data-item-id="${item.id}"]`);
+  await card.locator('.lib-card-button').click();
+  await card.getByRole('button', { name: 'Stüdyo’da aç' }).click();
+  await expect(page.getByTestId('studio-source')).toContainText(item.primary_path.split('/').pop()!);
+});

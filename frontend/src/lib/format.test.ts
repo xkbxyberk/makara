@@ -3,8 +3,10 @@ import {
   formatBitrate,
   formatBytes,
   formatDuration,
+  formatTime,
   formatUploadDate,
   languageName,
+  parseTime,
   sizePrefix,
 } from './format';
 
@@ -61,5 +63,23 @@ describe('languageName', () => {
     expect(languageName('tr')).toBe('Türkçe');
     expect(languageName('en-desc')).toBe(languageName('en'));
     expect(languageName(null)).toBe('bilinmiyor');
+  });
+});
+
+describe('parseTime / formatTime', () => {
+  it('reads seconds, m:ss and h:mm:ss with fractions', () => {
+    expect(parseTime('90')).toBe(90);
+    expect(parseTime('1:30')).toBe(90);
+    expect(parseTime('1:02:03.5')).toBe(3723.5);
+    expect(parseTime('12,5')).toBe(12.5);
+  });
+  it('rejects what is not a time', () => {
+    expect(parseTime('')).toBeNull();
+    expect(parseTime('1:75')).toBeNull();
+    expect(parseTime('abc')).toBeNull();
+    expect(parseTime('-3')).toBeNull();
+  });
+  it('round-trips', () => {
+    for (const s of [0, 1.5, 62.25, 3723.5]) expect(parseTime(formatTime(s))).toBe(s);
   });
 });

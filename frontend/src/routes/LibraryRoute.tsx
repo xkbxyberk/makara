@@ -65,11 +65,13 @@ function Actions({
   item,
   onTrash,
   onError,
+  onStudio,
   withTrash = true,
 }: {
   item: LibraryItem;
   onTrash: (item: LibraryItem) => void;
   onError: (code: string) => void;
+  onStudio: (itemId: string) => void;
   /** The destructive action appears only once an item is opened, never on every row. */
   withTrash?: boolean;
 }) {
@@ -89,6 +91,9 @@ function Actions({
       </button>
       <button type="button" className="btn" disabled={missing} onClick={run(() => api.revealItem(item.id))}>
         {tr.library.reveal}
+      </button>
+      <button type="button" className="btn" disabled={missing} onClick={() => onStudio(item.id)}>
+        {tr.library.openInStudio}
       </button>
       {withTrash && (
         <button
@@ -139,7 +144,13 @@ function Details({ item }: { item: LibraryItem }) {
   );
 }
 
-export function LibraryRoute({ refreshKey }: { refreshKey: number }) {
+export function LibraryRoute({
+  refreshKey,
+  onOpenInStudio,
+}: {
+  refreshKey: number;
+  onOpenInStudio: (itemId: string) => void;
+}) {
   const [query, setQuery] = useState<LibraryQuery>(EMPTY_QUERY);
   const [view, setView] = useState<View>(() => (localStorage.getItem('vd-library-view') as View) || 'grid');
   const [state, setState] = useState<State>({ phase: 'loading' });
@@ -340,7 +351,7 @@ export function LibraryRoute({ refreshKey }: { refreshKey: number }) {
                 {selected === item.id && (
                   <div className="lib-card-more">
                     <Details item={item} />
-                    <Actions item={item} onTrash={setConfirming} onError={setActionError} />
+                    <Actions item={item} onTrash={setConfirming} onError={setActionError} onStudio={onOpenInStudio} />
                   </div>
                 )}
               </li>
@@ -396,6 +407,7 @@ export function LibraryRoute({ refreshKey }: { refreshKey: number }) {
                       item={item}
                       onTrash={setConfirming}
                       onError={setActionError}
+                      onStudio={onOpenInStudio}
                       withTrash={false}
                     />
                   </td>

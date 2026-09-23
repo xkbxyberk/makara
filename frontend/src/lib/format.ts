@@ -76,3 +76,20 @@ export function languageName(code: string | null | undefined): string {
     return base;
   }
 }
+
+/** "90", "1:30", "1:02:03.5" or "12,5" -> seconds; null when it is not a time. */
+export function parseTime(text: string): number | null {
+  const value = text.trim().replace(',', '.');
+  if (!/^\d+(?::\d{1,2}){0,2}(?:\.\d+)?$/.test(value)) return null;
+  const parts = value.split(':').map(Number);
+  if (parts.slice(1).some((p) => p >= 60)) return null;
+  return parts.reduce((total, part) => total * 60 + part, 0);
+}
+
+/** Seconds -> "m:ss.ms" (or "h:mm:ss.ms"), the inverse of parseTime for input fields. */
+export function formatTime(seconds: number): string {
+  const whole = Math.floor(seconds);
+  const fraction = Math.round((seconds - whole) * 1000);
+  const base = formatDuration(whole);
+  return fraction ? `${base}.${String(fraction).padStart(3, '0').replace(/0+$/, '')}` : base;
+}

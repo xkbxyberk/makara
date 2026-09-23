@@ -101,13 +101,15 @@ export const tr = {
       compat_mp4: 'Uyumlu MP4',
       separate: 'Ayrı dosyalar',
       audio: 'Sadece ses',
-    },
+      studio: 'Stüdyo',
+    } as Record<string, string>,
     modeHelp: {
       mkv: 'Seçtiğin her şey tek bir MKV dosyasında, dil etiketleriyle. Hiçbir şey yeniden kodlanmaz, kalite kaybı olmaz. QuickTime açmaz; IINA veya VLC ile oynat.',
       compat_mp4: 'QuickTime’da ve iPhone’da oynayan MP4 (H.264 + AAC). Kaynak uyumsuzsa yeniden kodlanır; bu yavaştır ve biraz kalite kaybettirir — öncesinde söylenir.',
       separate: 'Her parça ayrı dosya: görüntü, her ses dili, her altyazı. Oynatıcılar aynı adlı altyazıyı kendiliğinden yükler.',
       audio: 'Yalnızca ses, istediğin biçimde; kapak resmi ve bilgiler gömülü.',
-    },
+      studio: 'Stüdyo’da bir kaynaktan üretilmiş yeni dosya. Kaynağa dokunulmaz.',
+    } as Record<string, string>,
     sections: {
       video: 'Görüntü',
       audio: 'Ses',
@@ -195,6 +197,8 @@ export const tr = {
       preparing: 'Hazırlanıyor',
       downloading: 'İndiriliyor',
       postprocessing: 'İşleniyor',
+      processing: 'İşleniyor',
+      finalizing: 'Dosyalar yerleştiriliyor',
       merging: 'Birleştiriliyor',
       converting: 'Dönüştürülüyor',
       cancelling: 'İptal ediliyor',
@@ -248,6 +252,7 @@ export const tr = {
     play: 'Oynat',
     playHelp: 'Varsayılan oynatıcıda açar (IINA, QuickTime…).',
     reveal: 'Finder’da göster',
+    openInStudio: 'Stüdyo’da aç',
     trash: 'Çöp Kutusu’na taşı',
     trashTitle: 'Çöp Kutusu’na taşınsın mı?',
     trashBody: (n: number) =>
@@ -296,6 +301,151 @@ export const tr = {
       'Uygulama açıkken desteklenen bir bağlantı kopyaladığında incelemeyi önerir. Pano yalnızca içeriği değiştiğinde okunur.',
     notifications: 'Sistem bildirimleri',
     notificationsHelp: 'Pencere arka plandayken bir indirme bitince veya başarısız olunca bildirim gösterir.',
+  },
+  studio: {
+    title: 'Stüdyo',
+    operation: 'İşlem',
+    source: 'Kaynak',
+    fromLibrary: 'Kütüphaneden seç…',
+    pathLabel: 'Dosya yolu',
+    pathPlaceholder: 'Bir video, ses veya altyazı dosyasının tam yolu',
+    chooseFile: 'Dosya seç…',
+    choosePrompt: 'Stüdyo’da açılacak dosyayı seç',
+    open: 'Aç',
+    emptyTitle: 'Bir kaynak seç',
+    emptyBody:
+      'Kütüphanedeki bir öğeyi ya da Mac’indeki herhangi bir dosyayı aç. Stüdyo kaynağa asla dokunmaz; her işlem yanına yeni bir dosya yazar.',
+    probing: 'Dosya inceleniyor',
+    sourceSummary: (duration: string, streams: string) => `${duration} · ${streams}`,
+    streamKinds: { video: 'görüntü', audio: 'ses', subtitle: 'altyazı' } as Record<string, string>,
+    tabs: { audio: 'Ses', trim: 'Kes', remux: 'Remux ve izler', subtitle: 'Altyazı' } as Record<string, string>,
+    output: 'Çıktı adı',
+    outputSuffix: {
+      audio: '(ses)',
+      trim: '(kesit)',
+      remux: '(remux)',
+      subtitle: '(altyazı)',
+    } as Record<string, string>,
+    willWrite: 'Yazılacak dosya',
+    commands: 'Çalıştırılacak komutlar',
+    run: 'Çalıştır',
+    queued: 'Kuyruğa eklendi.',
+    openQueue: 'İndirmeleri aç',
+    planning: 'Hesaplanıyor…',
+    steps: {
+      WRITE_CONCAT_LIST: 'Parçaların listesi yazılır (FFmpeg birleştirme listesi).',
+      SHIFT: 'Altyazı zamanları kaydırılır (uygulama içinde, SRT olarak).',
+      CLEAN_CAPTIONS:
+        'YouTube otomatik altyazısındaki tekrar eden satırlar temizlenir (uygulama içinde, SRT olarak).',
+      LOUDNESS_MEASURE: '1. geçiş: ses seviyesi ölçülür.',
+      LOUDNESS_APPLY: '2. geçiş: ölçüme göre düzeltilir ({LOUDNORM_MEASURED} yerine 1. geçişin değerleri gelir).',
+    } as Record<string, string>,
+    audio: {
+      codec: 'Biçim',
+      bitrate: 'Bit hızı',
+      sampleRate: 'Örnekleme',
+      channels: 'Kanal',
+      auto: 'Kaynaktaki gibi',
+      mono: 'Mono',
+      stereo: 'Stereo',
+      track: 'Ses izi',
+      loudnorm: 'Ses seviyesini eşitle',
+    },
+    trim: {
+      mode: 'Kesim türü',
+      lossless: 'Kayıpsız',
+      accurate: 'Kare hassas',
+      segments: 'Parçalar',
+      start: 'Başlangıç',
+      end: 'Bitiş',
+      addSegment: 'Parça ekle',
+      removeSegment: 'Kaldır',
+      join: 'Parçaları tek dosyada birleştir',
+      chapters: 'Bölümlerden ekle',
+      timeHelp: 'Saniye ya da dk:sn biçiminde: 90, 1:30, 1:02:03.5',
+    },
+    remux: {
+      container: 'Kap',
+      keep: 'Tut',
+      kind: 'Tür',
+      codec: 'Kodek',
+      language: 'Dil',
+      title: 'Başlık',
+      isDefault: 'Varsayılan',
+      moveUp: 'Yukarı taşı',
+      moveDown: 'Aşağı taşı',
+      addFile: 'Dosya ekle (ses veya altyazı)…',
+      addPath: 'Eklenecek dosyanın yolu',
+      add: 'Ekle',
+      fromExtra: (name: string) => `ek: ${name}`,
+    },
+    subtitle: {
+      action: 'İşlem',
+      actions: {
+        convert: 'Biçim dönüştür',
+        shift: 'Zamanı kaydır',
+        clean: 'YouTube otomatik altyazısını temizle',
+      } as Record<string, string>,
+      target: 'Hedef biçim',
+      offset: 'Kaydırma (sn, eksi = erken)',
+      looksAuto: 'Bu dosya YouTube otomatik altyazısına benziyor; “temizle” önerilir.',
+    },
+    notices: {
+      LOUDNESS_TWO_PASS: (p: { target?: number }) =>
+        `Ses iki geçişte ${p.target ?? -16} LUFS’a eşitlenecek (EBU R128): önce ölçülür, sonra doğrusal olarak düzeltilir.`,
+      LOSSLESS_FROM_LOSSY: (p: { codec?: string }) =>
+        `Kaynak ${p.codec ?? 'kayıplı'}; kayıpsız biçime çevirmek kaybolan kaliteyi geri getirmez, yalnızca dosyayı büyütür.`,
+      NO_AUDIO_IN_SOURCE: 'Bu dosyada ses yok.',
+      INVALID_SEGMENT: (p: { start?: number; end?: number }) =>
+        `Geçersiz parça (${p.start ?? '?'} → ${p.end ?? '?'} sn): bitiş başlangıçtan sonra ve dosyanın içinde olmalı.`,
+      NO_SEGMENTS: 'En az bir parça ekle.',
+      SEGMENTS_SEPARATE: (p: { count?: number }) =>
+        `${p.count ?? 'Birkaç'} ayrı dosya yazılacak. Tek dosya için “birleştir”i işaretle.`,
+      LOSSLESS_KEYFRAMES:
+        'Kayıpsız kesim yeniden kodlamaz ve anında biter, ama yalnızca anahtar karelerde kesebilir: başlangıç en yakın önceki anahtar kareye kayar, bitiş birkaç kare uzun olabilir.',
+      CUT_MOVES_TO_KEYFRAME: (p: { requested?: number; actual?: number }) =>
+        `Başlangıç ${p.requested} sn yerine ${p.actual} sn olacak (en yakın anahtar kare). Tam an için “Kare hassas”ı seç.`,
+      ACCURATE_REENCODES:
+        'Kare hassas kesim tam istediğin karede keser ama görüntüyü yeniden kodlar (H.264): daha yavaştır, gözle görülmeyecek kadar az kalite kaybı olur.',
+      JOIN_FIRST_TRACKS_ONLY:
+        'Kare hassas birleştirmede yalnızca ilk görüntü ve ilk ses izi korunur.',
+      SUBTITLE_NOT_IN_MP4: (p: { codec?: string }) =>
+        `${p.codec ?? 'Bu'} altyazısı resim tabanlı; MP4’e konamaz. MKV seç ya da izi kaldır.`,
+      CODEC_NOT_IN_MP4: (p: { codec?: string }) =>
+        `${p.codec ?? 'Bu'} izi MP4’e yeniden kodlanmadan konamaz. MKV seç ya da izi kaldır.`,
+      NO_TRACKS_KEPT: 'En az bir iz tut.',
+      UNKNOWN_TRACK: 'Listede artık bulunmayan bir iz var.',
+      REMUX_NO_REENCODE:
+        'Remux yeniden kodlamaz: izler olduğu gibi kopyalanır, yalnızca kap ve iz bilgileri değişir. Hızlıdır, kalite kaybı yoktur.',
+      NOT_A_SUBTITLE: 'Bu dosya bir altyazı değil.',
+      ASS_STYLING_LOST: 'ASS’teki yazı tipi ve renk bilgileri dönüştürmede kaybolur.',
+    } as Record<string, string | ((p: Record<string, unknown>) => string)>,
+    terms: {
+      lossless: {
+        label: 'Kayıpsız',
+        body: 'Görüntü yeniden kodlanmaz, kopyalanır: anında biter ve kalite kaybı olmaz, ama kesim yalnızca anahtar karelerde olabilir.',
+      },
+      accurate: {
+        label: 'Kare hassas',
+        body: 'Tam istediğin karede keser. Bunun için görüntüyü yeniden kodlar: daha yavaş, çok az kalite kaybı.',
+      },
+      keyframe: {
+        label: 'anahtar kare',
+        body: 'Kendi başına çözülebilen tam kare. Aradaki kareler yalnızca farkları taşır; bu yüzden kopyalayarak yapılan kesim ancak anahtar karelerde başlayabilir.',
+      },
+      loudnorm: {
+        label: 'EBU R128',
+        body: 'Yayın standardı ses yüksekliği ölçümü. Parçaları aynı algılanan seviyeye (-16 LUFS, podcast’lerin kullandığı değer) getirir; bölümler arasında ses açıp kısmak gerekmez.',
+      },
+      remux: {
+        label: 'Remux',
+        body: 'Yeniden kodlamadan kap (container) değiştirme ve izleri düzenleme. Hızlıdır ve kalite kaybı olmaz.',
+      },
+      container: {
+        label: 'Kap',
+        body: 'MKV her şeyi taşır ama QuickTime açmaz; MP4/MOV Apple cihazlarında oynar ama bazı ses ve altyazı türlerini kabul etmez.',
+      },
+    },
   },
   clipboard: {
     offer: 'Panoya bir bağlantı kopyaladın:',
@@ -601,6 +751,20 @@ export const tr = {
       body: 'Finder’da taşınmış veya silinmiş olabilir.',
     },
     ITEM_NOT_FOUND: { title: 'Öğe bulunamadı', body: 'Kütüphaneden kaldırılmış olabilir.' },
+    SOURCE_NOT_FOUND: { title: 'Dosya bulunamadı', body: 'Yolu kontrol et; tam yol (/ ile başlayan) olmalı.' },
+    SOURCE_NOT_MEDIA: {
+      title: 'Bu bir medya dosyası değil',
+      body: 'FFmpeg bu dosyada görüntü, ses ya da altyazı bulamadı.',
+    },
+    OUTPUT_DIR_NOT_ALLOWED: {
+      title: 'Bu klasöre yazılamaz',
+      body: 'Stüdyo çıktıları kaynağın yanına ya da indirme klasörüne yazılır.',
+    },
+    SUBTITLE_EMPTY: { title: 'Altyazı boş kaldı', body: 'Kaydırma bütün satırları sıfırın öncesine itti.' },
+    LOUDNESS_MEASURE_FAILED: {
+      title: 'Ses seviyesi ölçülemedi',
+      body: 'Ham kayda bak. Eşitlemeyi kapatıp tekrar dene.',
+    },
     ITEM_NOT_TRASHABLE: {
       title: 'Bu öğe çöpe atılamaz',
       body: 'Zaten çöpte ya da dosyası eksik. Önce “Dosyaları denetle”yi dene.',
