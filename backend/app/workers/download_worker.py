@@ -136,15 +136,22 @@ def _stream_file(work: Path, format_id: str) -> Path:
     raise errors.AppError(code="DOWNLOAD_INCOMPLETE", raw=f"no file for format {format_id}")
 
 
-def _extract(url: str, log: Collector) -> dict[str, Any]:
-    import yt_dlp
+def _fetch(ydl: Any, req: dict[str, Any]) -> dict[str, Any]:
+    """Extract *and* download with the same YoutubeDL instance.
 
-    with yt_dlp.YoutubeDL({**params.inspect_params(), "logger": log, "no_warnings": False}) as ydl:
-        info = ydl.extract_info(url, download=False)
-        if info is None:
-            raise errors.AppError(code=errors.classify(log.raw()), raw=log.raw())
-        sanitized: dict[str, Any] = ydl.sanitize_info(info)
-        return sanitized
+    Never extract with one instance and hand a sanitized info dict to another: YouTube format
+    URLs are finished lazily (the "n" JS challenge is solved at download time through callbacks
+    that sanitize_info cannot serialise), so a re-processed dict yields unsigned URLs and
+    HTTP 403. Only fixture mode, whose URLs point at 127.0.0.1, passes a ready dict.
+    """
+    if req.get("info"):
+        result = ydl.process_ie_result(copy.deepcopy(req["info"]), download=True)
+    else:
+        result = ydl.extract_info(req["url"], download=True)
+    if not result:
+        raise errors.AppError(code="VIDEO_UNAVAILABLE", raw="no result from yt-dlp")
+    sanitized: dict[str, Any] = ydl.sanitize_info(result)
+    return sanitized
 
 
 def _base_params(work: Path, log: Collector) -> dict[str, Any]:
@@ -159,20 +166,21 @@ def _base_params(work: Path, log: Collector) -> dict[str, Any]:
         "retries": 10,
         "fragment_retries": 10,
         "overwrites": False,
+        "noplaylist": True,
     }
     return options
 
 
-def _side_pass(req: dict[str, Any], info: dict[str, Any], work: Path, log: Collector) -> None:
+def _side_pass(req: dict[str, Any], work: Path, log: Collector) -> dict[str, Any] | None:
     import yt_dlp
 
     extras = req.get("extras") or {}
-    subs = req.get("subtitle_keys") or [] if req["mode"] != "audio" else []
+    subs = (req.get("subtitle_keys") or []) if req["mode"] != "audio" else []
     want_thumb = req["mode"] != "audio" and bool(
         extras.get("thumbnail") or extras.get("thumbnail_file")
     )
     if not (subs or want_thumb or extras.get("description") or extras.get("info_json")):
-        return
+        return None
     emit({"t": "stage", "stage": "preparing", "detail": "extras"})
     options = {
         **_base_params(work, log),
@@ -200,7 +208,7 @@ def _side_pass(req: dict[str, Any], info: dict[str, Any], work: Path, log: Colle
         ),
     }
     with yt_dlp.YoutubeDL(options) as ydl:
-        ydl.process_ie_result(copy.deepcopy(info), download=True)
+        return _fetch(ydl, req)
 
 
 def _selected(req: dict[str, Any]) -> list[str]:
@@ -208,7 +216,7 @@ def _selected(req: dict[str, Any]) -> list[str]:
     return [str(i) for i in ids if i]
 
 
-def _stream_pass(req: dict[str, Any], info: dict[str, Any], work: Path, log: Collector) -> None:
+def _stream_pass(req: dict[str, Any], work: Path, log: Collector) -> dict[str, Any]:
     import yt_dlp
 
     selected = _selected(req)
@@ -250,7 +258,7 @@ def _stream_pass(req: dict[str, Any], info: dict[str, Any], work: Path, log: Col
         ]
     emit({"t": "stage", "stage": "downloading"})
     with yt_dlp.YoutubeDL(options) as ydl:
-        ydl.process_ie_result(copy.deepcopy(info), download=True)
+        return _fetch(ydl, req)
 
 
 def _metadata(info: dict[str, Any]) -> dict[str, str]:
@@ -428,9 +436,9 @@ def run(req: dict[str, Any]) -> int:
     try:
         work.mkdir(parents=True, exist_ok=True)
         emit({"t": "stage", "stage": "preparing"})
-        info = req.get("info") or _extract(req["url"], log)
-        _side_pass(req, info, work, log)
-        _stream_pass(req, info, work, log)
+        _side_pass(req, work, log)
+        # Names, chapters and metadata come from the pass that actually downloaded the streams.
+        info = _stream_pass(req, work, log)
         files, plan, warnings = _finalize(req, info, work)
     except errors.AppError as exc:
         emit({"t": "error", "code": exc.code, "raw": exc.raw or log.raw()})

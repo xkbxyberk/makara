@@ -644,7 +644,6 @@ export const tr = {
   warnings: {
     DRM_PRESENT: 'Bu videonun bazı formatları DRM korumalı ve indirilemez.',
     DRM_MAYBE: 'Bazı formatlar DRM korumalı olabilir; indirme sırasında başarısız olabilirler.',
-    NO_AUDIO_LANGUAGE_INFO: 'Site ses parçaları için dil bilgisi vermiyor.',
     SIZES_ARE_ESTIMATES:
       'Bu sitede kesin dosya boyutu bilgisi yok; gösterilen bütün boyutlar tahmindir.',
     LIVE_CONTENT: 'Bu bir canlı yayın. Canlı yayın desteği sonraki aşamalarda geliyor.',

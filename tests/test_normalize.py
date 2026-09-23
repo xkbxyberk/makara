@@ -225,3 +225,26 @@ def test_audio_mode_says_whether_it_copies_or_reencodes(multi_audio: dict[str, A
     assert plan(opus, "opus") == (["copy"], {"AUDIO_MODE_COPY"})
     assert plan(opus, "mp3") == (["transcode"], {"AUDIO_MODE_REENCODE"})
     assert plan(aac, "flac") == (["transcode"], {"LOSSLESS_FROM_LOSSY"})
+
+
+def test_an_ordinary_single_language_video_raises_no_warning() -> None:
+    """A music video whose one audio track has no language tag is normal, not a problem."""
+    model = normalize(
+        {
+            "id": "x",
+            "title": "Song",
+            "duration": 10,
+            "formats": [
+                {"format_id": "251", "vcodec": "none", "acodec": "opus", "abr": 130},
+                {
+                    "format_id": "248",
+                    "vcodec": "vp9",
+                    "acodec": "none",
+                    "height": 1080,
+                    "filesize": 1000,
+                },
+            ],
+        }
+    )
+    assert model["warnings"] == []
+    assert model["audio_languages"][0]["role"] == "unknown"

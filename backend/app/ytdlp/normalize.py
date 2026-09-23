@@ -394,8 +394,6 @@ def normalize(info: dict[str, Any]) -> dict[str, Any]:
         warnings.append("DRM_PRESENT")
     elif any(f["drm"] == "maybe" for f in [*video_formats, *audio_formats, *muxed_formats]):
         warnings.append("DRM_MAYBE")
-    if audio_formats and not any(g["language"] for g in audio_languages):
-        warnings.append("NO_AUDIO_LANGUAGE_INFO")
     if video_formats and all(f["filesize_kind"] != SIZE_EXACT for f in video_formats):
         warnings.append("SIZES_ARE_ESTIMATES")
     if info.get("live_status") in ("is_live", "is_upcoming", "post_live"):
