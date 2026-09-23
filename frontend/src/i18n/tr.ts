@@ -7,7 +7,11 @@ export const tr = {
   app: {
     name: 'VideoDownloader',
     brand: 'Medya',
+    systemSection: 'Uygulama',
     themeToggle: 'Temayı değiştir',
+    theme: 'Tema',
+    showSidebar: 'Kenar çubuğunu göster',
+    hideSidebar: 'Kenar çubuğunu gizle',
     themeLight: 'Açık tema',
     themeDark: 'Koyu tema',
     copy: 'Kopyala',

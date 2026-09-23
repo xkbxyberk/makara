@@ -52,10 +52,11 @@ test('a finished download shows up in the library with its tracks and a thumbnai
   await expect.poll(() => thumb.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
 
   await card.locator('.lib-card-button').click();
-  await expect(card).toContainText('İngilizce'); // audio track language, from ffprobe
-  await expect(card).toContainText('Türkçe'); // subtitle languages
-  await expect(card.getByRole('button', { name: 'Oynat' })).toBeEnabled();
-  await expect(card.getByRole('button', { name: 'Finder’da göster' })).toBeEnabled();
+  const inspector = page.getByTestId('inspector'); // the selected item's details and actions
+  await expect(inspector).toContainText('İngilizce'); // audio track language, from ffprobe
+  await expect(inspector).toContainText('Türkçe'); // subtitle languages
+  await expect(inspector.getByRole('button', { name: 'Oynat' })).toBeEnabled();
+  await expect(inspector.getByRole('button', { name: 'Finder’da göster' })).toBeEnabled();
 });
 
 test('list view, search and the kind filter', async ({ page, request }) => {
@@ -80,8 +81,9 @@ test('move to Trash asks first, and Cancel really cancels', async ({ page, reque
   await openLibrary(page);
   const card = page.locator(`[data-item-id="${item.id}"]`);
   await card.locator('.lib-card-button').click();
+  const inspector = page.getByTestId('inspector'); // the selected item's details and actions
 
-  await card.getByRole('button', { name: 'Çöp Kutusu’na taşı' }).click();
+  await inspector.getByRole('button', { name: 'Çöp Kutusu’na taşı' }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toContainText('Çöp Kutusu’na taşınsın mı?');
   await expect(dialog.getByRole('button', { name: 'Vazgeç' })).toBeFocused(); // the safe choice
@@ -89,7 +91,7 @@ test('move to Trash asks first, and Cancel really cancels', async ({ page, reque
   await expect(dialog).toBeHidden();
   expect(existsSync(item.primary_path)).toBe(true);
 
-  await card.getByRole('button', { name: 'Çöp Kutusu’na taşı' }).click();
+  await inspector.getByRole('button', { name: 'Çöp Kutusu’na taşı' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Çöp Kutusu’na taşı' }).click();
   await expect(card).toHaveCount(0);
   expect(existsSync(item.primary_path)).toBe(false);
@@ -103,7 +105,8 @@ test('a file deleted in Finder is marked missing, not forgotten', async ({ page,
   const card = page.locator(`[data-item-id="${item.id}"]`);
   await expect(card).toContainText('Eksik');
   await card.locator('.lib-card-button').click();
-  await expect(card.getByRole('button', { name: 'Oynat' })).toBeDisabled();
+  const inspector = page.getByTestId('inspector'); // the selected item's details and actions
+  await expect(inspector.getByRole('button', { name: 'Oynat' })).toBeDisabled();
   await page.getByLabel('Yalnızca eksikler').check();
   await expect(card).toBeVisible();
 });
@@ -115,6 +118,9 @@ test('screenshots: library grid and list in light, dark and narrow', async ({ pa
   await page.getByRole('radio', { name: 'Izgara' }).click();
   await expect(page.getByTestId('library-item').first()).toBeVisible();
   await page.screenshot({ path: `${SHOTS}/library-grid-light.png` });
+  await page.getByTestId('library-item').first().locator('.lib-card-button').click();
+  await expect(page.getByTestId('inspector')).toBeVisible();
+  await page.screenshot({ path: `${SHOTS}/library-inspector-light.png` });
   await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'));
   await page.screenshot({ path: `${SHOTS}/library-grid-dark.png` });
   await page.getByRole('radio', { name: 'Liste' }).click();
@@ -129,6 +135,7 @@ test('a library item opens in the Studio', async ({ page, request }) => {
   await openLibrary(page);
   const card = page.locator(`[data-item-id="${item.id}"]`);
   await card.locator('.lib-card-button').click();
-  await card.getByRole('button', { name: 'Stüdyo’da aç' }).click();
+  const inspector = page.getByTestId('inspector'); // the selected item's details and actions
+  await inspector.getByRole('button', { name: 'Stüdyo’da aç' }).click();
   await expect(page.getByTestId('studio-source')).toContainText(item.primary_path.split('/').pop()!);
 });

@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { tr } from '../i18n/tr';
+import { Icon, type SymbolName } from './Icon';
 
 export function Panel({
   title,
@@ -62,11 +63,12 @@ export function Badge({
   return <span className={tone === 'neutral' ? 'badge' : `badge badge-${tone}`}>{children}</span>;
 }
 
-export function EmptyState({ glyph, title, body }: { glyph: string; title: string; body: string }) {
+/** ContentUnavailableView: a large quiet symbol, a title, one sentence of direction. */
+export function EmptyState({ icon, title, body }: { icon: SymbolName; title: string; body: string }) {
   return (
     <div className="state">
-      <div className="state-glyph" aria-hidden="true">
-        {glyph}
+      <div className="state-glyph">
+        <Icon name={icon} size={40} />
       </div>
       <div className="state-title">{title}</div>
       <div>{body}</div>
@@ -100,14 +102,15 @@ export function ErrorState({
   const copy = table[code] ?? tr.errors.UNKNOWN;
   return (
     <div className="state" role="alert">
-      <div className="state-glyph" aria-hidden="true">
-        ⚠︎
+      <div className="state-glyph">
+        <Icon name="exclamationmark.triangle.fill" size={40} tone="yellow" />
       </div>
       <div className="state-title">{copy.title}</div>
       <div>{copy.body}</div>
-      <div style={{ marginTop: 'var(--space-3)', display: 'flex', gap: 8, justifyContent: 'center' }}>
+      <div style={{ marginTop: 'var(--s3)', display: 'flex', gap: 8, justifyContent: 'center' }}>
         {onRetry && (
           <button type="button" className="btn" onClick={onRetry}>
+            <Icon name="arrow.clockwise" size={14} />
             {tr.app.retry}
           </button>
         )}
@@ -140,6 +143,7 @@ export function CopyButton({ value, label }: { value: string; label?: string }) 
         timer.current = setTimeout(() => setDone(false), 1500);
       }}
     >
+      <Icon name={done ? 'checkmark' : 'doc.on.doc'} size={14} />
       {done ? tr.app.copied : (label ?? tr.app.copy)}
     </button>
   );
@@ -174,6 +178,9 @@ export function ConfirmDialog({
   }, [open]);
   return (
     <dialog ref={ref} className="confirm" onCancel={onCancel} aria-labelledby="confirm-title">
+      <div className="confirm-icon">
+        <Icon name={danger ? 'trash' : 'info.circle'} size={40} />
+      </div>
       <h2 id="confirm-title">{title}</h2>
       <p className="muted">{body}</p>
       <div className="confirm-actions">
@@ -199,5 +206,12 @@ export function Notice({
   tone?: 'neutral' | 'warn' | 'danger';
   children: ReactNode;
 }) {
-  return <div className={tone === 'neutral' ? 'notice' : `notice notice-${tone}`}>{children}</div>;
+  const icon: SymbolName =
+    tone === 'danger' ? 'xmark.octagon.fill' : tone === 'warn' ? 'exclamationmark.triangle.fill' : 'info.circle';
+  return (
+    <div className={tone === 'neutral' ? 'notice' : `notice notice-${tone}`}>
+      <Icon name={icon} size={15} />
+      <div className="notice-body">{children}</div>
+    </div>
+  );
 }

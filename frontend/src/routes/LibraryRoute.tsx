@@ -19,6 +19,8 @@ import {
   Panel,
   Term,
 } from '../components/ui';
+import { Icon } from '../components/Icon';
+import { ToolbarItems } from '../components/Toolbar';
 
 type View = 'grid' | 'list';
 type State =
@@ -37,8 +39,8 @@ function Thumb({ item }: { item: LibraryItem }) {
   const [failed, setFailed] = useState(false);
   if (!item.thumbnail || failed) {
     return (
-      <div className="lib-thumb lib-thumb-empty" aria-hidden="true">
-        {item.kind === 'audio' ? '♪' : '▶'}
+      <div className="lib-thumb lib-thumb-empty">
+        <Icon name={item.kind === 'audio' ? 'music.note' : 'film'} size={30} />
       </div>
     );
   }
@@ -66,14 +68,11 @@ function Actions({
   onTrash,
   onError,
   onStudio,
-  withTrash = true,
 }: {
   item: LibraryItem;
   onTrash: (item: LibraryItem) => void;
   onError: (code: string) => void;
   onStudio: (itemId: string) => void;
-  /** The destructive action appears only once an item is opened, never on every row. */
-  withTrash?: boolean;
 }) {
   const run = (action: () => Promise<unknown>) => () =>
     void action().catch((error: unknown) => onError(error instanceof ApiError ? error.code : 'UNKNOWN'));
@@ -87,24 +86,26 @@ function Actions({
         title={tr.library.playHelp}
         onClick={run(() => api.openItem(item.id))}
       >
+        <Icon name="play.fill" size={12} />
         {tr.library.play}
       </button>
       <button type="button" className="btn" disabled={missing} onClick={run(() => api.revealItem(item.id))}>
+        <Icon name="folder" size={14} />
         {tr.library.reveal}
       </button>
       <button type="button" className="btn" disabled={missing} onClick={() => onStudio(item.id)}>
+        <Icon name="scissors" size={14} />
         {tr.library.openInStudio}
       </button>
-      {withTrash && (
-        <button
-          type="button"
-          className="btn btn-quiet danger-text"
-          disabled={missing}
-          onClick={() => onTrash(item)}
-        >
-          {tr.library.trash}
-        </button>
-      )}
+      <button
+        type="button"
+        className="btn btn-quiet danger-text"
+        disabled={missing}
+        onClick={() => onTrash(item)}
+      >
+        <Icon name="trash" size={14} />
+        {tr.library.trash}
+      </button>
     </div>
   );
 }
@@ -206,18 +207,52 @@ export function LibraryRoute({
   const set = (patch: Partial<LibraryQuery>) => setQuery((q) => ({ ...q, ...patch }));
   const page = state.phase === 'ready' ? state.page : null;
   const filtered = JSON.stringify(query) !== JSON.stringify(EMPTY_QUERY);
+  const chosen = page?.items.find((item) => item.id === selected) ?? null;
+  const select = (id: string) => setSelected((current) => (current === id ? null : id));
 
   return (
     <div className="content-inner">
+      <ToolbarItems>
+        <div className="searchfield">
+          <Icon name="magnifyingglass" size={14} />
+          <input
+            className="input"
+            type="search"
+            value={query.search}
+            placeholder={tr.library.search}
+            aria-label={tr.library.search}
+            onChange={(event) => set({ search: event.target.value })}
+          />
+        </div>
+        <div className="segmented icons" role="radiogroup" aria-label={tr.library.view}>
+          {(['grid', 'list'] as View[]).map((value) => (
+            <button
+              key={value}
+              type="button"
+              role="radio"
+              aria-checked={view === value}
+              aria-label={tr.library[value]}
+              title={tr.library[value]}
+              className={view === value ? 'segment active' : 'segment'}
+              onClick={() => setView(value)}
+            >
+              <Icon name={value === 'grid' ? 'square.grid.2x2' : 'list.bullet'} size={15} />
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          className="btn-icon"
+          aria-label={tr.library.scan}
+          title={tr.library.scanHelp}
+          disabled={scan === 'running'}
+          onClick={() => void runScan()}
+        >
+          {scan === 'running' ? <span className="spinner" /> : <Icon name="arrow.clockwise" size={17} />}
+        </button>
+      </ToolbarItems>
+
       <div className="lib-toolbar">
-        <input
-          className="input"
-          type="search"
-          value={query.search}
-          placeholder={tr.library.search}
-          aria-label={tr.library.search}
-          onChange={(event) => set({ search: event.target.value })}
-        />
         <select
           className="input select"
           aria-label={tr.library.siteLabel}
@@ -263,160 +298,139 @@ export function LibraryRoute({
           />
           {tr.library.onlyMissing}
         </label>
-        <div className="segmented" role="radiogroup" aria-label={tr.library.view}>
-          {(['grid', 'list'] as View[]).map((value) => (
-            <button
-              key={value}
-              type="button"
-              role="radio"
-              aria-checked={view === value}
-              className={view === value ? 'segment active' : 'segment'}
-              onClick={() => setView(value)}
-            >
-              {tr.library[value]}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="lib-status">
+        <span className="toolbar-spacer" />
         {page && (
           <span className="muted" data-testid="library-summary">
             {tr.library.summary(page.facets.count, formatBytes(page.facets.total_size), page.facets.missing)}
           </span>
         )}
-        <span className="toolbar-spacer" />
-        {scan && scan !== 'running' && <span className="muted">{tr.library.scanResult(scan)}</span>}
-        <button
-          type="button"
-          className="btn"
-          title={tr.library.scanHelp}
-          disabled={scan === 'running'}
-          onClick={() => void runScan()}
-        >
-          {scan === 'running' ? tr.library.scanning : tr.library.scan}
-        </button>
       </div>
 
+      {scan && scan !== 'running' && <Notice>{tr.library.scanResult(scan)}</Notice>}
       {actionError && (
         <Notice tone="danger">
           {(tr.errors as Record<string, { title: string }>)[actionError]?.title ?? actionError}
         </Notice>
       )}
 
-      <Panel title={tr.library.title} count={page?.items.length} flush>
-        {state.phase === 'loading' && <LoadingState title={tr.library.loading} body="" />}
-        {state.phase === 'error' && (
-          <ErrorState code={state.code} raw={state.raw} onRetry={() => void load(query)} />
-        )}
-        {page && page.items.length === 0 && (
-          filtered ? (
-            <EmptyState glyph="⌕" title={tr.library.noMatchTitle} body={tr.library.noMatchBody} />
-          ) : (
-            <EmptyState glyph="▦" title={tr.library.emptyTitle} body={tr.library.emptyBody} />
-          )
-        )}
-        {page && page.items.length > 0 && view === 'grid' && (
-          <ul className="lib-grid">
-            {page.items.map((item) => (
-              <li
-                key={item.id}
-                className={selected === item.id ? 'lib-card selected' : 'lib-card'}
-                data-testid="library-item"
-                data-item-id={item.id}
-              >
-                <button
-                  type="button"
-                  className="lib-card-button"
-                  aria-expanded={selected === item.id}
-                  onClick={() => setSelected(selected === item.id ? null : item.id)}
-                >
-                  <Thumb item={item} />
-                  <span className="lib-card-title">{item.title}</span>
-                  <span className="muted lib-card-meta">
-                    {item.channel} · {formatDuration(item.duration)} · {formatBytes(item.size)}
-                  </span>
-                </button>
-                <div className="lib-card-badges">
-                  {item.mode && (
-                    <Badge>
-                      <Term
-                        label={tr.download.modes[item.mode] ?? item.mode}
-                        body={tr.download.modeHelp[item.mode] ?? ''}
-                      />
-                    </Badge>
-                  )}
-                  {item.status === 'missing' && <MissingBadge />}
-                </div>
-                {selected === item.id && (
-                  <div className="lib-card-more">
-                    <Details item={item} />
-                    <Actions item={item} onTrash={setConfirming} onError={setActionError} onStudio={onOpenInStudio} />
-                  </div>
-                )}
-              </li>
+      <div className={chosen ? 'lib-layout with-inspector' : 'lib-layout'}>
+        <Panel title={tr.library.title} count={page?.items.length} flush>
+          {state.phase === 'loading' && <LoadingState title={tr.library.loading} body="" />}
+          {state.phase === 'error' && (
+            <ErrorState code={state.code} raw={state.raw} onRetry={() => void load(query)} />
+          )}
+          {page && page.items.length === 0 &&
+            (filtered ? (
+              <EmptyState icon="magnifyingglass" title={tr.library.noMatchTitle} body={tr.library.noMatchBody} />
+            ) : (
+              <EmptyState icon="books.vertical" title={tr.library.emptyTitle} body={tr.library.emptyBody} />
             ))}
-          </ul>
-        )}
-        {page && page.items.length > 0 && view === 'list' && (
-          <table className="grid lib-table">
-            <thead>
-              <tr>
-                <th>{tr.table.name}</th>
-                <th className="optional">{tr.library.siteLabel}</th>
-                <th className="optional">{tr.library.sorts.uploaded}</th>
-                <th className="num">{tr.table.duration}</th>
-                <th className="num">{tr.table.size}</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
+          {page && page.items.length > 0 && view === 'grid' && (
+            <ul className="lib-grid">
               {page.items.map((item) => (
-                <tr key={item.id} data-testid="library-item" data-item-id={item.id}>
-                  <td>
-                    <button
-                      type="button"
-                      className="linklike"
-                      aria-expanded={selected === item.id}
-                      onClick={() => setSelected(selected === item.id ? null : item.id)}
-                    >
-                      {item.title}
-                    </button>{' '}
-                    {item.status === 'missing' && <MissingBadge />}
-                    <div className="muted">{item.channel}</div>
-                    {selected === item.id && (
-                      <>
-                        <Details item={item} />
-                        <button
-                          type="button"
-                          className="btn btn-quiet danger-text"
-                          disabled={item.status === 'missing'}
-                          onClick={() => setConfirming(item)}
-                        >
-                          {tr.library.trash}
-                        </button>
-                      </>
+                <li
+                  key={item.id}
+                  className={selected === item.id ? 'lib-card selected' : 'lib-card'}
+                  data-testid="library-item"
+                  data-item-id={item.id}
+                >
+                  <button
+                    type="button"
+                    className="lib-card-button"
+                    aria-pressed={selected === item.id}
+                    onClick={() => select(item.id)}
+                  >
+                    <Thumb item={item} />
+                    <span className="lib-card-title">{item.title}</span>
+                    <span className="lib-card-meta">
+                      {item.channel} · {formatDuration(item.duration)} · {formatBytes(item.size)}
+                    </span>
+                  </button>
+                  <div className="lib-card-badges">
+                    {item.mode && (
+                      <Badge>
+                        <Term
+                          label={tr.download.modes[item.mode] ?? item.mode}
+                          body={tr.download.modeHelp[item.mode] ?? ''}
+                        />
+                      </Badge>
                     )}
-                  </td>
-                  <td className="optional muted">{item.site}</td>
-                  <td className="optional muted">{formatUploadDate(item.upload_date)}</td>
-                  <td className="num">{formatDuration(item.duration)}</td>
-                  <td className="num">{formatBytes(item.size)}</td>
-                  <td>
-                    <Actions
-                      item={item}
-                      onTrash={setConfirming}
-                      onError={setActionError}
-                      onStudio={onOpenInStudio}
-                      withTrash={false}
-                    />
-                  </td>
-                </tr>
+                    {item.status === 'missing' && <MissingBadge />}
+                  </div>
+                </li>
               ))}
-            </tbody>
-          </table>
+            </ul>
+          )}
+          {page && page.items.length > 0 && view === 'list' && (
+            <table className="grid lib-table">
+              <thead>
+                <tr>
+                  <th>{tr.table.name}</th>
+                  <th className="optional">{tr.library.siteLabel}</th>
+                  <th className="optional">{tr.library.sorts.uploaded}</th>
+                  <th className="num">{tr.table.duration}</th>
+                  <th className="num">{tr.table.size}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {page.items.map((item) => (
+                  <tr
+                    key={item.id}
+                    data-testid="library-item"
+                    data-item-id={item.id}
+                    className={selected === item.id ? 'selected' : undefined}
+                  >
+                    <td>
+                      <button
+                        type="button"
+                        className="linklike"
+                        aria-pressed={selected === item.id}
+                        onClick={() => select(item.id)}
+                      >
+                        {item.title}
+                      </button>{' '}
+                      {item.status === 'missing' && <MissingBadge />}
+                      <div className="muted">{item.channel}</div>
+                    </td>
+                    <td className="optional muted">{item.site}</td>
+                    <td className="optional muted">{formatUploadDate(item.upload_date)}</td>
+                    <td className="num">{formatDuration(item.duration)}</td>
+                    <td className="num">{formatBytes(item.size)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </Panel>
+
+        {chosen && (
+          <aside className="inspector" aria-label={tr.library.details} data-testid="inspector">
+            <div className="panel-body inspector-body">
+              <Thumb item={chosen} />
+              <div className="inspector-title">{chosen.title}</div>
+              <div className="muted">{chosen.channel}</div>
+              <div className="lib-card-badges">
+                {chosen.mode && (
+                  <Badge>
+                    <Term
+                      label={tr.download.modes[chosen.mode] ?? chosen.mode}
+                      body={tr.download.modeHelp[chosen.mode] ?? ''}
+                    />
+                  </Badge>
+                )}
+                {chosen.status === 'missing' && <MissingBadge />}
+              </div>
+              <Actions
+                item={chosen}
+                onTrash={setConfirming}
+                onError={setActionError}
+                onStudio={onOpenInStudio}
+              />
+              <Details item={chosen} />
+            </div>
+          </aside>
         )}
-      </Panel>
+      </div>
 
       <ConfirmDialog
         open={confirming !== null}

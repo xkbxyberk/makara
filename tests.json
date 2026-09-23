@@ -505,6 +505,42 @@
           "proof": "test_separate_segments_become_separate_library_items"
         }
       ]
+    },
+    "UI": {
+      "title": "HIG redesign (after M4)",
+      "status": "done",
+      "criteria": [
+        {
+          "id": "UI.1",
+          "text": "Sidebar with symbols and a sun/moon/system theme picker; the theme applies and persists",
+          "pass": true,
+          "proof": "e2e 'theme switches between system, light and dark'; screenshots/*-light.png, *-dark.png"
+        },
+        {
+          "id": "UI.2",
+          "text": "Screen actions live in the toolbar (Library search/view/scan, Sistem re-check) and are reachable by accessible name",
+          "pass": true,
+          "proof": "e2e 'list view, search and the kind filter'; 'a file deleted in Finder is marked missing'; doctor spec"
+        },
+        {
+          "id": "UI.3",
+          "text": "Library selection opens an inspector with details and actions; Trash still asks first",
+          "pass": true,
+          "proof": "e2e 'move to Trash asks first, and Cancel really cancels'; screenshots/library-inspector-light.png"
+        },
+        {
+          "id": "UI.4",
+          "text": "Narrow window: sidebar collapses, nothing overlaps content",
+          "pass": true,
+          "proof": "screenshots/*-narrow.png"
+        },
+        {
+          "id": "UI.5",
+          "text": "Desktop window opens with vibrancy and no errors",
+          "pass": true,
+          "proof": "manual: scripts/desktop.py with isolated VD_DATA_DIR, log clean apart from a pywebview WebKit deprecation notice"
+        }
+      ]
     }
   }
 }

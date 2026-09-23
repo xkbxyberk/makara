@@ -51,7 +51,17 @@ def main() -> int:
         webbrowser.open(URL)
         thread.join()
         return 0
-    webview.create_window("VideoDownloader", URL, width=1240, height=860, min_size=(420, 600))
+    # `transparent` + `vibrancy` give the sidebar the real macOS material behind the web view;
+    # `?shell=native` tells the page it may leave the sidebar see-through.
+    webview.create_window(
+        "VideoDownloader",
+        f"{URL}?shell=native",
+        width=1240,
+        height=860,
+        min_size=(420, 600),
+        transparent=True,
+        vibrancy=True,
+    )
     webview.start()
     # The window is closed: shut the server down properly so the job manager stops its workers
     # (a daemon thread would simply die, leaving workers running into the next launch).

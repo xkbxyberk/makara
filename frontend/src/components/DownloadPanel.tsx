@@ -18,6 +18,7 @@ import {
 } from '../lib/api';
 import { formatBitrate, formatBytes, languageName, sizePrefix } from '../lib/format';
 import { Badge, CopyButton, ErrorState, Notice, Panel, Term } from './ui';
+import { Icon } from './Icon';
 
 const MODES: Mode[] = ['mkv', 'compat_mp4', 'separate', 'audio'];
 const CODECS: AudioCodec[] = ['mp3', 'm4a', 'opus', 'flac', 'wav'];
@@ -298,6 +299,7 @@ export function DownloadPanel({
             aria-expanded={pickerOpen}
             onClick={() => setPickerOpen((open) => !open)}
           >
+            <Icon name="slider.horizontal.3" size={14} />
             {pickerOpen ? tr.download.hidePicker : tr.download.showPicker}
           </button>
           <span className="toolbar-spacer" />
@@ -308,6 +310,7 @@ export function DownloadPanel({
             disabled={!planIsCurrent || plan.blocking || submitting}
             onClick={() => void submit()}
           >
+            {submitting ? <span className="spinner" /> : <Icon name="arrow.down.circle" size={15} />}
             {submitting ? tr.download.submitting : tr.download.submit}
           </button>
         </div>

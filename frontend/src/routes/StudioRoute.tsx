@@ -13,6 +13,7 @@ import {
 } from '../lib/api';
 import { formatBytes, formatDuration, formatTime, languageName, parseTime } from '../lib/format';
 import { CopyButton, EmptyState, ErrorState, LoadingState, Notice, Panel, Term } from '../components/ui';
+import { Icon, type SymbolName } from '../components/Icon';
 
 type SourceState =
   | { phase: 'empty' }
@@ -37,6 +38,12 @@ interface Track {
 }
 
 const OPS: StudioOp[] = ['audio', 'trim', 'remux', 'subtitle'];
+const OP_ICONS: Record<StudioOp, SymbolName> = {
+  audio: 'waveform',
+  trim: 'scissors',
+  remux: 'slider.horizontal.3',
+  subtitle: 'captions',
+};
 const CODECS = ['mp3', 'm4a', 'opus', 'flac', 'wav'];
 const LOSSY = ['mp3', 'm4a', 'opus'];
 
@@ -332,11 +339,12 @@ export function StudioRoute({
                   )
               }
             >
+              <Icon name="folder" size={14} />
               {tr.studio.chooseFile}
             </button>
           </form>
         </div>
-        {state.phase === 'empty' && <EmptyState glyph="✂︎" title={tr.studio.emptyTitle} body={tr.studio.emptyBody} />}
+        {state.phase === 'empty' && <EmptyState icon="scissors" title={tr.studio.emptyTitle} body={tr.studio.emptyBody} />}
         {state.phase === 'probing' && <LoadingState title={tr.studio.probing} body="" />}
         {state.phase === 'error' && <ErrorState code={state.code} raw={state.raw} />}
         {source && (
@@ -363,6 +371,7 @@ export function StudioRoute({
                     className={op === value ? 'segment active' : 'segment'}
                     onClick={() => setOp(value)}
                   >
+                    <Icon name={OP_ICONS[value]} size={14} />
                     {tr.studio.tabs[value]}
                   </button>
                 );
@@ -585,11 +594,11 @@ export function StudioRoute({
                           />
                         </td>
                         <td className="studio-move">
-                          <button type="button" className="btn btn-quiet" aria-label={tr.studio.remux.moveUp} onClick={() => move(index, -1)}>
-                            ↑
+                          <button type="button" className="btn-icon" aria-label={tr.studio.remux.moveUp} title={tr.studio.remux.moveUp} onClick={() => move(index, -1)}>
+                            <Icon name="chevron.up" size={14} />
                           </button>
-                          <button type="button" className="btn btn-quiet" aria-label={tr.studio.remux.moveDown} onClick={() => move(index, 1)}>
-                            ↓
+                          <button type="button" className="btn-icon" aria-label={tr.studio.remux.moveDown} title={tr.studio.remux.moveDown} onClick={() => move(index, 1)}>
+                            <Icon name="chevron.down" size={14} />
                           </button>
                         </td>
                       </tr>
@@ -725,6 +734,7 @@ export function StudioRoute({
                 disabled={!current || plan.blocking || queued}
                 onClick={() => void run()}
               >
+                <Icon name="play.fill" size={13} />
                 {tr.studio.run}
               </button>
             </div>

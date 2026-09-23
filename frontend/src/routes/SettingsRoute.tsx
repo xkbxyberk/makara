@@ -2,10 +2,16 @@ import { useEffect, useRef, useState } from 'react';
 import { tr } from '../i18n/tr';
 import { ApiError, api, type Mode, type Settings } from '../lib/api';
 import { ErrorState, LoadingState, Notice, Panel, Term } from '../components/ui';
+import { Icon, type SymbolName } from '../components/Icon';
 
 export type Theme = 'system' | 'light' | 'dark';
 const MODES: Mode[] = ['mkv', 'compat_mp4', 'separate', 'audio'];
 const THEMES: Theme[] = ['system', 'light', 'dark'];
+const THEME_ICONS: Record<string, SymbolName> = {
+  system: 'circle.lefthalf.filled',
+  light: 'sun.max.fill',
+  dark: 'moon.fill',
+};
 
 type State =
   | { phase: 'loading' }
@@ -17,12 +23,14 @@ function Segmented<T extends string>({
   value,
   options,
   labels,
+  icons,
   onChange,
 }: {
   label: string;
   value: T;
   options: T[];
   labels: Record<string, string>;
+  icons?: Record<string, SymbolName>;
   onChange: (value: T) => void;
 }) {
   return (
@@ -36,6 +44,7 @@ function Segmented<T extends string>({
           className={value === option ? 'segment active' : 'segment'}
           onClick={() => onChange(option)}
         >
+          {icons?.[option] && <Icon name={icons[option]} size={13} />}
           {labels[option]}
         </button>
       ))}
@@ -176,6 +185,7 @@ export function SettingsRoute({
                 onChange={(event) => edit({ download_dir: event.target.value })}
               />
               <button type="button" className="btn" onClick={() => void chooseFolder()}>
+                <Icon name="folder" size={14} />
                 {tr.settings.chooseFolder}
               </button>
             </div>
@@ -243,7 +253,7 @@ export function SettingsRoute({
 
           <div className="setting">
             <span className="setting-label">{tr.settings.theme}</span>
-            <Segmented label={tr.settings.theme} value={theme} options={THEMES} labels={tr.settings.themes} onChange={setTheme} />
+            <Segmented label={tr.settings.theme} value={theme} options={THEMES} labels={tr.settings.themes} icons={THEME_ICONS} onChange={setTheme} />
           </div>
 
           <label className="setting setting-toggle">

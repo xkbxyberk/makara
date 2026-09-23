@@ -100,6 +100,14 @@ Local-only media workstation on yt-dlp + FFmpeg. macOS arm64, single user (Berk)
     (B-frame reordering: 27 frames instead of 25 per 1 s piece at 25 fps). Tests state that bound;
     frame-accurate cuts are within one frame.
 
+22. **Toolbar actions are portals.** A screen puts its toolbar buttons in
+    `<ToolbarItems>` (`components/Toolbar.tsx`); they render into the window toolbar. Icons go
+    through `<Icon name="sf.symbol.name">` (`components/Icon.tsx`) so the SF-style names stay in
+    one map. An icon-only button needs an `aria-label` (the e2e tests find buttons by it).
+23. The desktop window is `transparent=True, vibrancy=True` and loads `/?shell=native`; that CSS
+    (`html.native`) only turns the sidebar see-through when the theme follows the system, since
+    the material follows the system appearance, not ours.
+
 ## Rules
 
 - **Never delete, skip, weaken or `xfail` a test to make the suite pass.** Fix the code.

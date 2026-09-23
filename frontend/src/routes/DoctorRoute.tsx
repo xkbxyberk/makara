@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { tr } from '../i18n/tr';
 import { ApiError, api, type DoctorCheck, type DoctorReport } from '../lib/api';
 import { Badge, CopyButton, ErrorState, LoadingState, Notice, Panel, Term } from '../components/ui';
+import { Icon } from '../components/Icon';
+import { ToolbarItems } from '../components/Toolbar';
 
 type State =
   | { phase: 'loading' }
@@ -14,9 +16,7 @@ function Capabilities({ capabilities }: { capabilities: Record<string, boolean> 
     <div className="cap-grid">
       {Object.entries(capabilities).map(([key, available]) => (
         <div key={key}>
-          <span style={{ color: available ? 'var(--ok)' : 'var(--text-tertiary)' }}>
-            {available ? '✓' : '✕'}
-          </span>{' '}
+          <Icon name={available ? 'checkmark.circle.fill' : 'xmark.circle'} tone={available ? 'green' : 'secondary'} size={14} />
           <span className={available ? '' : 'dim'}>{labels[key] ?? key}</span>
         </div>
       ))}
@@ -47,6 +47,7 @@ function UpdateYtdlp({ onDone }: { onDone: () => void }) {
   return (
     <div className="update-row">
       <button type="button" className="btn" disabled={state.phase === 'running'} onClick={() => void run()}>
+        {state.phase === 'running' ? <span className="spinner" /> : <Icon name="arrow.down.circle" size={14} />}
         {state.phase === 'running' ? tr.doctor.updating : tr.doctor.updateYtdlp}
       </button>
       <span className="dim">{tr.doctor.updateHelp}</span>
@@ -68,7 +69,11 @@ function CheckRow({ check, onReload }: { check: DoctorCheck; onReload: () => voi
 
   return (
     <div className="check-row">
-      <span className={`check-dot ${check.status}`} aria-hidden="true" />
+      <Icon
+        name={check.status === 'ok' ? 'checkmark.circle.fill' : check.status === 'warn' ? 'exclamationmark.triangle.fill' : 'xmark.octagon.fill'}
+        tone={check.status === 'ok' ? 'green' : check.status === 'warn' ? 'yellow' : 'red'}
+        size={22}
+      />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div>
           <strong>
@@ -96,13 +101,13 @@ function CheckRow({ check, onReload }: { check: DoctorCheck; onReload: () => voi
         </div>
         {capabilities && <Capabilities capabilities={capabilities} />}
         {missing.map((key) => (
-          <div style={{ marginTop: 'var(--space-2)' }} key={key}>
+          <div style={{ marginTop: 'var(--s2)' }} key={key}>
             <Notice tone="warn">{explained[key] ?? key}</Notice>
           </div>
         ))}
         {check.id === 'yt_dlp' && <UpdateYtdlp onDone={onReload} />}
         {check.status !== 'ok' && check.fix.kind === 'command' && (
-          <div style={{ marginTop: 'var(--space-2)' }}>
+          <div style={{ marginTop: 'var(--s2)' }}>
             <div className="muted">{tr.doctor.fixHint}</div>
             <div className="cmd">
               <code className="mono">{check.fix.command}</code>
@@ -135,16 +140,19 @@ export function DoctorRoute() {
 
   return (
     <div className="content-inner">
-      <Panel
-        title={tr.doctor.title}
-        actions={
-          <button type="button" className="btn" onClick={() => void load()}>
-            {tr.doctor.refresh}
-          </button>
-        }
-        flush
-      >
-        <div style={{ padding: 'var(--space-3) var(--space-4)' }} className="muted">
+      <ToolbarItems>
+        <button
+          type="button"
+          className="btn-icon"
+          aria-label={tr.doctor.refresh}
+          title={tr.doctor.refresh}
+          onClick={() => void load()}
+        >
+          <Icon name="arrow.clockwise" size={17} />
+        </button>
+      </ToolbarItems>
+      <Panel title={tr.doctor.title} flush>
+        <div style={{ padding: 'var(--s3) var(--s4)' }} className="muted">
           {tr.doctor.subtitle}
         </div>
         {state.phase === 'loading' && <LoadingState title={tr.doctor.title} body={tr.doctor.subtitle} />}

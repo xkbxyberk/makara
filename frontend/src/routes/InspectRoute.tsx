@@ -22,6 +22,7 @@ import {
 } from '../lib/format';
 import { Badge, CopyButton, EmptyState, ErrorState, LoadingState, Notice, Panel, Term } from '../components/ui';
 import { DownloadPanel } from '../components/DownloadPanel';
+import { Icon } from '../components/Icon';
 
 type State =
   | { phase: 'empty' }
@@ -288,7 +289,7 @@ function Subtitles({ model }: { model: VideoModel }) {
   return (
     <Panel title={tr.inspect.subtitles} count={total} flush>
       {has_live_chat && (
-        <div style={{ padding: 'var(--space-3) var(--space-4)' }}>
+        <div style={{ padding: 'var(--s3) var(--s4)' }}>
           <Notice>{tr.inspect.liveChat}</Notice>
         </div>
       )}
@@ -481,16 +482,20 @@ export function InspectRoute({
           void run(url);
         }}
       >
-        <input
-          ref={inputRef}
-          className="input"
-          type="text"
-          value={url}
-          aria-label={tr.inspect.urlLabel}
-          placeholder={tr.inspect.urlPlaceholder}
-          onChange={(event) => setUrl(event.target.value)}
-        />
-        <button type="submit" className="btn btn-primary" disabled={state.phase === 'loading'}>
+        <div className="searchfield">
+          <Icon name="link" size={15} />
+          <input
+            ref={inputRef}
+            className="input"
+            type="text"
+            value={url}
+            aria-label={tr.inspect.urlLabel}
+            placeholder={tr.inspect.urlPlaceholder}
+            onChange={(event) => setUrl(event.target.value)}
+          />
+        </div>
+        <button type="submit" className="btn btn-primary btn-large" disabled={state.phase === 'loading'}>
+          {state.phase === 'loading' ? <span className="spinner" /> : <Icon name="magnifyingglass" size={14} />}
           {tr.inspect.submit}
         </button>
       </form>
@@ -500,7 +505,7 @@ export function InspectRoute({
 
       {state.phase === 'empty' && (
         <Panel title={tr.inspect.title}>
-          <EmptyState glyph="⌘V" title={tr.inspect.emptyTitle} body={tr.inspect.emptyBody} />
+          <EmptyState icon="doc.on.clipboard" title={tr.inspect.emptyTitle} body={tr.inspect.emptyBody} />
         </Panel>
       )}
       {state.phase === 'loading' && (

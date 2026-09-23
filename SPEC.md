@@ -167,6 +167,20 @@ are not offered.
 
 ## 5. Screens
 
+### Window shell (HIG redesign, after M4)
+Follows the macOS Human Interface Guidelines as far as a web view allows. A source-list sidebar
+(Medya: İncele, İndirmeler, Kütüphane, Stüdyo · Uygulama: Sistem, Ayarlar) with accent-tinted
+symbols and a badge for active jobs; a unified toolbar holding the sidebar toggle, the screen
+title and that screen's own actions (Library: search field, grid/list switch, scan; Sistem:
+re-check). The theme picker at the foot of the sidebar is three symbols (sun, moon, half circle
+for "system"). Colors are macOS semantic colors for light and dark, the accent follows the
+system accent where WebKit exposes it, and controls look like their AppKit counterparts
+(bordered, prominent, borderless symbol buttons, popup buttons, segmented controls, grouped
+sections). In the desktop window the sidebar shows the real vibrancy material behind a
+transparent web view (`?shell=native`, only while the theme follows the system). Icons are
+Lucide glyphs mapped to SF Symbol names in `components/Icon.tsx`; SF Symbols themselves cannot
+be used outside Apple's native frameworks. Below 720 px the sidebar collapses and floats.
+
 ### Inspect (M1, built)
 - **Empty:** a panel explaining that pasting a link lists every quality, language and subtitle,
   and that nothing is downloaded. Hint that ⌘V anywhere starts an inspect.
@@ -183,7 +197,7 @@ are not offered.
   and a per-row "inspect this video" action.
 
 ### Doctor / Sistem (M0, built)
-- **Loading / error** states as above. **Ready:** one row per dependency with a status dot,
+- **Loading / error** states as above. **Ready:** one row per dependency with a status symbol (check, triangle, octagon),
   its values, the ffmpeg capability matrix, a plain-Turkish explanation for each missing
   optional capability, and a copyable fix command when the check is not green.
 

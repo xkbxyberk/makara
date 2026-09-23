@@ -4,6 +4,7 @@ import { ApiError, api, type Job } from '../lib/api';
 import { formatBytes, formatDuration } from '../lib/format';
 import type { Connection } from '../lib/jobs';
 import { Badge, EmptyState, LoadingState, Notice, Panel } from '../components/ui';
+import { Icon } from '../components/Icon';
 
 const INDETERMINATE = new Set(['starting', 'preparing', 'postprocessing', 'cancelling']);
 
@@ -55,28 +56,46 @@ function JobRow({ job }: { job: Job }) {
   return (
     <li className="job" data-testid="job" data-status={job.status}>
       <div className="job-head">
-        <strong className="job-title">{job.title ?? job.source_url}</strong>
+        <Icon
+          name={job.status === 'done' ? 'checkmark.circle.fill' : job.status === 'failed' ? 'xmark.octagon.fill' : job.mode === 'studio' ? 'scissors' : 'arrow.down.circle'}
+          tone={job.status === 'done' ? 'green' : job.status === 'failed' ? 'red' : 'secondary'}
+          size={18}
+        />
+        <span className="job-title">{job.title ?? job.source_url}</span>
         <Badge>{tr.download.modes[job.mode]}</Badge>
         <Badge tone={tone[job.status]}>{tr.queue.statuses[job.status]}</Badge>
         <div className="job-actions">
           {(job.status === 'queued' || job.status === 'running') && (
-            <button type="button" className="btn" onClick={act(() => api.cancel(job.id))}>
-              {tr.queue.cancel}
+            <button
+              type="button"
+              className="btn-icon"
+              aria-label={tr.queue.cancel}
+              title={tr.queue.cancel}
+              onClick={act(() => api.cancel(job.id))}
+            >
+              <Icon name="xmark.circle" size={17} />
             </button>
           )}
           {(job.status === 'failed' || job.status === 'cancelled') && (
-            <button type="button" className="btn" onClick={act(() => api.retry(job.id))}>
-              {tr.queue.retry}
+            <button
+              type="button"
+              className="btn-icon"
+              aria-label={tr.queue.retry}
+              title={tr.queue.retry}
+              onClick={act(() => api.retry(job.id))}
+            >
+              <Icon name="arrow.clockwise" size={17} />
             </button>
           )}
           {job.status !== 'running' && (
             <button
               type="button"
-              className="btn btn-quiet"
+              className="btn-icon"
+              aria-label={tr.queue.remove}
               title={tr.queue.removeHelp}
               onClick={act(() => api.remove(job.id))}
             >
-              {tr.queue.remove}
+              <Icon name="minus.circle" size={17} />
             </button>
           )}
         </div>
@@ -103,10 +122,12 @@ function JobRow({ job }: { job: Job }) {
               <span className="mono path">{file.split('/').slice(-2).join('/')}</span>
               <button
                 type="button"
-                className="btn btn-quiet"
+                className="btn-icon"
+                aria-label={tr.queue.reveal}
+                title={tr.queue.reveal}
                 onClick={act(() => api.revealJobFile(job.id, index))}
               >
-                {tr.queue.reveal}
+                <Icon name="folder" size={16} />
               </button>
             </li>
           ))}
@@ -135,7 +156,7 @@ export function QueueRoute({ jobs, connection }: { jobs: Job[] | null; connectio
         {jobs === null ? (
           <LoadingState title={tr.queue.loading} body="" />
         ) : jobs.length === 0 ? (
-          <EmptyState glyph="↓" title={tr.queue.emptyTitle} body={tr.queue.emptyBody} />
+          <EmptyState icon="arrow.down.circle" title={tr.queue.emptyTitle} body={tr.queue.emptyBody} />
         ) : (
           <ul className="jobs">
             {jobs.map((job) => (

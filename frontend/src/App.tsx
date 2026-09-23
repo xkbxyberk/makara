@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import './theme.css';
 import { tr } from './i18n/tr';
+import { Icon, type SymbolName } from './components/Icon';
+import { ToolbarSlot } from './components/Toolbar';
 import { InspectRoute } from './routes/InspectRoute';
 import { DoctorRoute } from './routes/DoctorRoute';
 import { QueueRoute } from './routes/QueueRoute';
@@ -12,17 +14,26 @@ import { isActive, useJobs } from './lib/jobs';
 
 type RouteId = 'inspect' | 'download' | 'library' | 'studio' | 'doctor' | 'settings';
 
-const NAV: { id: RouteId; ready: boolean }[] = [
-  { id: 'inspect', ready: true },
-  { id: 'download', ready: true },
-  { id: 'library', ready: true },
-  { id: 'studio', ready: true },
-  { id: 'doctor', ready: true },
-  { id: 'settings', ready: true },
+const MEDIA: { id: RouteId; icon: SymbolName }[] = [
+  { id: 'inspect', icon: 'magnifyingglass' },
+  { id: 'download', icon: 'arrow.down.circle' },
+  { id: 'library', icon: 'books.vertical' },
+  { id: 'studio', icon: 'scissors' },
+];
+const APP: { id: RouteId; icon: SymbolName }[] = [
+  { id: 'doctor', icon: 'stethoscope' },
+  { id: 'settings', icon: 'gearshape' },
+];
+const THEMES: { id: Theme; icon: SymbolName }[] = [
+  { id: 'light', icon: 'sun.max.fill' },
+  { id: 'dark', icon: 'moon.fill' },
+  { id: 'system', icon: 'circle.lefthalf.filled' },
 ];
 
-function systemPrefersDark(): boolean {
-  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
+// The desktop launcher opens the page with ?shell=native: the window then has real vibrancy
+// (NSVisualEffectView) behind a transparent web view, which the sidebar lets show through.
+if (new URLSearchParams(window.location.search).get('shell') === 'native') {
+  document.documentElement.classList.add('native');
 }
 
 function useTheme() {
@@ -35,20 +46,32 @@ function useTheme() {
     else root.setAttribute('data-theme', theme);
     localStorage.setItem('vd-theme', theme);
   }, [theme]);
-  const isDark = theme === 'dark' || (theme === 'system' && systemPrefersDark());
-  const toggle = useCallback(() => setTheme(isDark ? 'light' : 'dark'), [isDark]);
-  return { theme, setTheme, isDark, toggle };
+  return { theme, setTheme };
 }
+
+const narrow = () => window.matchMedia?.('(max-width: 720px)').matches ?? false;
 
 export function App() {
   const [route, setRoute] = useState<RouteId>('inspect');
-  const { theme, setTheme, isDark, toggle } = useTheme();
+  const { theme, setTheme } = useTheme();
+  const [sidebar, setSidebar] = useState(() => !narrow());
+  const [toolbarSlot, setToolbarSlot] = useState<HTMLElement | null>(null);
   const [libraryVersion, setLibraryVersion] = useState(0);
   const [clipboardUrl, setClipboardUrl] = useState<string | null>(null);
   const [catalogueFailed, setCatalogueFailed] = useState(false);
   const [inspectRequest, setInspectRequest] = useState<{ url: string; n: number } | null>(null);
   const [studioRequest, setStudioRequest] = useState<{ itemId: string; n: number } | null>(null);
   const notifications = useRef(true);
+
+  // Like a Mac window, shrinking below the split-view width collapses the sidebar and widening
+  // brings it back; in between the toggle decides.
+  useEffect(() => {
+    const query = window.matchMedia?.('(max-width: 720px)');
+    if (!query) return;
+    const onChange = (event: MediaQueryListEvent) => setSidebar(!event.matches);
+    query.addEventListener('change', onChange);
+    return () => query.removeEventListener('change', onChange);
+  }, []);
 
   useEffect(() => {
     api
@@ -73,41 +96,74 @@ export function App() {
   });
   const active = jobs?.filter(isActive).length ?? 0;
 
+  const go = (id: RouteId) => {
+    setRoute(id);
+    if (narrow()) setSidebar(false); // on a narrow window the sidebar floats; close it after a choice
+  };
+
+  const navItem = (item: { id: RouteId; icon: SymbolName }) => (
+    <button
+      key={item.id}
+      type="button"
+      className="nav-item"
+      aria-current={route === item.id ? 'page' : undefined}
+      onClick={() => go(item.id)}
+    >
+      <Icon name={item.icon} size={17} />
+      <span>{tr.nav[item.id]}</span>
+      {item.id === 'download' && active > 0 && (
+        <span className="nav-count" data-testid="active-count">
+          {tr.queue.activeCount(active)}
+        </span>
+      )}
+    </button>
+  );
+
   return (
-    <div className="shell">
-      <nav className="sidebar" aria-label={tr.app.name}>
+    <div className={sidebar ? 'shell' : 'shell sidebar-hidden'}>
+      <nav className="sidebar" aria-label={tr.app.name} aria-hidden={!sidebar}>
         <div className="sidebar-brand">{tr.app.brand}</div>
-        {NAV.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            className="nav-item"
-            aria-current={route === item.id ? 'page' : undefined}
-            disabled={!item.ready}
-            onClick={() => setRoute(item.id)}
-          >
-            {tr.nav[item.id]}
-            {!item.ready && <span className="dim"> · {tr.app.soon}</span>}
-            {item.id === 'download' && active > 0 && (
-              <span className="nav-count" data-testid="active-count">
-                {tr.queue.activeCount(active)}
-              </span>
-            )}
-          </button>
-        ))}
+        {MEDIA.map(navItem)}
+        <div className="sidebar-brand">{tr.app.systemSection}</div>
+        {APP.map(navItem)}
         <div className="sidebar-footer">
-          <button type="button" className="btn" onClick={toggle} aria-label={tr.app.themeToggle}>
-            {isDark ? tr.app.themeLight : tr.app.themeDark}
-          </button>
+          <div className="segmented icons" role="radiogroup" aria-label={tr.app.theme}>
+            {THEMES.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                role="radio"
+                aria-checked={theme === option.id}
+                aria-label={tr.settings.themes[option.id]}
+                title={tr.settings.themes[option.id]}
+                className={theme === option.id ? 'segment active' : 'segment'}
+                onClick={() => setTheme(option.id)}
+              >
+                <Icon name={option.icon} size={14} />
+              </button>
+            ))}
+          </div>
         </div>
       </nav>
       <main className="main">
         <header className="toolbar">
+          <button
+            type="button"
+            className="btn-icon"
+            aria-label={sidebar ? tr.app.hideSidebar : tr.app.showSidebar}
+            title={sidebar ? tr.app.hideSidebar : tr.app.showSidebar}
+            aria-pressed={sidebar}
+            onClick={() => setSidebar((open) => !open)}
+          >
+            <Icon name="sidebar.left" size={18} />
+          </button>
           <h1>{tr.nav[route]}</h1>
           <span className="toolbar-spacer" />
+          <div className="toolbar-actions" ref={setToolbarSlot} />
         </header>
         {catalogueFailed && (
           <div className="clipboard-banner" role="alert">
+            <Icon name="exclamationmark.triangle.fill" tone="yellow" />
             <span>{tr.library.catalogueFailed}</span>
             <span className="toolbar-spacer" />
             <button type="button" className="btn" onClick={() => setCatalogueFailed(false)}>
@@ -117,6 +173,7 @@ export function App() {
         )}
         {clipboardUrl && (
           <div className="clipboard-banner" role="status">
+            <Icon name="link" className="sf-accent" />
             <span>{tr.clipboard.offer}</span>
             <code className="mono path">{clipboardUrl}</code>
             <span className="toolbar-spacer" />
@@ -136,37 +193,39 @@ export function App() {
             </button>
           </div>
         )}
-        <div className="content">
-          {/* Inspect stays mounted so a result survives a trip to another screen and back. */}
-          <div hidden={route !== 'inspect'}>
-            <InspectRoute
-              active={route === 'inspect'}
-              onOpenQueue={() => setRoute('download')}
-              request={inspectRequest}
-            />
+        <ToolbarSlot.Provider value={toolbarSlot}>
+          <div className="content">
+            {/* Inspect stays mounted so a result survives a trip to another screen and back. */}
+            <div hidden={route !== 'inspect'}>
+              <InspectRoute
+                active={route === 'inspect'}
+                onOpenQueue={() => setRoute('download')}
+                request={inspectRequest}
+              />
+            </div>
+            {route === 'download' && <QueueRoute jobs={jobs} connection={connection} />}
+            {route === 'library' && (
+              <LibraryRoute
+                refreshKey={libraryVersion}
+                onOpenInStudio={(itemId) => {
+                  setStudioRequest((r) => ({ itemId, n: (r?.n ?? 0) + 1 }));
+                  setRoute('studio');
+                }}
+              />
+            )}
+            {route === 'doctor' && <DoctorRoute />}
+            {route === 'settings' && (
+              <SettingsRoute
+                theme={theme}
+                setTheme={setTheme}
+                onSaved={(settings) => (notifications.current = settings.notifications)}
+              />
+            )}
+            {route === 'studio' && (
+              <StudioRoute onOpenQueue={() => setRoute('download')} request={studioRequest} />
+            )}
           </div>
-          {route === 'download' && <QueueRoute jobs={jobs} connection={connection} />}
-          {route === 'library' && (
-            <LibraryRoute
-              refreshKey={libraryVersion}
-              onOpenInStudio={(itemId) => {
-                setStudioRequest((r) => ({ itemId, n: (r?.n ?? 0) + 1 }));
-                setRoute('studio');
-              }}
-            />
-          )}
-          {route === 'doctor' && <DoctorRoute />}
-          {route === 'settings' && (
-            <SettingsRoute
-              theme={theme}
-              setTheme={setTheme}
-              onSaved={(settings) => (notifications.current = settings.notifications)}
-            />
-          )}
-          {route === 'studio' && (
-            <StudioRoute onOpenQueue={() => setRoute('download')} request={studioRequest} />
-          )}
-        </div>
+        </ToolbarSlot.Provider>
       </main>
     </div>
   );

@@ -177,4 +177,13 @@ over subtitles alone and doubled the requests YouTube sees; side files now come 
 stream pass (verified live with TR+EN subtitles). A transient-403 retry was added after live runs
 showed YouTube refusing freshly signed URLs for a few minutes at a time.
 
-**Next:** HIG redesign of the UI (Berk's request), then stop before M5.
+**HIG redesign** (Berk's request, web path chosen over a SwiftUI rewrite so the tested backend
+and e2e suite stay intact). New shell: source-list sidebar with symbols, unified toolbar with
+per-screen actions via a portal, sun/moon/system theme picker, macOS semantic colors and control
+styles, a Library inspector column, symbol buttons in the queue, status symbols in Sistem, real
+sidebar vibrancy in the desktop window. The e2e tests changed only where the structure did (the
+library's details moved from the card into the inspector); every assertion is kept. The narrow
+screenshot run caught the floating sidebar covering the page after a resize; the sidebar now
+collapses when the window gets narrow, like a Mac split view.
+
+**Next:** M5 (sections/clips + SponsorBlock) — waiting for Berk's go-ahead.
