@@ -198,4 +198,10 @@ feedback; all off under Reduce motion. Two e2e hover tests turned out to rely on
 shifts when the download plan arrives); they now wait for the page to settle. The e2e server
 moved to port 8788 so it no longer collides with the running app.
 
+**Plain ffmpeg removed** at Berk's request; ffmpeg-full linked onto PATH in its place (Homebrew
+also auto-removed two libraries nothing used, libnghttp3 and libngtcp2). The next gate run hit a
+1-in-4 e2e failure: a parallel test re-downloaded the same clip into a deleted file's freed name,
+and the scan "restored" it into the old record. A real (rare) bug, fixed with a creation-time
+rule and two regression tests that fail without it; 100 stressed e2e runs clean.
+
 **Next:** M5 (sections/clips + SponsorBlock) — waiting for Berk's go-ahead.

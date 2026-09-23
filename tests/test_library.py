@@ -338,3 +338,30 @@ def test_spotlight_candidates_from_the_trash_or_hidden_folders_are_ignored() -> 
     assert _hidden_or_ours(paths.data_dir() / "simulated-trash" / "clip.mp4")
     assert _hidden_or_ours(Path("/Volumes/TM/Backups.backupdb/mac/clip.mp4"))
     assert not _hidden_or_ours(home / "Movies" / "clip.mp4")
+
+
+def test_an_identical_later_download_at_the_old_path_is_not_restored(
+    library: Library, clip: Path, tmp_path: Path
+) -> None:
+    """Deleted in Finder, then the same video downloaded again: the new download gets the freed
+    name and the very same bytes. It is the new download's file, not a resurrected old one."""
+    item = add(library, clip)
+    data = clip.read_bytes()
+    clip.unlink()
+    clip.write_bytes(data)  # a new file, created after the item was catalogued
+    library.scan([tmp_path / "downloads"])
+    assert library.get(item["id"])["status"] == "missing"  # type: ignore[index]
+
+
+def test_an_identical_later_download_elsewhere_is_not_a_relink(
+    library: Library, clip: Path, tmp_path: Path
+) -> None:
+    item = add(library, clip)
+    data = clip.read_bytes()
+    clip.unlink()
+    later = tmp_path / "downloads" / "Channel" / f"{clip.stem} (2){clip.suffix}"
+    later.parent.mkdir(parents=True, exist_ok=True)
+    later.write_bytes(data)  # finished while the scan ran, not yet in the catalogue
+    counts = library.scan([tmp_path / "downloads"])
+    assert counts["repaired"] == 0 and counts["missing"] == 1
+    assert library.get(item["id"])["primary_path"] == str(clip)  # type: ignore[index]

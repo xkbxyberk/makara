@@ -277,7 +277,10 @@ class Library:
             counts["checked"] += 1
             primary = Path(item["primary_path"])
             size, duration = _primary_size(item), item.get("duration")
-            if primary.exists() and _same_media(primary, size, duration):
+            # A download that finishes while this runs may reuse a deleted file's name, with the
+            # same bytes; it is told apart by its creation time, not by its content.
+            added = item.get("added_at")
+            if primary.exists() and _same_media(primary, size, duration, born_before=added):
                 if item["status"] == "missing":
                     counts["restored"] += 1
                 self._mark(item["id"], status="ok", checked_at=time.time())
@@ -285,7 +288,7 @@ class Library:
             # Gone -- or something else now sits at that path (a new download reused the name).
             if by_size is None:
                 by_size = _index_by_size(search_roots)
-            found = find_moved(primary, size, duration, by_size, exclude=owned)
+            found = find_moved(primary, size, duration, by_size, exclude=owned, born_before=added)
             if found is not None:
                 owned.add(_resolved(found))
                 files = [
@@ -379,10 +382,24 @@ def _resolved(path: str | Path) -> str:
         return str(path)
 
 
-def _same_media(path: Path, size: int | None, duration: float | None) -> bool:
+def _born_after(path: Path, moment: float | None) -> bool:
+    """Was this file created after `moment`? macOS keeps a file's creation time through moves,
+    renames, Finder tags and Put Back, so a file born after an item was catalogued cannot be
+    that item's file -- it is a later download that happens to be byte-identical."""
+    if moment is None:
+        return False
+    born = getattr(path.stat(), "st_birthtime", None)
+    return born is not None and born > moment
+
+
+def _same_media(
+    path: Path, size: int | None, duration: float | None, born_before: float | None = None
+) -> bool:
     """Is the file at `path` still the one that was recorded? Size must match exactly; the
-    duration too when it is known."""
+    duration too when it is known; and it must not be younger than the record."""
     try:
+        if _born_after(path, born_before):
+            return False
         if size and path.stat().st_size != size:
             return False
         if duration is not None:
@@ -448,9 +465,11 @@ def find_moved(
     duration: float | None,
     by_size: dict[int, list[Path]],
     exclude: set[str] | None = None,
+    born_before: float | None = None,
 ) -> Path | None:
     """A candidate must match the recorded size exactly *and* the duration, so a different file
-    that happens to share a name (or a size) is never mistaken for the one that moved."""
+    that happens to share a name (or a size) is never mistaken for the one that moved. A file
+    created after the record cannot be it either (see `_born_after`)."""
     if not size:
         return None
     candidates = list(by_size.get(size, []))
@@ -460,6 +479,8 @@ def find_moved(
         if exclude and _resolved(candidate) in exclude:
             continue
         try:
+            if _born_after(candidate, born_before):
+                continue
             if candidate.stat().st_size != size:
                 continue
             if duration is not None:

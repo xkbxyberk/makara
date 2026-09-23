@@ -56,9 +56,10 @@ Local-only media workstation on yt-dlp + FFmpeg. macOS arm64, single user (Berk)
 6. **Sizes have three tiers** (`filesize`, `filesize_approx`, `tbr * duration`). For HLS/DASH
    formats `tbr` is often the *peak* bitrate, so those estimates read high — the model flags
    them with `filesize_unreliable` and the UI must keep saying so.
-7. **Two FFmpeg builds.** Homebrew's plain `ffmpeg` (on PATH) has no libass, libwebp or zimg;
-   the keg-only `ffmpeg-full` (`/opt/homebrew/opt/ffmpeg-full/bin`, installed 2026-09-23 with
-   Berk's approval) has them. `app/ffmpeg/binaries.py` prefers ffmpeg-full and never mixes
+7. **FFmpeg is Homebrew's `ffmpeg-full`** (libass, libwebp, zimg), installed 2026-09-23 with
+   Berk's approval. At his request the plain `ffmpeg` formula was then uninstalled and
+   ffmpeg-full was `brew link --force`d, so `/opt/homebrew/bin/ffmpeg` is ffmpeg-full too. The
+   keg path `/opt/homebrew/opt/ffmpeg-full/bin` is still preferred. `app/ffmpeg/binaries.py` prefers ffmpeg-full and never mixes
    ffmpeg/ffprobe from two builds; always get binaries from there, never `shutil.which`. The
    doctor detects capabilities at runtime; a feature that needs libass/libwebp must check them.
 8. **Lossless vs frame-accurate cuts** (for M4): stream-copy cuts land on keyframes and will
@@ -115,9 +116,13 @@ Local-only media workstation on yt-dlp + FFmpeg. macOS arm64, single user (Berk)
     transitions. Everything stops under "Reduce motion". Screenshots pass
     `animations: 'disabled'`; hover a term only after the page has settled (the download plan
     grows the panel and shifts the page).
-25. Help tags (`<Term>`) render into `document.body` with fixed positioning, so panels with
+25. **A file created after an item was catalogued is never that item's file** (`_born_after`,
+    macOS `st_birthtime`, which survives moves, renames, tags and Put Back). Without that rule a
+    re-download of the same video, reusing a deleted file's name with identical bytes, was
+    "restored" into the old record: two records, one file.
+26. Help tags (`<Term>`) render into `document.body` with fixed positioning, so panels with
     `overflow: hidden` cannot clip them.
-26. The e2e server runs on port 8788 (`VD_PORT`), so the suite can run while the real app is open
+27. The e2e server runs on port 8788 (`VD_PORT`), so the suite can run while the real app is open
     on 8787.
 
 ## Rules
