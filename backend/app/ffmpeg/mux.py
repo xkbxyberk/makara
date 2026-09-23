@@ -181,7 +181,7 @@ def build_mux_argv(
 
 def run_with_progress(
     argv: list[str], duration: float | None, on_progress: Callable[[float], None]
-) -> None:
+) -> str:
     """Run FFmpeg, reporting 0..1 from its machine-readable `-progress` stream."""
     argv = [shutil.which("ffmpeg") or "ffmpeg", *argv[1:]]
     with tempfile.TemporaryFile() as stderr:
@@ -195,8 +195,8 @@ def run_with_progress(
             elif key == "progress" and value == "end":
                 on_progress(1.0)
         code = proc.wait()
+        stderr.seek(0)
+        errors_text = stderr.read().decode(errors="replace")
         if code != 0:
-            stderr.seek(0)
-            raise RuntimeError(
-                f"ffmpeg exited {code}: {stderr.read().decode(errors='replace')[-2000:]}"
-            )
+            raise RuntimeError(f"ffmpeg exited {code}: {errors_text[-2000:]}")
+        return errors_text

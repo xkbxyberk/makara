@@ -10,6 +10,7 @@ from typing import Any
 
 import pytest
 
+from app import errors
 from app.library import Library, summarize_streams
 
 
@@ -205,3 +206,135 @@ def test_concurrent_use_from_many_threads_is_safe(library: Library, clip: Path) 
     for thread in threads:
         thread.join()
     assert failures == []
+
+
+# ---- regression tests for the M3 adversarial review ------------------------------------------
+
+
+def _two_identical(
+    library: Library, tmp_path: Path, test_media: Path
+) -> tuple[Path, Path, str, str]:
+    root = tmp_path / "downloads"
+    root.mkdir(exist_ok=True)
+    a, b = root / "A.mp4", root / "B.mp4"
+    shutil.copy2(test_media / "video_h264.mp4", a)
+    shutil.copy2(test_media / "video_h264.mp4", b)
+    return a, b, add(library, a)["id"], add(library, b)["id"]
+
+
+def test_two_missing_items_never_end_up_sharing_one_file(
+    library: Library, tmp_path: Path, test_media: Path
+) -> None:
+    a, b, a_id, b_id = _two_identical(library, tmp_path, test_media)
+    moved = tmp_path / "downloads" / "sub" / "A.mp4"
+    moved.parent.mkdir()
+    a.rename(moved)
+    b.unlink()
+    counts = library.scan([tmp_path / "downloads"])
+    assert counts["repaired"] == 1 and counts["missing"] == 1
+    paths = [library.get(i)["primary_path"] for i in (a_id, b_id)]  # type: ignore[index]
+    assert len(set(paths)) == 2, "two records point at one file"
+
+
+def test_a_different_file_at_the_old_path_is_not_restored(
+    library: Library, clip: Path, tmp_path: Path, test_media: Path
+) -> None:
+    item = add(library, clip)
+    clip.unlink()
+    shutil.copy2(test_media / "audio_en.m4a", clip)  # a later download reused the name
+    library.scan([tmp_path / "downloads"])
+    assert library.get(item["id"])["status"] == "missing"  # type: ignore[index]
+
+
+def test_trash_refuses_an_item_that_is_not_ok(
+    library: Library, clip: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import app.library
+
+    monkeypatch.setattr(app.library, "move_to_trash", lambda p: p.unlink())
+    item = add(library, clip)
+    library.trash(item["id"])
+    with pytest.raises(errors.AppError) as caught:
+        library.trash(item["id"])  # a double click, or a stale tab
+    assert caught.value.code == "ITEM_NOT_TRASHABLE"
+
+
+def test_trash_leaves_a_file_that_is_no_longer_ours(
+    library: Library, clip: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import app.library
+
+    trashed: list[Path] = []
+    monkeypatch.setattr(app.library, "move_to_trash", lambda p: trashed.append(p) or p.unlink())
+    sidecar = clip.with_suffix(".tr.srt")
+    sidecar.write_text("1\n00:00:00,000 --> 00:00:01,000\nİlk\n")
+    item = add(library, clip, extra=[sidecar])
+    sidecar.write_text("a different, newer subtitle that now sits at this path\n")
+    library.trash(item["id"])
+    assert trashed == [clip]
+    assert sidecar.exists()
+
+
+def test_trash_never_touches_a_file_another_item_owns(
+    library: Library, tmp_path: Path, test_media: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import app.library
+
+    trashed: list[Path] = []
+    monkeypatch.setattr(app.library, "move_to_trash", lambda p: trashed.append(p))
+    a, _, _a_id, b_id = _two_identical(library, tmp_path, test_media)
+    # Force B's record to also list A's file as a sidecar (e.g. a stale re-link).
+    b = library.get(b_id)
+    assert b is not None
+    library._update(
+        b_id, files=[*b["files"], {"path": str(a), "size": a.stat().st_size, "role": "sidecar"}]
+    )
+    library.trash(b_id)
+    assert a not in trashed
+
+
+def test_a_scan_never_resurrects_an_item_trashed_meanwhile(library: Library, clip: Path) -> None:
+    item = add(library, clip)
+    library._update(item["id"], status="trashed")
+    library._mark(item["id"], status="missing")  # what a slow, concurrent scan would do
+    assert library.get(item["id"])["status"] == "trashed"  # type: ignore[index]
+
+
+def test_only_one_scan_runs_at_a_time(library: Library, tmp_path: Path) -> None:
+    library._scan_lock.acquire()
+    try:
+        with pytest.raises(errors.AppError) as caught:
+            library.scan([tmp_path])
+        assert caught.value.code == "SCAN_BUSY"
+    finally:
+        library._scan_lock.release()
+
+
+def test_a_symlinked_root_does_not_disguise_another_items_file(
+    library: Library, tmp_path: Path, test_media: Path
+) -> None:
+    real = tmp_path / "real"
+    real.mkdir()
+    p, q = real / "P.mp4", real / "Q.mp4"
+    shutil.copy2(test_media / "video_h264.mp4", p)
+    shutil.copy2(test_media / "video_h264.mp4", q)
+    add(library, p)
+    q_id = add(library, q)["id"]
+    link = tmp_path / "link"
+    link.symlink_to(real)
+    q.unlink()
+    library.scan([link])  # the walk sees link/P.mp4, which *is* P's file
+    assert library.get(q_id)["status"] == "missing"  # type: ignore[index]
+
+
+def test_spotlight_candidates_from_the_trash_or_hidden_folders_are_ignored() -> None:
+    from app import paths
+    from app.library import _hidden_or_ours
+
+    home = Path.home()
+    assert _hidden_or_ours(home / ".Trash" / "clip.mp4")
+    assert _hidden_or_ours(Path("/Volumes/Disk/.Trashes/501/clip.mp4"))
+    assert _hidden_or_ours(home / "Movies" / "VideoDownloader" / ".vd-work" / "x" / "clip.mp4")
+    assert _hidden_or_ours(paths.data_dir() / "simulated-trash" / "clip.mp4")
+    assert _hidden_or_ours(Path("/Volumes/TM/Backups.backupdb/mac/clip.mp4"))
+    assert not _hidden_or_ours(home / "Movies" / "clip.mp4")

@@ -152,6 +152,8 @@ export interface Settings {
   default_mode: Mode;
   clipboard_watch: boolean;
   notifications: boolean;
+  /** Read-only: the app's built-in template, for "Varsayılana dön". */
+  default_filename_template?: string;
 }
 
 export interface LibraryTrack {

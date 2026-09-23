@@ -56,10 +56,13 @@ def get_library(
 
 
 @router.post("/library/scan")
-async def post_scan(request: Request) -> dict[str, int]:
+async def post_scan(request: Request) -> Any:
     root = Path(settings_store.load().download_dir).expanduser()
-    # ffprobe and Spotlight can take a moment; keep the event loop free.
-    return await asyncio.to_thread(_library(request).scan, [root])
+    try:
+        # ffprobe and Spotlight can take a moment; keep the event loop free.
+        return await asyncio.to_thread(_library(request).scan, [root])
+    except errors.AppError as exc:
+        return _error(exc, 409)
 
 
 @router.get("/library/{item_id}/thumbnail", response_model=None)
@@ -102,7 +105,8 @@ def post_trash_item(item_id: str, request: Request) -> Any:
     try:
         return _library(request).trash(item_id)
     except errors.AppError as exc:
-        return _error(exc, 404)
+        status = {"ITEM_NOT_FOUND": 404, "TRASH_FAILED": 500}.get(exc.code, 409)
+        return _error(exc, status)
 
 
 @router.post("/system/pick-folder")
@@ -114,7 +118,10 @@ async def post_pick_folder(body: PickFolderBody) -> Any:
 
 
 @router.post("/system/update-ytdlp")
-async def post_update_ytdlp() -> Any:
+async def post_update_ytdlp(request: Request) -> Any:
+    # `uv sync` swaps yt-dlp's files; a running worker importing an extractor lazily would break.
+    if request.app.state.jobs.active:
+        return _error(errors.AppError(code="JOBS_RUNNING"), 409)
     try:
         return await asyncio.to_thread(system.update_ytdlp)
     except errors.AppError as exc:

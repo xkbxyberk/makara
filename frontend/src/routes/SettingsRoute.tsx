@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { tr } from '../i18n/tr';
 import { ApiError, api, type Mode, type Settings } from '../lib/api';
 import { ErrorState, LoadingState, Notice, Panel, Term } from '../components/ui';
@@ -57,6 +57,7 @@ export function SettingsRoute({
   const [failure, setFailure] = useState<ApiError | null>(null);
   const [justSaved, setJustSaved] = useState(false);
   const [defaultTemplate, setDefaultTemplate] = useState('');
+  const previewTicket = useRef(0);
 
   const load = () => {
     setState({ phase: 'loading' });
@@ -64,7 +65,7 @@ export function SettingsRoute({
       .settings()
       .then((settings) => {
         setState({ phase: 'ready', saved: settings, draft: settings });
-        setDefaultTemplate((current) => current || settings.filename_template);
+        setDefaultTemplate(settings.default_filename_template ?? settings.filename_template);
       })
       .catch((error: unknown) => {
         const f = error instanceof ApiError ? error : new ApiError('UNKNOWN', String(error));
@@ -78,11 +79,16 @@ export function SettingsRoute({
 
   useEffect(() => {
     if (!template) return;
+    const ticket = ++previewTicket.current;
     const timer = setTimeout(() => {
       api
         .previewTemplate(template, tr.settings.sample)
-        .then((result) => setPreview({ filename: result.filename }))
-        .catch((error: unknown) => setPreview({ error: error instanceof ApiError ? error.code : 'UNKNOWN' }));
+        .then((result) => ticket === previewTicket.current && setPreview({ filename: result.filename }))
+        .catch(
+          (error: unknown) =>
+            ticket === previewTicket.current &&
+            setPreview({ error: error instanceof ApiError ? error.code : 'UNKNOWN' }),
+        );
     }, 150);
     return () => clearTimeout(timer);
   }, [template]);
@@ -107,17 +113,31 @@ export function SettingsRoute({
   }
 
   const { saved } = state;
+  // Functional updates: a folder picked (or a save finishing) after further edits must not
+  // overwrite those edits with a stale copy of the form.
   const edit = (patch: Partial<Settings>) => {
     setJustSaved(false);
-    setState({ phase: 'ready', saved, draft: { ...state.draft, ...patch } });
+    setState((current) =>
+      current.phase === 'ready' ? { ...current, draft: { ...current.draft, ...patch } } : current,
+    );
   };
   const dirty = JSON.stringify(saved) !== JSON.stringify(state.draft);
 
   const save = async () => {
     setFailure(null);
+    const submitted = state.draft;
     try {
-      const stored = await api.saveSettings(state.draft);
-      setState({ phase: 'ready', saved: stored, draft: stored });
+      const stored = await api.saveSettings(submitted);
+      setState((current) =>
+        current.phase === 'ready'
+          ? {
+              phase: 'ready',
+              saved: stored,
+              // Keep anything typed while the save was in flight.
+              draft: JSON.stringify(current.draft) === JSON.stringify(submitted) ? stored : current.draft,
+            }
+          : current,
+      );
       setJustSaved(true);
       onSaved(stored);
     } catch (error) {

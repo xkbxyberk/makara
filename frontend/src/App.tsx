@@ -45,6 +45,7 @@ export function App() {
   const { theme, setTheme, isDark, toggle } = useTheme();
   const [libraryVersion, setLibraryVersion] = useState(0);
   const [clipboardUrl, setClipboardUrl] = useState<string | null>(null);
+  const [catalogueFailed, setCatalogueFailed] = useState(false);
   const [inspectRequest, setInspectRequest] = useState<{ url: string; n: number } | null>(null);
   const notifications = useRef(true);
 
@@ -67,6 +68,7 @@ export function App() {
     onTransition,
     onClipboard: setClipboardUrl,
     onLibrary: () => setLibraryVersion((v) => v + 1),
+    onLibraryError: () => setCatalogueFailed(true),
   });
   const active = jobs?.filter(isActive).length ?? 0;
 
@@ -103,6 +105,15 @@ export function App() {
           <h1>{tr.nav[route]}</h1>
           <span className="toolbar-spacer" />
         </header>
+        {catalogueFailed && (
+          <div className="clipboard-banner" role="alert">
+            <span>{tr.library.catalogueFailed}</span>
+            <span className="toolbar-spacer" />
+            <button type="button" className="btn" onClick={() => setCatalogueFailed(false)}>
+              {tr.clipboard.dismiss}
+            </button>
+          </div>
+        )}
         {clipboardUrl && (
           <div className="clipboard-banner" role="status">
             <span>{tr.clipboard.offer}</span>

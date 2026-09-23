@@ -118,8 +118,9 @@ function CheckRow({ check, onReload }: { check: DoctorCheck; onReload: () => voi
 export function DoctorRoute() {
   const [state, setState] = useState<State>({ phase: 'loading' });
 
-  const load = useCallback(async () => {
-    setState({ phase: 'loading' });
+  // A refresh after an update keeps the report on screen (and the update message with it).
+  const load = useCallback(async (quiet = false) => {
+    if (!quiet) setState({ phase: 'loading' });
     try {
       setState({ phase: 'ready', report: await api.doctor() });
     } catch (error) {
@@ -152,7 +153,7 @@ export function DoctorRoute() {
         )}
         {state.phase === 'ready' &&
           state.report.checks.map((check) => (
-            <CheckRow key={check.id} check={check} onReload={() => void load()} />
+            <CheckRow key={check.id} check={check} onReload={() => void load(true)} />
           ))}
       </Panel>
     </div>

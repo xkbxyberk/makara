@@ -28,6 +28,10 @@ def isolated_app_dirs(
     base = tmp_path_factory.mktemp("app")
     monkeypatch.setenv("VD_DATA_DIR", str(base / "data"))
     monkeypatch.setenv("VD_DOWNLOAD_DIR", str(base / "downloads"))
+    # Nor may a test search Berk's whole Mac through Spotlight.
+    import app.library
+
+    monkeypatch.setattr(app.library, "_spotlight", lambda name: [])
 
 
 def load_fixture(name: str) -> dict[str, Any]:

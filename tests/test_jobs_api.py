@@ -454,3 +454,70 @@ def test_identical_downloads_keep_their_own_files_when_one_is_deleted(app_env: A
     primaries = [i["primary_path"] for i in items]
     assert len(set(primaries)) == 2, "two records now point at the same file"
     assert any(i["status"] == "missing" for i in items)
+
+
+@pytest.mark.parametrize(
+    ("folder", "code"),
+    [
+        ("~", "DOWNLOAD_DIR_UNSAFE"),
+        ("~/Library/Mail", "DOWNLOAD_DIR_UNSAFE"),
+        ("/System/Library", "DOWNLOAD_DIR_UNSAFE"),
+        ("/usr/local/share", "DOWNLOAD_DIR_UNSAFE"),
+        ("relative/path", "DOWNLOAD_DIR_NOT_ABSOLUTE"),
+        ("/nonexistent-parent/child", "DOWNLOAD_DIR_MISSING"),
+    ],
+)
+def test_unsafe_or_unusable_download_folders_are_refused(
+    app_env: Any, folder: str, code: str
+) -> None:
+    client = app_env()
+    settings = client.get("/api/settings").json()
+    response = client.put("/api/settings", json={**settings, "download_dir": folder})
+    assert response.json()["error"]["code"] == code
+
+
+def test_a_file_is_not_a_download_folder(app_env: Any, tmp_path: Path) -> None:
+    client = app_env()
+    a_file = tmp_path / "file.txt"
+    a_file.write_text("x")
+    settings = client.get("/api/settings").json()
+    response = client.put("/api/settings", json={**settings, "download_dir": str(a_file)})
+    assert response.json()["error"]["code"] == "DOWNLOAD_DIR_NOT_A_FOLDER"
+
+
+def test_updating_yt_dlp_is_refused_while_a_job_runs(app_env: Any, media_server: str) -> None:
+    client = app_env(f"{media_server}/slow")
+    model = inspect(client)
+    job = client.post(
+        "/api/jobs",
+        json={
+            "inspect_id": model["inspect_id"],
+            "mode": "separate",
+            "video_format_id": "v-vp9",
+            "extras": {"thumbnail": False},
+        },
+    ).json()
+    wait_for(client, job["id"], lambda j: j["status"] == "running")
+    response = client.post("/api/system/update-ytdlp")
+    assert response.status_code == 409 and response.json()["error"]["code"] == "JOBS_RUNNING"
+    client.post(f"/api/jobs/{job['id']}/cancel")
+
+
+def test_a_cancel_while_files_are_being_placed_is_ignored(app_env: Any) -> None:
+    client = app_env()
+    model = inspect(client)
+    job = client.post(
+        "/api/jobs",
+        json={
+            "inspect_id": model["inspect_id"],
+            "mode": "audio",
+            "audio_format_ids": ["a-en-m4a"],
+            "audio_codec": "m4a",
+        },
+    ).json()
+    wait_for(client, job["id"], lambda j: j["status"] == "done")
+    store = client.app.state.jobs.store  # type: ignore[attr-defined]
+    store.update(job["id"], status="running", stage="finalizing")
+    after = client.post(f"/api/jobs/{job['id']}/cancel").json()
+    assert after["stage"] == "finalizing"
+    assert job["id"] not in client.app.state.jobs.cancelling  # type: ignore[attr-defined]

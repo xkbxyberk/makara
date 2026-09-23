@@ -72,9 +72,17 @@ def update_ytdlp() -> dict[str, Any]:
     before = installed_ytdlp()
     log: list[str] = []
     for argv in update_ytdlp_argv():
-        proc = subprocess.run(
-            argv, capture_output=True, text=True, cwd=paths.PROJECT_ROOT, timeout=600, check=False
-        )
+        try:
+            proc = subprocess.run(
+                argv,
+                capture_output=True,
+                text=True,
+                cwd=paths.PROJECT_ROOT,
+                timeout=600,
+                check=False,
+            )
+        except (OSError, subprocess.SubprocessError) as exc:  # no uv, or it hung
+            raise errors.AppError(code="UPDATE_FAILED", raw=f"{argv[0]}: {exc}") from None
         log.append(f"$ {' '.join(argv)}\n{proc.stdout}{proc.stderr}")
         if proc.returncode != 0:
             raise errors.AppError(code="UPDATE_FAILED", raw="\n".join(log)[-6000:])

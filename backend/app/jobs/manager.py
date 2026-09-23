@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
+import logging
 import os
 import shutil
 import signal
@@ -26,7 +27,9 @@ from app import paths
 from app.db import JobStore
 from app.settings import Settings
 
+log = logging.getLogger("videodownloader.jobs")
 CANCEL_GRACE_SECONDS = 5
+WORKERS = {"download": "app.workers.download_worker", "studio": "app.workers.studio_worker"}
 PUBLIC_REQUEST_FIELDS = (
     "mode",
     "video_format_id",
@@ -194,7 +197,7 @@ class JobManager:
             proc = await asyncio.create_subprocess_exec(
                 sys.executable,
                 "-m",
-                "app.workers.download_worker",
+                WORKERS.get(job["kind"], "app.workers.download_worker"),
                 stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
@@ -243,9 +246,8 @@ class JobManager:
             if proc.returncode is None:
                 self._signal_proc(proc, signal.SIGKILL)
 
-        if job_id in self.cancelling:
-            self._finish_cancelled(job_id)
-        elif "files" in outcome:
+        # A finished job is finished, even if a cancel raced its last moments.
+        if "files" in outcome:
             self._update(
                 job_id,
                 status="done",
@@ -261,7 +263,10 @@ class JobManager:
                 try:
                     self.on_done(job, outcome)
                 except Exception as exc:  # the file is safely on disk either way
+                    log.exception("cataloguing job %s failed", job_id)
                     self.publish({"type": "library_error", "id": job_id, "raw": str(exc)})
+        elif job_id in self.cancelling:
+            self._finish_cancelled(job_id)
         else:
             code = outcome.get("code") or "WORKER_CRASHED"
             detail = outcome.get("raw") or "\n".join(stderr_tail) or f"exit {proc.returncode}"
@@ -319,6 +324,10 @@ class JobManager:
             return self._update(
                 job_id, status="cancelled", stage="cancelled", finished_at=time.time()
             )
+        if job["stage"] == "finalizing":
+            # The finished files are being moved into place; stopping now would leave them
+            # there with no catalogue record. Let it complete.
+            return job
         if job["status"] == "running" and job_id not in self.cancelling:
             self.cancelling.add(job_id)
             self._update(job_id, stage="cancelling")

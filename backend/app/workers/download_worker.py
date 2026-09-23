@@ -402,6 +402,7 @@ def _finalize(
         if wanted and source.exists():
             outputs.append((source, suffix))
 
+    emit({"t": "stage", "stage": "finalizing"})
     targets = naming.claim(root, stem, [suffix for _, suffix in outputs])
     try:
         for (source, _), target in zip(outputs, targets, strict=True):
@@ -445,7 +446,11 @@ def run(req: dict[str, Any]) -> int:
         emit({"t": "error", "code": errors.classify(str(exc)), "raw": log.raw(exc)})
         return 1
     _cleanup(req, work)
-    outputs = _describe(files, req["job_id"])
+    try:
+        outputs = _describe(files, req["job_id"])
+    except Exception as exc:  # the files are in place; describing them is a nicety
+        print(f"describe failed: {exc!r}", file=sys.stderr)
+        outputs = []
     emit(
         {
             "t": "done",

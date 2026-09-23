@@ -16,6 +16,7 @@ from app import errors, inspect_service, notify
 from app import settings as settings_store
 from app.jobs import planning
 from app.jobs.manager import JobManager, public
+from app.settings import DEFAULT_TEMPLATE
 from app.ytdlp import naming
 
 router = APIRouter(prefix="/api")
@@ -23,21 +24,6 @@ router = APIRouter(prefix="/api")
 Mode = Literal["mkv", "compat_mp4", "separate", "audio"]
 AudioCodec = Literal["mp3", "m4a", "opus", "flac", "wav"]
 SSE_KEEPALIVE_SECONDS = 5
-# Downloads create folders and the library reveals files under this root; never the disk itself.
-UNSAFE_DOWNLOAD_DIRS = {
-    Path(p).resolve()
-    for p in (
-        "/",
-        "/System",
-        "/Library",
-        "/Applications",
-        "/usr",
-        "/bin",
-        "/etc",
-        "/private",
-        "/Users",
-    )
-}
 
 
 class Extras(BaseModel):
@@ -167,7 +153,7 @@ async def get_events(request: Request) -> StreamingResponse:
 
 @router.get("/settings")
 def get_settings() -> dict[str, Any]:
-    return settings_store.load().as_dict()
+    return {**settings_store.load().as_dict(), "default_filename_template": DEFAULT_TEMPLATE}
 
 
 @router.put("/settings")
@@ -176,11 +162,10 @@ async def put_settings(body: SettingsBody, request: Request) -> Any:
         naming.validate_template(body.filename_template)
     except errors.AppError as exc:
         return _error(exc)
-    directory = Path(body.download_dir).expanduser()
-    if not directory.is_absolute():
-        return _error(errors.AppError(code="DOWNLOAD_DIR_NOT_ABSOLUTE", raw=body.download_dir))
-    if directory.resolve() in UNSAFE_DOWNLOAD_DIRS:
-        return _error(errors.AppError(code="DOWNLOAD_DIR_UNSAFE", raw=body.download_dir))
+    try:
+        directory = settings_store.validate_download_dir(body.download_dir)
+    except errors.AppError as exc:
+        return _error(exc)
     saved = settings_store.save(
         settings_store.Settings(**{**body.model_dump(), "download_dir": str(directory)})
     )

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
+import logging
 import re
 import sys
 from collections.abc import AsyncIterator, Awaitable, Callable
@@ -15,7 +17,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from app import db, paths
+from app import db, errors, paths
 from app import settings as settings_store
 from app.api import jobs_api, library_api
 from app.api.routes import router
@@ -24,6 +26,7 @@ from app.library import Library
 from app.system import ClipboardWatcher
 
 _MEDIA_NAME = re.compile(r"^[A-Za-z0-9_.-]+$")
+log = logging.getLogger("videodownloader")
 
 HOST = paths.SERVER_HOST
 PORT = paths.SERVER_PORT
@@ -43,6 +46,14 @@ async def reject_cross_site(
         if (origin and origin not in ALLOWED_ORIGINS) or site == "cross-site":
             return JSONResponse(status_code=403, content={"error": {"code": "FORBIDDEN_ORIGIN"}})
     return await call_next(request)
+
+
+def _log_task_failure(task: asyncio.Task[Any]) -> None:
+    if task.cancelled():
+        return
+    exc = task.exception()
+    if exc is not None and not (isinstance(exc, errors.AppError) and exc.code == "SCAN_BUSY"):
+        log.error("background task failed", exc_info=exc)
 
 
 @asynccontextmanager
@@ -66,12 +77,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     scan = asyncio.create_task(
         asyncio.to_thread(library.scan, [Path(settings_store.load().download_dir).expanduser()])
     )
+    scan.add_done_callback(_log_task_failure)
     try:
         yield
     finally:
-        scan.cancel()
         clipboard.stop()
         await manager.stop()
+        with contextlib.suppress(asyncio.CancelledError, errors.AppError):
+            await asyncio.wait_for(asyncio.shield(scan), timeout=5)
 
 
 def create_app() -> FastAPI:

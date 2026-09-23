@@ -75,3 +75,14 @@ def test_release_removes_only_empty_placeholders(tmp_path: Path) -> None:
     b.write_bytes(b"real data")
     naming.release([a, b])
     assert not a.exists() and b.read_bytes() == b"real data"
+
+
+def test_claim_creates_nothing_outside_the_root_through_a_symlink(tmp_path: Path) -> None:
+    root = tmp_path / "root"
+    root.mkdir()
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    os.symlink(outside, root / "Ch")
+    with pytest.raises(errors.AppError):
+        naming.claim(root, PurePosixPath("Ch/deeper/still/Clip"), [".mkv"])
+    assert list(outside.iterdir()) == []  # not even an empty folder

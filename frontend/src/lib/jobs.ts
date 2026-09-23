@@ -14,6 +14,8 @@ export interface ServerEventHandlers {
   onClipboard?: (url: string) => void;
   /** A finished download was added to the library. */
   onLibrary?: () => void;
+  /** A finished download could not be catalogued (its file is still on disk). */
+  onLibraryError?: () => void;
 }
 
 export function useJobs(handlers: ServerEventHandlers = {}) {
@@ -53,6 +55,7 @@ export function useJobs(handlers: ServerEventHandlers = {}) {
       latest.current.onClipboard?.(url);
     });
     source.addEventListener('library', () => latest.current.onLibrary?.());
+    source.addEventListener('library_error', () => latest.current.onLibraryError?.());
     return () => source.close();
   }, []);
 

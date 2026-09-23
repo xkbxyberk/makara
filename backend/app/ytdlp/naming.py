@@ -104,10 +104,17 @@ def claim(root: Path, relative_stem: PurePosixPath, suffixes: list[str]) -> list
     """
     base = root.expanduser().resolve()
     parts = [safe_component(p) for p in relative_stem.parts] or ["_"]
+    # A symlinked sub-folder must not lead outside the root -- checked for every folder that
+    # already exists *before* anything is created, so nothing is ever made outside the root.
+    current = base
+    for part in parts[:-1]:
+        current = current / part
+        exists = current.exists() or current.is_symlink()
+        if exists and not current.resolve().is_relative_to(base):
+            raise errors.AppError(code="PATH_OUTSIDE_ROOT", raw=str(current))
     parent = base.joinpath(*parts[:-1])
     parent.mkdir(parents=True, exist_ok=True)
     real_parent = parent.resolve()
-    # A symlinked sub-folder must not lead outside the root either.
     if not real_parent.is_relative_to(base):
         raise errors.AppError(code="PATH_OUTSIDE_ROOT", raw=str(real_parent))
     clean_suffixes = [safe_suffix(s) for s in suffixes]

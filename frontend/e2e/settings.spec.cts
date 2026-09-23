@@ -52,19 +52,25 @@ test('system actions degrade clearly where they cannot run', async ({ page }) =>
 
   await page.getByRole('navigation').getByRole('button', { name: 'Sistem' }).click();
   await page.getByRole('button', { name: 'yt-dlp’yi güncelle' }).click();
-  await expect(page.getByRole('alert')).toContainText('Güncelleme bu modda kapalı');
+  // Other specs download in parallel, so either refusal may apply; each is unit-tested on its own
+  // (test_system_actions_never_run_in_fixture_mode, test_updating_yt_dlp_is_refused_while_a_job_runs).
+  await expect(page.getByRole('alert')).toContainText(
+    /Güncelleme bu modda kapalı|Önce indirmelerin bitmesini bekle/,
+  );
 });
 
 test('a copied link is offered for inspection', async ({ page, request }) => {
   await page.goto('/');
   await expect(page.getByText('Henüz bir şey incelemedin')).toBeVisible();
   await page.getByRole('navigation').getByRole('button', { name: 'Kütüphane' }).click();
-  // Wait for the event stream so the fake clipboard event is not sent into the void.
-  await expect.poll(async () => (await request.post('/api/test/clipboard', {
-    data: { url: 'https://example.test/local-media' },
-  })).ok()).toBe(true);
   const banner = page.getByRole('status').filter({ hasText: 'Panoya bir bağlantı kopyaladın' });
-  await expect(banner).toBeVisible();
+  // Re-send until it lands: the page's event stream may not be connected on the first try.
+  await expect
+    .poll(async () => {
+      await request.post('/api/test/clipboard', { data: { url: 'https://example.test/local-media' } });
+      return banner.isVisible();
+    })
+    .toBe(true);
   await banner.getByRole('button', { name: 'İncele' }).click();
   await expect(page.getByRole('heading', { name: 'Local test clip' })).toBeVisible();
 });

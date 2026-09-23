@@ -276,7 +276,13 @@ export function LibraryRoute({ refreshKey }: { refreshKey: number }) {
         )}
         <span className="toolbar-spacer" />
         {scan && scan !== 'running' && <span className="muted">{tr.library.scanResult(scan)}</span>}
-        <button type="button" className="btn" disabled={scan === 'running'} onClick={() => void runScan()}>
+        <button
+          type="button"
+          className="btn"
+          title={tr.library.scanHelp}
+          disabled={scan === 'running'}
+          onClick={() => void runScan()}
+        >
           {scan === 'running' ? tr.library.scanning : tr.library.scan}
         </button>
       </div>
@@ -321,7 +327,14 @@ export function LibraryRoute({ refreshKey }: { refreshKey: number }) {
                   </span>
                 </button>
                 <div className="lib-card-badges">
-                  {item.mode && <Badge>{tr.download.modes[item.mode]}</Badge>}
+                  {item.mode && (
+                    <Badge>
+                      <Term
+                        label={tr.download.modes[item.mode] ?? item.mode}
+                        body={tr.download.modeHelp[item.mode] ?? ''}
+                      />
+                    </Badge>
+                  )}
                   {item.status === 'missing' && <MissingBadge />}
                 </div>
                 {selected === item.id && (

@@ -8,6 +8,7 @@ Rules agreed with Berk:
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import shutil
@@ -102,6 +103,7 @@ class Library:
     def __init__(self, conn: sqlite3.Connection) -> None:
         self.conn = conn
         self._lock = threading.Lock()
+        self._scan_lock = threading.Lock()
         with self._lock:
             conn.executescript(SCHEMA)
 
@@ -125,6 +127,8 @@ class Library:
             return None
         meta = outcome.get("meta") or {}
         tracks = primary.get("tracks") or {"video": [], "audio": [], "subtitle": []}
+        if not tracks.get("video") and not tracks.get("audio"):
+            return None  # e.g. a converted subtitle file: not something to play
         item = {
             "id": uuid.uuid4().hex[:12],
             "job_id": job["id"],
@@ -223,33 +227,63 @@ class Library:
         }
 
     # ---- keeping it true to the disk -----------------------------------------------------------
+    def _owned(self, *, except_item: str | None = None) -> set[str]:
+        """Every file (primary or sidecar) recorded by a live item, as resolved paths."""
+        owned: set[str] = set()
+        for row in self._fetch("SELECT id, files FROM library_items WHERE status != 'trashed'"):
+            if row["id"] == except_item:
+                continue
+            owned.update(_resolved(f["path"]) for f in json.loads(row["files"] or "[]"))
+        return owned
+
+    def _mark(self, item_id: str, **changes: Any) -> None:
+        """Scan updates never touch an item that was trashed while the scan was running."""
+        assignments = ", ".join(f"{c} = ?" for c in changes)
+        values = [json.dumps(v) if c in JSON_COLUMNS else v for c, v in changes.items()]
+        self._write(
+            f"UPDATE library_items SET {assignments} WHERE id = ? AND status != 'trashed'",
+            [*values, item_id],
+        )
+
     def scan(self, search_roots: list[Path]) -> dict[str, int]:
-        """Mark vanished files missing; re-link any that turn up with the same size and duration."""
+        """Mark vanished files missing; re-link any that turn up with the same size and duration.
+
+        One scan at a time: the start-up scan and the button could otherwise race each other.
+        """
+        if not self._scan_lock.acquire(blocking=False):
+            raise errors.AppError(code="SCAN_BUSY")
+        try:
+            return self._scan(search_roots)
+        finally:
+            self._scan_lock.release()
+
+    def _scan(self, search_roots: list[Path]) -> dict[str, int]:
         counts = {"checked": 0, "missing": 0, "repaired": 0, "restored": 0}
         by_size: dict[int, list[Path]] | None = None
         items = self.query(include_trashed=False)
         # Downloading the same video twice gives two byte-identical files. Deleting one must not
-        # re-point its record at the *other* item's file.
-        owned = {str(Path(i["primary_path"])) for i in items}
+        # re-point its record at the *other* item's file -- nor two records at one file.
+        owned = self._owned()
         for item in items:
             counts["checked"] += 1
             primary = Path(item["primary_path"])
-            if primary.exists():
+            size, duration = _primary_size(item), item.get("duration")
+            if primary.exists() and _same_media(primary, size, duration):
                 if item["status"] == "missing":
                     counts["restored"] += 1
-                self._update(item["id"], status="ok", checked_at=time.time())
+                self._mark(item["id"], status="ok", checked_at=time.time())
                 continue
+            # Gone -- or something else now sits at that path (a new download reused the name).
             if by_size is None:
                 by_size = _index_by_size(search_roots)
-            found = find_moved(
-                primary, _primary_size(item), item.get("duration"), by_size, exclude=owned
-            )
+            found = find_moved(primary, size, duration, by_size, exclude=owned)
             if found is not None:
+                owned.add(_resolved(found))
                 files = [
                     {**f, "path": str(found)} if f["path"] == item["primary_path"] else f
                     for f in item["files"]
                 ]
-                self._update(
+                self._mark(
                     item["id"],
                     primary_path=str(found),
                     files=files,
@@ -258,20 +292,41 @@ class Library:
                 )
                 counts["repaired"] += 1
             else:
-                self._update(item["id"], status="missing", checked_at=time.time())
+                self._mark(item["id"], status="missing", checked_at=time.time())
                 counts["missing"] += 1
         return counts
 
     # ---- user actions ----------------------------------------------------------------------
     def trash(self, item_id: str) -> dict[str, Any]:
-        """Move every file of an item to the macOS Trash (recoverable) and mark it trashed."""
+        """Move an item's files to the macOS Trash (recoverable) and mark it trashed.
+
+        Only files that are still *this item's*: present, the size that was recorded, and not
+        recorded by any other live item. A path reused by a later download is left alone.
+        """
         item = self.get(item_id)
         if item is None:
             raise errors.AppError(code="ITEM_NOT_FOUND", raw=item_id)
-        for file in item["files"]:
+        if item["status"] != "ok":
+            raise errors.AppError(code="ITEM_NOT_TRASHABLE", raw=item["status"])
+        others = self._owned(except_item=item_id)
+
+        def ours(file: dict[str, Any]) -> bool:
             path = Path(file["path"])
-            if path.exists():
-                move_to_trash(path)
+            if not path.is_file() or _resolved(path) in others:
+                return False
+            return not file.get("size") or path.stat().st_size == int(file["size"])
+
+        primary = next((f for f in item["files"] if f["path"] == item["primary_path"]), None)
+        if primary is None or not ours(primary):
+            raise errors.AppError(code="FILE_MISSING", raw=item["primary_path"])
+        try:
+            move_to_trash(Path(primary["path"]))
+        except OSError as exc:
+            raise errors.AppError(code="TRASH_FAILED", raw=str(exc)) from None
+        for file in item["files"]:
+            if file is not primary and ours(file):
+                with contextlib.suppress(OSError):
+                    move_to_trash(Path(file["path"]))
         updated = self._update(item_id, status="trashed", checked_at=time.time())
         assert updated is not None
         return updated
@@ -308,6 +363,27 @@ def move_to_trash(path: Path) -> None:
     send2trash(str(path))
 
 
+def _resolved(path: str | Path) -> str:
+    try:
+        return str(Path(path).resolve())
+    except OSError:
+        return str(path)
+
+
+def _same_media(path: Path, size: int | None, duration: float | None) -> bool:
+    """Is the file at `path` still the one that was recorded? Size must match exactly; the
+    duration too when it is known."""
+    try:
+        if size and path.stat().st_size != size:
+            return False
+        if duration is not None:
+            probed = summarize_streams(path)["duration"]
+            return probed is not None and abs(probed - duration) <= DURATION_TOLERANCE
+    except (OSError, subprocess.SubprocessError, ValueError):
+        return False
+    return True
+
+
 def _primary_size(item: dict[str, Any]) -> int | None:
     for file in item.get("files") or []:
         if file["path"] == item["primary_path"]:
@@ -331,6 +407,14 @@ def _index_by_size(roots: list[Path]) -> dict[int, list[Path]]:
     return index
 
 
+def _hidden_or_ours(path: Path) -> bool:
+    if any(part.startswith(".") for part in path.parts[1:]):  # .Trash, .Trashes, .vd-work, ...
+        return True
+    if "Backups.backupdb" in path.parts or "MobileBackups" in path.parts:
+        return True
+    return _resolved(path).startswith(_resolved(paths.data_dir()))  # e.g. simulated-trash
+
+
 def _spotlight(name: str) -> list[Path]:
     """Files anywhere on the Mac with exactly this name, via Spotlight. argv only, no shell."""
     if sys.platform != "darwin" or paths.fixture_mode() or not shutil.which("mdfind"):
@@ -345,7 +429,8 @@ def _spotlight(name: str) -> list[Path]:
         ).stdout
     except (OSError, subprocess.SubprocessError):
         return []
-    return [Path(line) for line in out.splitlines() if line and Path(line).name == name][:50]
+    found = [Path(line) for line in out.splitlines() if line and Path(line).name == name]
+    return [p for p in found if not _hidden_or_ours(p)][:50]
 
 
 def find_moved(
@@ -362,7 +447,8 @@ def find_moved(
     candidates = list(by_size.get(size, []))
     candidates += [p for p in _spotlight(original.name) if p not in candidates]
     for candidate in candidates:
-        if exclude and str(candidate) in exclude:
+        # Compare resolved paths: a symlinked folder must not disguise another item's file.
+        if exclude and _resolved(candidate) in exclude:
             continue
         try:
             if candidate.stat().st_size != size:

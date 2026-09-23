@@ -229,6 +229,9 @@ export const tr = {
     siteLabel: 'Site',
     onlyMissing: 'Yalnızca eksikler',
     scan: 'Dosyaları denetle',
+    scanHelp:
+      'Her öğenin dosyasının hâlâ yerinde olduğuna bakar. Finder’da taşınan dosyayı aynı boyut ve süreyle bulup bağlantıyı düzeltir; bulamadıklarını “Eksik” diye işaretler.',
+    catalogueFailed: 'Bir indirme tamamlandı ama kütüphaneye eklenemedi. Dosya diskte duruyor.',
     scanning: 'Denetleniyor…',
     scanResult: (c: { checked: number; missing: number; repaired: number; restored: number }) =>
       `${c.checked} öğe denetlendi · ${c.repaired} dosyanın yeni yeri bulundu · ${c.restored} geri geldi · ${c.missing} eksik`,
@@ -562,7 +565,7 @@ export const tr = {
     },
     DOWNLOAD_DIR_UNSAFE: {
       title: 'Bu klasör indirme için kullanılamaz',
-      body: 'Diskin kökü veya bir sistem klasörü seçilemez. Filmler veya Belgeler altında bir klasör seç.',
+      body: 'Ev klasörünün kendisi, Kitaplık ya da bir sistem klasörü seçilemez. Filmler veya Belgeler altında bir klasör seç.',
     },
     DOWNLOAD_DIR_NOT_ABSOLUTE: {
       title: 'İndirme klasörü tam yol olmalı',
@@ -598,6 +601,25 @@ export const tr = {
       body: 'Finder’da taşınmış veya silinmiş olabilir.',
     },
     ITEM_NOT_FOUND: { title: 'Öğe bulunamadı', body: 'Kütüphaneden kaldırılmış olabilir.' },
+    ITEM_NOT_TRASHABLE: {
+      title: 'Bu öğe çöpe atılamaz',
+      body: 'Zaten çöpte ya da dosyası eksik. Önce “Dosyaları denetle”yi dene.',
+    },
+    TRASH_FAILED: { title: 'Çöp Kutusu’na taşınamadı', body: 'Dosya kilitli ya da erişim izni yok.' },
+    SCAN_BUSY: { title: 'Denetim zaten sürüyor', body: 'Bitmesini bekle.' },
+    JOBS_RUNNING: {
+      title: 'Önce indirmelerin bitmesini bekle',
+      body: 'yt-dlp, çalışan bir indirmenin altından değiştirilemez.',
+    },
+    DOWNLOAD_DIR_NOT_A_FOLDER: { title: 'Bu bir klasör değil', body: 'Bir klasör seç.' },
+    DOWNLOAD_DIR_MISSING: {
+      title: 'Klasör bulunamadı',
+      body: 'Üst klasör yok. Var olan bir klasör seç.',
+    },
+    DOWNLOAD_DIR_NOT_WRITABLE: {
+      title: 'Bu klasöre yazılamıyor',
+      body: 'Yazma iznin olan bir klasör seç.',
+    },
     PICKER_UNAVAILABLE: {
       title: 'Klasör seçici açılamadı',
       body: 'Klasör yolunu elle yazabilirsin.',
