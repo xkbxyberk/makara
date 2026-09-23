@@ -7,7 +7,6 @@ dependencies = [
     "yt-dlp[default]>=2026.8.19",
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",
-    "sqlalchemy>=2.0",
     "pydantic>=2.9",
     "send2trash>=1.8",
     "pywebview>=5.3",

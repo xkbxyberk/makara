@@ -73,4 +73,34 @@ a regression test:
   real source is 240p and every 360p–720p option is upscaled. They are now badged, and the
   archive default picks the original.
 
-**Next:** M2 — download engine, queue and track picker (in progress).
+## 2026-09-23 — M2: download engine, queue, track picker
+
+**The key design decision: yt-dlp downloads, we mux.** yt-dlp fetches each selected format as
+its own raw file (`-f v,a1,a2` with a comma, not `+`), then our own FFmpeg command builds the
+output. That makes language tags, the default flag, subtitle codecs and copy-vs-transcode
+explicit and decided by *probing the real files*, and it isolates us from the multistreams
+behaviour the README says will change. A spike showed why this was necessary: with several
+formats, yt-dlp re-downloads subtitles for every one of them, and the `filepath` it reports in
+`requested_subtitles` is wrong (it names the last stream, not the file it wrote).
+
+**Offline downloads.** `scripts/make_test_media.py` generates clips with `testsrc2`/`sine` and a
+synthetic info dict whose URLs point at 127.0.0.1. Tests run the real yt-dlp downloader and real
+FFmpeg against them, and verify every output with `ffprobe`. A throttled, Range-capable test
+endpoint lets a test cancel mid-download and prove the retry *resumed*.
+
+**Bugs the tests caught on the way:**
+- FastAPI runs sync handlers in a threadpool, but the queue's `asyncio.Queue`/`Event` are
+  loop-bound and not thread-safe. Handlers that touch the manager are `async` now, and the
+  manager marshals any off-loop call with `call_soon_threadsafe`.
+- `-map_metadata -1` also strips chapter titles. With chapters, the (tag-less) ffmetadata file
+  is used as the metadata source instead.
+- Matroska surfaces an attachment named `cover.jpg` as an attached-picture video stream; that
+  is correct (players show it), tests now expect it.
+- TestClient never delivers an HTTP disconnect to a streaming response, so the SSE test runs
+  against a real uvicorn server; the manager also sends a shutdown event so open streams never
+  hold up server shutdown.
+
+**Deviations from the plan:** SQLAlchemy was dropped in favour of plain `sqlite3` — one small
+table does not earn an ORM. The Settings *screen* moves to M3 (its API exists).
+
+**Next:** adversarial review of M2, then M3 — Library and Settings.

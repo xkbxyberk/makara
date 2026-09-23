@@ -1,0 +1,240 @@
+"""The real yt-dlp + FFmpeg pipeline, end to end, against media served on 127.0.0.1.
+
+Every assertion about the output file is made with ffprobe, not by trusting our own code.
+"""
+
+from __future__ import annotations
+
+import io
+import json
+from pathlib import Path
+from typing import Any
+
+import pytest
+
+from app.ffmpeg.probe import probe
+from app.settings import DEFAULT_TEMPLATE
+from app.workers import download_worker
+
+AUDIO_TRACKS = [
+    {"format_id": "a-en-m4a", "language": "en", "role": "original"},
+    {"format_id": "a-en-opus", "language": "en", "role": "original"},
+    {"format_id": "a-tr-m4a", "language": "tr", "role": "dub"},
+    {"format_id": "a-de-m4a", "language": "de", "role": "dub"},
+]
+SUB_TRACKS = [{"key": k, "language": k} for k in ("en", "tr", "de")]
+
+
+def run_job(
+    tmp_path: Path, info: dict[str, Any], **overrides: Any
+) -> tuple[int, list[dict[str, Any]]]:
+    job_id = "job" + str(abs(hash(json.dumps(overrides, sort_keys=True))))[:8]
+    request = {
+        "job_id": job_id,
+        "download_dir": str(tmp_path / "out"),
+        "work_dir": str(tmp_path / "out" / ".vd-work" / job_id),
+        "filename_template": DEFAULT_TEMPLATE,
+        "info": info,
+        "audio_tracks": AUDIO_TRACKS,
+        "subtitle_tracks": SUB_TRACKS,
+        "expected_sizes": {},
+        "extras": {"thumbnail": True},
+        "subtitle_keys": [],
+        "audio_format_ids": [],
+        "video_format_id": None,
+        **overrides,
+    }
+    buffer = io.StringIO()
+    download_worker.OUT = buffer
+    code = download_worker.run(request)
+    events = [json.loads(line) for line in buffer.getvalue().splitlines()]
+    return code, events
+
+
+def done_files(events: list[dict[str, Any]]) -> list[Path]:
+    done = [e for e in events if e["t"] == "done"]
+    assert done, f"job did not finish: {[e for e in events if e['t'] == 'error']}"
+    return [Path(f) for f in done[-1]["files"]]
+
+
+def streams(path: Path, kind: str) -> list[dict[str, Any]]:
+    """Streams of one type. Cover art is reported separately (see `cover_art`)."""
+    return [
+        s
+        for s in probe(path)["streams"]
+        if s["codec_type"] == kind and not s.get("disposition", {}).get("attached_pic")
+    ]
+
+
+def cover_art(path: Path) -> list[dict[str, Any]]:
+    # Matroska's demuxer surfaces an attachment named cover.* as an attached-picture stream,
+    # which is exactly what makes players show it.
+    return [s for s in probe(path)["streams"] if s.get("disposition", {}).get("attached_pic")]
+
+
+def test_archive_mkv_with_two_audio_languages_and_two_subtitles(
+    tmp_path: Path, local_info: dict[str, Any]
+) -> None:
+    code, events = run_job(
+        tmp_path,
+        local_info,
+        mode="mkv",
+        video_format_id="v-vp9",
+        audio_format_ids=["a-en-opus", "a-tr-m4a"],
+        subtitle_keys=["en", "tr"],
+    )
+    assert code == 0
+    [output] = done_files(events)
+    assert output.name == "2026-09-01 - Local test clip [localclip01].mkv"
+    assert output.parent.name == "VD Test Channel"
+
+    info = probe(output)
+    video = streams(output, "video")
+    assert [v["codec_name"] for v in video] == ["vp9"]
+    audio = streams(output, "audio")
+    assert [a["tags"]["language"] for a in audio] == ["eng", "tur"]
+    assert [a["disposition"]["default"] for a in audio] == [1, 0]
+    assert [a["codec_name"] for a in audio] == ["opus", "aac"]  # copied, never re-encoded
+    subs = streams(output, "subtitle")
+    assert [s["tags"]["language"] for s in subs] == ["eng", "tur"]
+    assert all(s["disposition"]["default"] == 0 for s in subs)
+    [cover] = cover_art(output)
+    assert cover["codec_name"] == "mjpeg"
+    assert [c["tags"]["title"] for c in info["chapters"]] == ["Intro", "Outro"]
+    assert float(info["format"]["duration"]) == pytest.approx(4, abs=0.3)
+
+    stages = [e["stage"] for e in events if e["t"] == "stage"]
+    assert "downloading" in stages and "merging" in stages
+    progress = [
+        e["progress"] for e in events if e["t"] == "progress" and e["stage"] == "downloading"
+    ]
+    assert progress == sorted(progress) and progress[-1] == 1.0
+    # The scratch directory is gone once the file is in place.
+    assert list((tmp_path / "out" / ".vd-work").iterdir()) == []
+
+
+def test_compat_mp4_reencodes_only_what_quicktime_cannot_play(
+    tmp_path: Path, local_info: dict[str, Any]
+) -> None:
+    code, events = run_job(
+        tmp_path,
+        local_info,
+        mode="compat_mp4",
+        video_format_id="v-vp9",
+        audio_format_ids=["a-en-opus"],
+        subtitle_keys=["en"],
+    )
+    assert code == 0
+    [output] = done_files(events)
+    assert output.suffix == ".mp4"
+    [video] = streams(output, "video")
+    assert video["codec_name"] == "h264" and video["codec_tag_string"] == "avc1"
+    assert len(cover_art(output)) == 1
+    [audio] = streams(output, "audio")
+    assert audio["codec_name"] == "aac"
+    assert [s["codec_name"] for s in streams(output, "subtitle")] == ["mov_text"]
+    assert "converting" in [e["stage"] for e in events if e["t"] == "stage"]
+    plan = next(e for e in events if e["t"] == "done")["plan"]
+    assert plan["video"][0].startswith("transcode:vp9")
+
+
+def test_compat_mp4_copies_when_already_compatible(
+    tmp_path: Path, local_info: dict[str, Any]
+) -> None:
+    code, events = run_job(
+        tmp_path,
+        local_info,
+        mode="compat_mp4",
+        video_format_id="v-h264",
+        audio_format_ids=["a-en-m4a"],
+    )
+    assert code == 0
+    [output] = done_files(events)
+    plan = next(e for e in events if e["t"] == "done")["plan"]
+    assert plan == {"video": ["copy:h264"], "audio": ["copy:aac"], "subtitle": []}
+    assert "converting" not in [e["stage"] for e in events if e["t"] == "stage"]
+    assert streams(output, "video")[0]["codec_tag_string"] == "avc1"
+
+
+def test_audio_only_mp3_with_cover_art_and_metadata(
+    tmp_path: Path, local_info: dict[str, Any]
+) -> None:
+    code, events = run_job(
+        tmp_path,
+        local_info,
+        mode="audio",
+        audio_format_ids=["a-en-opus"],
+        audio_codec="mp3",
+        audio_quality="192",
+    )
+    assert code == 0
+    [output] = done_files(events)
+    assert output.suffix == ".mp3"
+    info = probe(output)
+    assert [a["codec_name"] for a in streams(output, "audio")] == ["mp3"]
+    assert len(cover_art(output)) == 1
+    assert info["format"]["tags"]["title"] == "Local test clip"
+
+
+def test_separate_files_are_named_for_players_to_autoload(
+    tmp_path: Path, local_info: dict[str, Any]
+) -> None:
+    code, events = run_job(
+        tmp_path,
+        local_info,
+        mode="separate",
+        video_format_id="v-h264",
+        audio_format_ids=["a-en-m4a", "a-tr-m4a"],
+        subtitle_keys=["tr"],
+        extras={"thumbnail_file": True},
+    )
+    assert code == 0
+    names = sorted(p.name for p in done_files(events))
+    stem = "2026-09-01 - Local test clip [localclip01]"
+    assert names == sorted(
+        [
+            f"{stem}.mp4",
+            f"{stem}.en.m4a",
+            f"{stem}.tr.m4a",
+            f"{stem}.tr.srt",
+            f"{stem}.jpg",
+        ]
+    )
+
+
+def test_an_existing_file_is_never_overwritten(tmp_path: Path, local_info: dict[str, Any]) -> None:
+    kwargs = {"mode": "audio", "audio_format_ids": ["a-en-m4a"], "audio_codec": "m4a"}
+    _, first = run_job(tmp_path, local_info, **kwargs)
+    _, second = run_job(tmp_path, local_info, **{**kwargs, "audio_quality": "1"})
+    [a], [b] = done_files(first), done_files(second)
+    assert a != b and b.name.endswith(" (2).m4a")
+    assert a.exists() and b.exists()
+
+
+def test_a_template_escaping_the_download_root_is_refused(
+    tmp_path: Path, local_info: dict[str, Any]
+) -> None:
+    code, events = run_job(
+        tmp_path,
+        local_info,
+        mode="audio",
+        audio_format_ids=["a-en-m4a"],
+        audio_codec="m4a",
+        filename_template="../../escape/%(title)s.%(ext)s",
+    )
+    assert code == 1
+    assert events[-1] == {"t": "error", "code": "PATH_OUTSIDE_ROOT", "raw": events[-1]["raw"]}
+    assert not (tmp_path / "escape").exists()
+
+
+def test_an_unreachable_stream_fails_with_a_code(
+    tmp_path: Path, local_info: dict[str, Any]
+) -> None:
+    broken = json.loads(json.dumps(local_info))
+    for fmt in broken["formats"]:
+        fmt["url"] = "http://127.0.0.1:1/gone.mp4"
+    code, events = run_job(
+        tmp_path, broken, mode="mkv", video_format_id="v-h264", audio_format_ids=["a-en-m4a"]
+    )
+    assert code == 1
+    assert events[-1]["t"] == "error" and events[-1]["code"] == "NETWORK"

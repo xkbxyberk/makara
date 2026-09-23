@@ -21,6 +21,7 @@ import {
   sizePrefix,
 } from '../lib/format';
 import { Badge, CopyButton, EmptyState, ErrorState, LoadingState, Notice, Panel, Term } from '../components/ui';
+import { DownloadPanel } from '../components/DownloadPanel';
 
 type State =
   | { phase: 'empty' }
@@ -412,7 +413,7 @@ function PlaylistView({ model, onInspect }: { model: PlaylistModel; onInspect: (
   );
 }
 
-export function InspectRoute() {
+export function InspectRoute({ onOpenQueue }: { onOpenQueue: () => void }) {
   const [url, setUrl] = useState('');
   const [state, setState] = useState<State>({ phase: 'empty' });
   const inputRef = useRef<HTMLInputElement>(null);
@@ -502,13 +503,25 @@ export function InspectRoute() {
         <PlaylistView model={state.model} onInspect={(next) => void run(next)} />
       )}
       {state.phase === 'ready' && state.model.kind === 'video' && (
-        <ResultView model={state.model} />
+        <ResultView
+          model={state.model}
+          onQueued={onOpenQueue}
+          onReinspect={() => void run(state.model.source_url)}
+        />
       )}
     </div>
   );
 }
 
-function ResultView({ model }: { model: VideoModel }) {
+function ResultView({
+  model,
+  onQueued,
+  onReinspect,
+}: {
+  model: VideoModel;
+  onQueued: () => void;
+  onReinspect: () => void;
+}) {
   const warnings = tr.warnings as Record<string, string>;
   const peak = Math.max(1, ...model.heatmap.map((p) => p.value ?? 0));
   return (
@@ -519,6 +532,12 @@ function ResultView({ model }: { model: VideoModel }) {
         </Notice>
       ))}
       <Metadata model={model} />
+      <DownloadPanel
+        key={model.inspect_id}
+        model={model}
+        onQueued={onQueued}
+        onReinspect={onReinspect}
+      />
       <VideoTable formats={model.video_formats} title={tr.inspect.videoFormats} />
       {model.muxed_formats.length > 0 && (
         <VideoTable formats={model.muxed_formats} title={tr.inspect.muxedFormats} />

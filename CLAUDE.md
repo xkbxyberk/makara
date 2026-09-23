@@ -62,6 +62,18 @@ Local-only media workstation on yt-dlp + FFmpeg. macOS arm64, single user (Berk)
    the final `format_id` string, never a raw itag.
 10. Playwright specs are `frontend/e2e/*.spec.cts` (`.cts`, because the package is ESM and
     `@playwright/test` is CommonJS). Screenshots land in `test-results/screenshots/`.
+11. **We mux, not yt-dlp.** The worker downloads raw streams with `-f v,a1,a2` (comma) and
+    `backend/app/ffmpeg/mux.py` builds the file. Do not "simplify" back to `+` and yt-dlp's
+    merger: with several formats it re-fetches subtitles per format and reports a wrong subtitle
+    `filepath`, and the multistreams semantics are slated to change upstream.
+12. `-map_metadata -1` also drops chapter titles; see `mux.py` for the workaround.
+13. The job manager's state is bound to the asyncio loop. Route handlers that touch it must be
+    `async def`; never call it from a thread without `_on_loop`.
+14. Offline download tests: `scripts/make_test_media.py` generates clips and `info.json`; the
+    fixture URL `https://example.test/local-media` inspects them. The e2e server regenerates
+    them and starts with an empty database on every run.
+15. Scratch files live in `<download dir>/.vd-work/<job id>/` so a retry resumes `.part` files;
+    only that directory is ever deleted, and only after the final file is in place.
 
 ## Rules
 

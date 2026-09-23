@@ -184,8 +184,99 @@
     },
     "M2": {
       "title": "Download engine, queue, track picker",
-      "status": "not started",
-      "criteria": []
+      "status": "done",
+      "criteria": [
+        {
+          "id": "M2.1",
+          "text": "Pick 1 video + 2 audio languages + 2 subtitles into one MKV; ffprobe shows eng/tur audio, default flag on the first, eng/tur subtitles",
+          "pass": true,
+          "proof": "e2e 'track picker: 1 video + 2 audio languages + 2 subtitles into one tagged MKV'; tests/test_download_worker.py::test_archive_mkv_with_two_audio_languages_and_two_subtitles"
+        },
+        {
+          "id": "M2.2",
+          "text": "Two clicks (paste, Download) produce the agreed default: best video, original audio only, manual TR+EN subtitles",
+          "pass": true,
+          "proof": "e2e 'two clicks: paste, then Download, gives the archive default'"
+        },
+        {
+          "id": "M2.3",
+          "text": "QuickTime-compatible MP4: re-encodes only what is incompatible, says so beforehand, H.264 tagged avc1 + AAC",
+          "pass": true,
+          "proof": "e2e 'compatible MP4'; tests/test_download_worker.py::test_compat_mp4_*"
+        },
+        {
+          "id": "M2.4",
+          "text": "Audio only: MP3 with embedded cover art and title metadata",
+          "pass": true,
+          "proof": "e2e 'audio only: MP3 with embedded cover art'; test_audio_only_mp3_with_cover_art_and_metadata"
+        },
+        {
+          "id": "M2.5",
+          "text": "Separate files are named so players auto-load them (<stem>.<lang>.srt)",
+          "pass": true,
+          "proof": "tests/test_download_worker.py::test_separate_files_are_named_for_players_to_autoload"
+        },
+        {
+          "id": "M2.6",
+          "text": "Chapters and cover art are embedded in the MKV",
+          "pass": true,
+          "proof": "test_archive_mkv_* asserts chapter titles and an attached picture"
+        },
+        {
+          "id": "M2.7",
+          "text": "Live filename preview; a template escaping the download folder blocks the download",
+          "pass": true,
+          "proof": "e2e 'a template that escapes the download folder blocks the download'; test_a_template_escaping_the_download_root_is_refused"
+        },
+        {
+          "id": "M2.8",
+          "text": "An existing file is never overwritten",
+          "pass": true,
+          "proof": "test_an_existing_file_is_never_overwritten"
+        },
+        {
+          "id": "M2.9",
+          "text": "Queue: concurrency limit respected",
+          "pass": true,
+          "proof": "tests/test_jobs_api.py::test_concurrency_limit_is_respected"
+        },
+        {
+          "id": "M2.10",
+          "text": "Cancel stops a running job; retry resumes the partial download (HTTP Range)",
+          "pass": true,
+          "proof": "tests/test_jobs_api.py::test_cancel_then_retry_resumes_the_partial_download"
+        },
+        {
+          "id": "M2.11",
+          "text": "The queue survives a server restart",
+          "pass": true,
+          "proof": "tests/test_jobs_api.py::test_the_queue_survives_a_restart"
+        },
+        {
+          "id": "M2.12",
+          "text": "Progress, stage, speed and ETA stream to the UI over SSE",
+          "pass": true,
+          "proof": "tests/test_jobs_api.py::test_events_stream_snapshot_then_live_updates (real uvicorn)"
+        },
+        {
+          "id": "M2.13",
+          "text": "Removing a job from the list never deletes media",
+          "pass": true,
+          "proof": "e2e 'the queue shows the finished job...'; test_remove_deletes_the_entry_but_never_the_media"
+        },
+        {
+          "id": "M2.14",
+          "text": "Download errors keep their code and raw log",
+          "pass": true,
+          "proof": "test_an_unreachable_stream_fails_with_a_code"
+        },
+        {
+          "id": "M2.15",
+          "text": "Screenshots of the download panel and queue reviewed in light, dark and at 420px",
+          "pass": true,
+          "proof": "test-results/screenshots/{download,queue}-{light,dark,narrow}.png"
+        }
+      ]
     },
     "M3": {
       "title": "Library",

@@ -93,10 +93,34 @@ auto-dub**, so no such badge exists.
 `automatic_captions`: a key ending `-orig`, or a URL carrying `kind=asr`, is `auto`; a URL
 carrying `tlang=`, or a name reading "X from Y", is `auto_translated`.
 
-### Job model (M2 onwards)
+### Job model
 
-States: `queued → running → (merging | postprocessing) → done | failed | cancelled`.
-Persisted in SQLite so the queue survives a restart. Each job owns one child process.
+`status`: `queued → running → done | failed | cancelled` (failed/cancelled → queued on retry).
+`stage` while running: `starting → preparing → downloading → (postprocessing) → (merging |
+converting)`; `cancelling` while a cancel is in flight. `progress` is 0..1 *within the stage*;
+the download stage is weighted by file size so a finished video reads ~90%, not 33%.
+
+Stored in SQLite (`jobs` table: id, status, stage, title, source_url, mode, request JSON,
+progress, speed, eta, item_index/count, output_files JSON, error_code, error_raw, timestamps).
+On start-up, jobs left `running` are requeued; each job's scratch directory
+`<download dir>/.vd-work/<id>/` persists across retries so yt-dlp resumes `.part` files.
+
+### Download pipeline (one child process per job)
+
+1. **Side pass** (yt-dlp, `skip_download`): subtitles (`subtitleslangs` anchored and escaped),
+   thumbnail converted to JPEG, description, info.json.
+2. **Stream pass** (yt-dlp): each selected format as its own file (`-f v,a1,a2`). Audio-only mode
+   uses `FFmpegExtractAudio` + `FFmpegMetadata` + `EmbedThumbnail` here.
+3. **Finalize** (our FFmpeg argv, progress from `-progress pipe:1`):
+   - MKV: copy everything; audio languages as ISO 639-2 tags, first audio default, subtitles to
+     SRT (ASS kept), chapters from the info dict, cover as a `cover.jpg` attachment.
+   - Compatible MP4: probe the real streams; copy H.264/HEVC (tagged `avc1`/`hvc1`) and AAC,
+     re-encode anything else (libx264 CRF 20; AudioToolbox AAC when available); `mov_text`
+     subtitles; `+faststart`.
+   - Separate: `<stem>.<ext>`, `<stem>.<lang>.<ext>` for audio, `<stem>.<key>.srt` (VTT converted)
+     for subtitles — the naming IINA and VLC auto-load.
+   The final path comes from the filename template, must resolve inside the download folder,
+   and gets a " (2)" suffix instead of ever overwriting.
 
 ## 4. API surface
 
@@ -106,7 +130,19 @@ Persisted in SQLite so the queue survives a restart. Each job owns one child pro
 | `GET` | `/api/doctor` | dependency report (see below) |
 | `POST` | `/api/inspect` | `{url, flat?}` → the normalised model, or `{error: {code, raw}}` |
 | `POST` | `/api/command` | selection → the equivalent `yt-dlp` argv, for display |
-| `POST` | `/api/estimate-size` | model + format ids → summed size and its confidence |
+| `POST` | `/api/plan` | selection → filename preview, size, compatibility notices, copy/transcode plan, command |
+| `GET` | `/api/jobs` | the queue |
+| `POST` | `/api/jobs` | selection → a queued job (400 `SELECTION_INVALID`, 410 `INSPECT_EXPIRED`) |
+| `POST` | `/api/jobs/{id}/cancel` · `/retry` | kill the job's process group · requeue and resume |
+| `DELETE` | `/api/jobs/{id}` | remove from the list (never deletes media) |
+| `GET` | `/api/events` | SSE: `snapshot` on connect, then `job` / `removed` events |
+| `GET`/`PUT` | `/api/settings` | download folder, template, concurrency (1–6), default mode |
+| `POST` | `/api/notify` | macOS notification; text comes from the UI, passed as AppleScript argv |
+| `POST` | `/api/reveal` | select a file in Finder (only inside the download folder) |
+
+Inspect results carry an `inspect_id` (server-side cache of the last 8) and `defaults` per
+mode. All non-GET requests from another origin are rejected, and the Host header must be
+`127.0.0.1` or `localhost`.
 
 Errors are `{"error": {"code", "raw", "detail"}}` with HTTP 400 for `INVALID_URL` /
 `UNSUPPORTED_SITE` and 502 otherwise. Codes: `INVALID_URL`, `UNSUPPORTED_SITE`,
@@ -140,8 +176,25 @@ are not offered.
   its values, the ffmpeg capability matrix, a plain-Turkish explanation for each missing
   optional capability, and a copyable fix command when the check is not green.
 
-### Download, Library, Studio, Settings
-Present in the sidebar, disabled, labelled "yakında". Specified in PLAN.md milestones M2–M8.
+### Download panel (inside Inspect, M2, built)
+- Segmented mode control (Arşiv MKV · Uyumlu MP4 · Ayrı dosyalar · Sadece ses), a one-line
+  explanation of the chosen mode, a chip summary of what will be downloaded, the estimated size
+  (with its confidence), the full destination path, and compatibility notices.
+- **İndir** (or ⌘↵) queues it. "Parçaları seç" opens the track picker: video (radio), audio per
+  language (checkbox + variant select; radio in audio mode), subtitles by kind with machine
+  translations collapsed behind a search box, extras, audio format and quality, the filename
+  template, and the equivalent yt-dlp command.
+- **Error:** an expired inspection offers "Yeniden incele"; blocking notices disable İndir.
+
+### İndirmeler (queue, M2, built)
+- **Loading** until the SSE snapshot arrives; **empty** state pointing to İncele; a banner while
+  the event stream reconnects. Each job: title, mode, status, stage, progress bar (indeterminate
+  when the stage has no measurable progress), percent, i/n, speed, ETA; the output files with
+  "Finder'da göster"; the coded error with its raw log; cancel / retry / remove.
+- The sidebar shows the number of active jobs.
+
+### Library, Studio, Settings
+Present in the sidebar, disabled, labelled "yakında". Specified in PLAN.md milestones M3–M8.
 
 ## 6. Feature → tool mapping
 
@@ -150,8 +203,8 @@ Present in the sidebar, disabled, labelled "yakında". Specified in PLAN.md mile
 | Inspect | `YoutubeDL(inspect_params()).extract_info(url, download=False)` + `sanitize_info` |
 | Playlist listing | same with `extract_flat="in_playlist"` |
 | JS challenge solving | `js_runtimes={"deno": {"path": ...}}`, `yt-dlp-ejs` from `yt-dlp[default]` |
-| Multi-audio MKV (M2) | `-f v+a1+a2` with `allow_multiple_audio_streams` and `merge_output_format="mkv"` |
-| Compatible MP4 (M2) | `-S "res,vcodec:avc,acodec:aac"` + remux, re-encoding only when needed and saying so |
+| Multi-audio MKV (M2) | yt-dlp `-f v,a1,a2` (separate files) + our FFmpeg mux with per-stream language and disposition |
+| Compatible MP4 (M2) | same, probing the real codecs: copy H.264/HEVC/AAC, re-encode the rest, `mov_text` subtitles |
 | Audio extraction (M2) | `FFmpegExtractAudio` + `EmbedThumbnail` + `FFmpegMetadata` |
 | SponsorBlock (M5) | `{"key": "SponsorBlock", "categories": …, "when": "after_filter"}` plus `ModifyChapters` for removal |
 | Sections (M5) | `download_ranges=download_range_func(...)`, `force_keyframes_at_cuts` |

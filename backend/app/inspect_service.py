@@ -9,10 +9,12 @@ import os
 import re
 import signal
 import sys
+import uuid
+from collections import OrderedDict
 from typing import Any
 
 from app import errors, paths
-from app.ytdlp import command, normalize
+from app.ytdlp import command, naming, normalize, selection
 from app.ytdlp.params import find_js_runtimes
 
 INSPECT_TIMEOUT_SECONDS = 180
@@ -20,6 +22,7 @@ INSPECT_TIMEOUT_SECONDS = 180
 # Fixture mode keys off whatever is recognisable in the URL, so the e2e suite can use
 # realistic-looking links without ever reaching the network.
 _FIXTURE_MATCHERS: list[tuple[str, str]] = [
+    (r"example\.test|local[-_]?media", "local_media"),
     (r"0e3GPea1Tyg|multi[-_]?audio", "youtube_multi_audio"),
     (r"iG9CE55wbtY|many[-_]?subs", "youtube_many_subs"),
     (r"playlist|@TED|/videos", "youtube_playlist_flat"),
@@ -38,10 +41,17 @@ def validate_url(url: str) -> str:
 
 def _fixture_for(url: str) -> dict[str, Any]:
     for pattern, name in _FIXTURE_MATCHERS:
-        if re.search(pattern, url, re.IGNORECASE):
-            path = paths.FIXTURE_DIR / f"{name}.json"
+        if not re.search(pattern, url, re.IGNORECASE):
+            continue
+        if name == "local_media":
+            # Generated clips whose format URLs point back at this server: downloadable offline.
+            path = paths.MEDIA_FIXTURE_DIR / "info.json"
             if path.exists():
-                return json.loads(path.read_text())
+                return json.loads(path.read_text().replace("{base}", paths.fixture_media_base()))
+            continue
+        path = paths.FIXTURE_DIR / f"{name}.json"
+        if path.exists():
+            return json.loads(path.read_text())
     raise errors.AppError(code="UNSUPPORTED_SITE", raw=f"no fixture matches {url}")
 
 
@@ -90,6 +100,37 @@ async def _run_worker(url: str) -> tuple[dict[str, Any], list[str]]:
     return result["info"], list(result.get("warnings") or [])
 
 
+# The last few inspections, so a download can be planned and started without re-extracting.
+# Only the fields a filename template can use are kept, not the (potentially huge) raw dict.
+_CACHE: OrderedDict[str, dict[str, Any]] = OrderedDict()
+CACHE_SIZE = 8
+
+
+def remember(model: dict[str, Any], info: dict[str, Any]) -> str:
+    inspect_id = uuid.uuid4().hex[:16]
+    _CACHE[inspect_id] = {
+        "model": model,
+        "url": model["source_url"],
+        "template_info": {
+            k: info.get(k) for k in naming.TEMPLATE_FIELDS if info.get(k) is not None
+        },
+        "chapters": info.get("chapters") or [],
+        # In fixture mode the worker is handed the info dict instead of re-extracting.
+        "fixture_info": info if paths.fixture_mode() else None,
+    }
+    while len(_CACHE) > CACHE_SIZE:
+        _CACHE.popitem(last=False)
+    return inspect_id
+
+
+def recall(inspect_id: str) -> dict[str, Any]:
+    entry = _CACHE.get(inspect_id)
+    if entry is None:
+        # The server restarted or the entry aged out: the UI re-inspects and tries again.
+        raise errors.AppError(code="INSPECT_EXPIRED", raw=inspect_id)
+    return entry
+
+
 async def inspect(url: str) -> dict[str, Any]:
     url = validate_url(url)
     warnings: list[str] = []
@@ -107,4 +148,7 @@ async def inspect(url: str) -> dict[str, Any]:
         "inspect": command.quote(command.inspect_command(url)),
         "suggested": command.quote(command.command_for_model(model, url)),
     }
+    if model["kind"] == "video":
+        model["defaults"] = selection.all_defaults(model)
+        model["inspect_id"] = remember(model, info)
     return model

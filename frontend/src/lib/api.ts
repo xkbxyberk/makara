@@ -80,8 +80,81 @@ export interface MediaMeta {
   thumbnail: string | null;
 }
 
+export type Mode = 'mkv' | 'compat_mp4' | 'separate' | 'audio';
+export type AudioCodec = 'mp3' | 'm4a' | 'opus' | 'flac' | 'wav';
+
+export interface TrackSelection {
+  video_format_id: string | null;
+  audio_format_ids: string[];
+  subtitle_keys: string[];
+}
+
+export interface Extras {
+  thumbnail: boolean;
+  thumbnail_file: boolean;
+  description: boolean;
+  info_json: boolean;
+}
+
+export interface Selection extends TrackSelection {
+  inspect_id: string;
+  mode: Mode;
+  audio_codec: AudioCodec | null;
+  audio_quality: string | null;
+  filename_template: string | null;
+  extras: Extras;
+}
+
+export interface Notice {
+  code: string;
+  level: 'info' | 'warn' | 'error';
+  params: Record<string, unknown>;
+}
+
+export interface Plan {
+  size: { bytes: number | null; kind: SizeKind; unreliable: boolean; missing: number };
+  notices: Notice[];
+  plan: { video: string | null; audio: string[]; subtitles: string | null };
+  blocking: boolean;
+  filename: string | null;
+  filename_error: string | null;
+  download_dir: string;
+  command: string;
+}
+
+export type JobStatus = 'queued' | 'running' | 'done' | 'failed' | 'cancelled';
+
+export interface Job {
+  id: string;
+  kind: string;
+  status: JobStatus;
+  stage: string;
+  title: string | null;
+  source_url: string | null;
+  mode: Mode;
+  progress: number;
+  speed: number | null;
+  eta: number | null;
+  item_index: number | null;
+  item_count: number | null;
+  output_files: string[];
+  error_code: string | null;
+  error_raw: string | null;
+  created_at: number;
+  finished_at: number | null;
+}
+
+export interface Settings {
+  download_dir: string;
+  filename_template: string;
+  concurrency: number;
+  default_mode: Mode;
+}
+
 export interface VideoModel {
   kind: 'video';
+  inspect_id: string;
+  defaults: Record<Mode, TrackSelection>;
   media: MediaMeta;
   video_formats: VideoFormat[];
   muxed_formats: VideoFormat[];
@@ -160,8 +233,20 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
+const post = (body: unknown): RequestInit => ({ method: 'POST', body: JSON.stringify(body) });
+
 export const api = {
   doctor: () => request<DoctorReport>('/api/doctor'),
-  inspect: (url: string) =>
-    request<InspectModel>('/api/inspect', { method: 'POST', body: JSON.stringify({ url }) }),
+  inspect: (url: string) => request<InspectModel>('/api/inspect', post({ url })),
+  plan: (selection: Selection) => request<Plan>('/api/plan', post(selection)),
+  createJob: (selection: Selection) => request<Job>('/api/jobs', post(selection)),
+  jobs: () => request<Job[]>('/api/jobs'),
+  cancel: (id: string) => request<Job>(`/api/jobs/${encodeURIComponent(id)}/cancel`, post({})),
+  retry: (id: string) => request<Job>(`/api/jobs/${encodeURIComponent(id)}/retry`, post({})),
+  remove: (id: string) =>
+    request<{ ok: boolean }>(`/api/jobs/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  settings: () => request<Settings>('/api/settings'),
+  notify: (title: string, body: string) =>
+    request<{ shown: boolean }>('/api/notify', post({ title, body })),
+  reveal: (path: string) => request<{ shown: boolean }>('/api/reveal', post({ path })),
 };

@@ -12,3 +12,4 @@ playwright-report/
 data/
 tmp/
 tests/fixtures/media/
+*.tsbuildinfo

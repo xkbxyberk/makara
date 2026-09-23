@@ -8,6 +8,7 @@ from typing import Any
 MODE_SEPARATE = "separate"
 MODE_MKV = "mkv"
 MODE_COMPAT_MP4 = "compat_mp4"
+MODE_AUDIO = "audio"
 
 
 def build_command(
@@ -17,6 +18,8 @@ def build_command(
     audio_format_ids: list[str] | None = None,
     subtitle_keys: list[str] | None = None,
     mode: str = MODE_MKV,
+    audio_codec: str | None = None,
+    reencode: bool = False,
 ) -> list[str]:
     """The argv a user could paste into a terminal to reproduce what the UI is about to do."""
     audio_format_ids = audio_format_ids or []
@@ -31,13 +34,24 @@ def build_command(
         argv.append("--audio-multistreams")
 
     if mode == MODE_MKV:
-        argv += ["--merge-output-format", "mkv"]
+        argv += ["--merge-output-format", "mkv", "--embed-chapters", "--embed-metadata"]
     elif mode == MODE_COMPAT_MP4:
-        argv += ["--merge-output-format", "mp4", "--remux-video", "mp4"]
+        argv += ["--merge-output-format", "mp4"]
+        if reencode:
+            argv += ["--recode-video", "mp4"]
+        argv += ["--embed-chapters", "--embed-metadata"]
+    elif mode == MODE_AUDIO:
+        argv += [
+            "-x",
+            "--audio-format",
+            audio_codec or "mp3",
+            "--embed-thumbnail",
+            "--embed-metadata",
+        ]
 
     if subtitle_keys:
         argv += ["--write-subs", "--write-auto-subs", "--sub-langs", ",".join(subtitle_keys)]
-        if mode != MODE_SEPARATE:
+        if mode not in (MODE_SEPARATE, MODE_AUDIO):
             argv.append("--embed-subs")
 
     argv.append(url)

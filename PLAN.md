@@ -29,22 +29,29 @@ Proof: `./scripts/check.sh` · `open VideoDownloader.command`
 
 Proof: `./scripts/check.sh` · screenshots in `test-results/screenshots/`
 
-## M2 — Download engine, queue, track picker
+## M2 — Download engine, queue, track picker ✅ done
 
-- [ ] Track picker: 1 video + N audio + M subtitles + thumbnail + description + info.json
-- [ ] Three output modes: separate files · archive MKV · maximum-compatibility MP4, with the
-      re-encode (if any) stated before the job starts
-- [ ] Compatibility advisor warns in plain Turkish (VP9/Opus in MP4, AV1 on old hardware, …)
-- [ ] Queue: concurrency limit, per-job stage/percent/speed/ETA over SSE, cancel, retry, resume
-- [ ] Naming template with a live filename preview and safe sanitisation
-- [ ] Audio-only download to MP3/M4A/Opus/FLAC/WAV with cover art and metadata
-- [ ] macOS notifications on finish and failure
+- [x] Track picker: 1 video + N audio + M subtitles + thumbnail + description + info.json
+- [x] Output modes: archive MKV · maximum-compatibility MP4 · separate files · audio only, with
+      any re-encode stated before the job starts
+- [x] Compatibility advisor warns in plain Turkish (VP9/Opus in MP4, AV1 hardware, HDR, …) and
+      points at an already-compatible alternative when one exists
+- [x] Queue: concurrency limit, stage/percent/speed/ETA over SSE, cancel, retry, resume of
+      partial downloads, survives a server restart
+- [x] Naming template with a live filename preview; never writes outside the download folder,
+      never overwrites an existing file
+- [x] Audio-only download to MP3/M4A/Opus/FLAC/WAV with cover art and metadata
+- [x] macOS notifications on finish and failure (when the window is in the background)
+- [x] "Two clicks": paste → Download gives original audio + manual TR/EN subtitles
 
-Proof: `./scripts/check.sh`; e2e produces an MKV from generated test media and `ffprobe`
-confirms the track count, languages and default flags.
+Proof: `./scripts/check.sh`. The e2e suite downloads generated test media through the real
+yt-dlp + FFmpeg pipeline and checks every output with `ffprobe`; `tests/test_jobs_api.py`
+proves a cancelled download *resumes* (the retry sends an HTTP Range request).
 
-## M3 — Library
+## M3 — Library and Settings
 
+- [ ] Settings screen (download folder, naming template, concurrency, default mode, theme);
+      the API (`GET/PUT /api/settings`) already exists since M2
 - [ ] SQLite catalogue of every finished job (source, site, uploader, tracks, paths, size, preset)
 - [ ] Grid and list views, search, sort, filters, reveal in Finder, open in external player
 - [ ] Missing-file scan with a badge, path repair on size+duration match

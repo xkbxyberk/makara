@@ -2,18 +2,25 @@
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
+import re
+from collections.abc import AsyncIterator, Awaitable, Callable
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from app import paths
+from app import db, paths
+from app import settings as settings_store
+from app.api import jobs_api
 from app.api.routes import router
+from app.jobs.manager import JobManager
 
-HOST = "127.0.0.1"
-PORT = 8787
+_MEDIA_NAME = re.compile(r"^[A-Za-z0-9_.-]+$")
+
+HOST = paths.SERVER_HOST
+PORT = paths.SERVER_PORT
 ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 ALLOWED_ORIGINS = {f"http://{host}:{port}" for host in ALLOWED_HOSTS for port in (PORT, 5173)}
 SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
@@ -32,12 +39,33 @@ async def reject_cross_site(
     return await call_next(request)
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    manager = JobManager(db.JobStore(db.connect()), settings_store.load)
+    app.state.jobs = manager
+    await manager.start()
+    try:
+        yield
+    finally:
+        await manager.stop()
+
+
 def create_app() -> FastAPI:
-    app = FastAPI(title="VideoDownloader", docs_url=None, redoc_url=None)
+    app = FastAPI(title="VideoDownloader", docs_url=None, redoc_url=None, lifespan=lifespan)
     # A DNS-rebinding page resolves its own hostname to 127.0.0.1; the Host header gives it away.
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=ALLOWED_HOSTS)
     app.middleware("http")(reject_cross_site)
     app.include_router(router)
+    app.include_router(jobs_api.router)
+
+    if paths.fixture_mode():
+        # Test-only: serve the generated clips so downloads run offline against this server.
+        @app.get("/fixture-media/{name}", response_model=None)
+        def fixture_media(name: str) -> FileResponse | JSONResponse:
+            path = paths.MEDIA_FIXTURE_DIR / name
+            if not _MEDIA_NAME.match(name) or not path.is_file():
+                return JSONResponse(status_code=404, content={"error": {"code": "NOT_FOUND"}})
+            return FileResponse(path)
 
     dist = paths.FRONTEND_DIST
     if dist.exists():

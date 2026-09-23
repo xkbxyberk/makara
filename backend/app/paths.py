@@ -5,8 +5,12 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+SERVER_HOST = "127.0.0.1"
+SERVER_PORT = 8787
+
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 FIXTURE_DIR = PROJECT_ROOT / "tests" / "fixtures" / "infojson"
+MEDIA_FIXTURE_DIR = PROJECT_ROOT / "tests" / "fixtures" / "media"
 FRONTEND_DIST = PROJECT_ROOT / "frontend" / "dist"
 
 APP_SUPPORT_DIR = Path.home() / "Library" / "Application Support" / "VideoDownloader"
@@ -24,6 +28,12 @@ def data_dir() -> Path:
 def download_dir() -> Path:
     override = os.environ.get("VD_DOWNLOAD_DIR")
     return Path(override) if override else DEFAULT_DOWNLOAD_DIR
+
+
+def fixture_media_base() -> str:
+    """Where the generated test media is served in fixture mode (by this very server)."""
+    default = f"http://{SERVER_HOST}:{SERVER_PORT}/fixture-media"
+    return os.environ.get("VD_FIXTURE_MEDIA_BASE", default)
 
 
 def fixture_mode() -> bool:
