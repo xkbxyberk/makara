@@ -161,6 +161,7 @@ export function StudioRoute({
   }, [source, op]);
 
   const parsedSegments = segments.map((s) => ({ start: parseTime(s.start), end: parseTime(s.end) }));
+  const offsetSeconds = /^-?\d+([.,]\d+)?$/.test(offset.trim()) ? Number(offset.trim().replace(',', '.')) : null;
   const segmentsValid = parsedSegments.every((s) => s.start !== null && s.end !== null);
 
   const body: StudioRequest | null = useMemo(() => {
@@ -191,8 +192,8 @@ export function StudioRoute({
         })),
       };
     } else {
-      const seconds = Number(offset.replace(',', '.'));
-      options = { action: subAction, target: subTarget, offset: Number.isFinite(seconds) ? seconds : 0 };
+      if (offsetSeconds === null) return null;
+      options = { action: subAction, target: subTarget, offset: offsetSeconds };
     }
     return {
       source_path: source.path,
@@ -201,7 +202,7 @@ export function StudioRoute({
       output_name: outputName.trim(),
       extra_paths: op === 'remux' ? extras.map((e) => e.path) : [],
     };
-  }, [source, op, outputName, codec, bitrate, sampleRate, channels, audioIndex, loudnorm, trimMode, join, segments, segmentsValid, container, tracks, extras, subAction, subTarget, offset]);
+  }, [source, op, outputName, codec, bitrate, sampleRate, channels, audioIndex, loudnorm, trimMode, join, segments, segmentsValid, container, tracks, extras, subAction, subTarget, offsetSeconds]);
 
   const key = useMemo(() => JSON.stringify(body), [body]);
 
@@ -232,7 +233,7 @@ export function StudioRoute({
   const current = plan !== null && planKey === key;
 
   const run = async () => {
-    if (!body || !current || plan.blocking) return;
+    if (!body || !current || plan.blocking || queued) return;
     try {
       await api.studioJob(body);
       setQueued(true);
@@ -244,9 +245,11 @@ export function StudioRoute({
   const addExtra = async () => {
     try {
       const extra = await api.studioProbe({ path: extraPath });
-      const index = extras.length + 1;
-      setExtras((list) => [...list, extra]);
-      setTracks((list) => [...list, ...tracksFor(extra, index, extra.name)]);
+      setExtras((list) => {
+        const index = list.length + 1; // inputs: 0 is the source, extras follow in order
+        setTracks((current) => [...current, ...tracksFor(extra, index, extra.name)]);
+        return [...list, extra];
+      });
       setExtraPath('');
     } catch (error) {
       setFailure(error instanceof ApiError ? error : new ApiError('UNKNOWN', String(error)));
@@ -402,7 +405,7 @@ export function StudioRoute({
                 <Field label={<Term label={tr.terms.sampleRate.label} body={tr.terms.sampleRate.body} />}>
                   <select className="input select" value={sampleRate} onChange={(e) => setSampleRate(e.target.value)}>
                     <option value="">{tr.studio.audio.auto}</option>
-                    <option value="44100">44,1 {tr.units.khz}</option>
+                    {codec !== 'opus' && <option value="44100">44,1 {tr.units.khz}</option>}
                     <option value="48000">48 {tr.units.khz}</option>
                   </select>
                 </Field>
@@ -512,6 +515,9 @@ export function StudioRoute({
 
             {op === 'remux' && (
               <div className="studio-grid">
+                <p className="dim studio-help">
+                  <Term label={tr.studio.terms.remux.label} body={tr.studio.terms.remux.body} />
+                </p>
                 <Field label={<Term label={tr.studio.terms.container.label} body={tr.studio.terms.container.body} />}>
                   <div className="segmented" role="radiogroup" aria-label={tr.studio.remux.container}>
                     {['mkv', 'mp4', 'mov'].map((c) => (
@@ -563,7 +569,7 @@ export function StudioRoute({
                             className="input mono narrow"
                             aria-label={`${tr.studio.remux.language} ${index + 1}`}
                             value={track.language}
-                            placeholder="tr, en…"
+                            placeholder={tr.studio.remux.languagePlaceholder}
                             onChange={(e) => editTrack(index, { language: e.target.value.trim() })}
                           />
                         </td>
@@ -634,7 +640,13 @@ export function StudioRoute({
                 </Field>
                 {subAction === 'shift' && (
                   <Field label={tr.studio.subtitle.offset}>
-                    <input className="input mono narrow" value={offset} onChange={(e) => setOffset(e.target.value)} />
+                    <input
+                      className={offsetSeconds === null ? 'input mono narrow invalid' : 'input mono narrow'}
+                      value={offset}
+                      aria-invalid={offsetSeconds === null}
+                      onChange={(e) => setOffset(e.target.value)}
+                    />
+                    {offsetSeconds === null && <span className="danger-text">{tr.studio.subtitle.offsetInvalid}</span>}
                   </Field>
                 )}
               </div>
@@ -710,7 +722,7 @@ export function StudioRoute({
               <button
                 type="button"
                 className="btn btn-primary btn-large"
-                disabled={!current || plan.blocking}
+                disabled={!current || plan.blocking || queued}
                 onClick={() => void run()}
               >
                 {tr.studio.run}

@@ -79,6 +79,10 @@ describe('parseTime / formatTime', () => {
     expect(parseTime('abc')).toBeNull();
     expect(parseTime('-3')).toBeNull();
   });
+  it('rounds to the millisecond before splitting off the fraction', () => {
+    expect(parseTime(formatTime(212.9996))).toBe(213);
+    expect(formatTime(59.9999)).toBe('1:00');
+  });
   it('round-trips', () => {
     for (const s of [0, 1.5, 62.25, 3723.5]) expect(parseTime(formatTime(s))).toBe(s);
   });

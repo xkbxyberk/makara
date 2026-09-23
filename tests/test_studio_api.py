@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import shutil
+import time
 from pathlib import Path
 from typing import Any
 
@@ -85,6 +86,7 @@ def test_a_studio_job_writes_next_to_the_source_and_joins_the_library(
         items = client.get("/api/library").json()["items"]
         if items:
             break
+        time.sleep(0.05)
     assert [i["mode"] for i in items] == ["studio"]
 
 
@@ -126,3 +128,70 @@ def test_a_blocking_plan_is_never_queued(app_env: Any, tmp_path: Path, test_medi
 def test_the_file_picker_never_opens_in_fixture_mode(app_env: Any) -> None:
     response = app_env().post("/api/system/pick-file", json={"prompt": "Dosya seç"})
     assert response.status_code == 501
+
+
+def test_the_preview_names_the_file_claim_will_really_use(
+    app_env: Any, tmp_path: Path, test_media: Path
+) -> None:
+    clip = _source(tmp_path, test_media)
+    (clip.parent / "clip (kesit).mp4").write_bytes(b"already here")
+    plan = (
+        app_env()
+        .post(
+            "/api/studio/plan",
+            json={
+                "source_path": str(clip),
+                "op": "trim",
+                "output_name": "clip (kesit)",
+                "options": {"mode": "lossless", "segments": [{"start": 0, "end": 1}]},
+            },
+        )
+        .json()
+    )
+    assert plan["outputs"] == [f"{clip.parent.resolve()}/clip (kesit) (2).mp4"]
+    assert "clip (kesit) (2).mp4" in plan["steps"][0]["command"]
+    assert all("geçici" not in s["command"] for s in plan["steps"])
+
+
+def test_malformed_options_are_refused_with_a_code_not_a_500(
+    app_env: Any, tmp_path: Path, test_media: Path
+) -> None:
+    clip = _source(tmp_path, test_media)
+    response = app_env().post(
+        "/api/studio/plan",
+        json={
+            "source_path": str(clip),
+            "op": "trim",
+            "output_name": "x",
+            "options": {"mode": "lossless", "segments": [{"start": "soon", "end": 1}]},
+        },
+    )
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "INVALID_OPTION"
+
+
+def test_separate_segments_become_separate_library_items(
+    app_env: Any, tmp_path: Path, test_media: Path
+) -> None:
+    client = app_env()
+    clip = _source(tmp_path, test_media)
+    job = client.post(
+        "/api/studio/jobs",
+        json={
+            "source_path": str(clip),
+            "op": "trim",
+            "output_name": "parts",
+            "options": {
+                "mode": "lossless",
+                "segments": [{"start": 0, "end": 1}, {"start": 2, "end": 3}],
+            },
+        },
+    ).json()
+    wait_for(client, job["id"], lambda j: j["status"] == "done")
+    items: list[dict[str, Any]] = []
+    for _ in range(50):
+        items = client.get("/api/library").json()["items"]
+        if len(items) == 2:
+            break
+        time.sleep(0.05)
+    assert sorted(i["title"] for i in items) == ["parts.1", "parts.2"]

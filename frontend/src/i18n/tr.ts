@@ -379,6 +379,7 @@ export const tr = {
       addPath: 'Eklenecek dosyanın yolu',
       add: 'Ekle',
       fromExtra: (name: string) => `ek: ${name}`,
+      languagePlaceholder: 'tr, en…',
     },
     subtitle: {
       action: 'İşlem',
@@ -389,6 +390,7 @@ export const tr = {
       } as Record<string, string>,
       target: 'Hedef biçim',
       offset: 'Kaydırma (sn, eksi = erken)',
+      offsetInvalid: 'Bir sayı gir, örneğin 1,5 ya da -2.',
       looksAuto: 'Bu dosya YouTube otomatik altyazısına benziyor; “temizle” önerilir.',
     },
     notices: {
@@ -419,7 +421,13 @@ export const tr = {
       REMUX_NO_REENCODE:
         'Remux yeniden kodlamaz: izler olduğu gibi kopyalanır, yalnızca kap ve iz bilgileri değişir. Hızlıdır, kalite kaybı yoktur.',
       NOT_A_SUBTITLE: 'Bu dosya bir altyazı değil.',
-      ASS_STYLING_LOST: 'ASS’teki yazı tipi ve renk bilgileri dönüştürmede kaybolur.',
+      ASS_STYLING_LOST: 'ASS’teki yazı tipi ve renk bilgileri bu işlemde kaybolur (sonuç SRT tabanlıdır).',
+      OPUS_48K: 'Opus 44,1 kHz desteklemez; çıktı 48 kHz olacak.',
+      JOIN_DROPS_COVER: 'Kayıpsız birleştirmede kapak resmi korunamaz; birleştirilmiş dosya kapaksız olur.',
+      ACCURATE_AUDIO_REENCODES:
+        'Kare hassas kesim sesi aynı biçimde yeniden kodlar (FLAC ve WAV kayıpsız kalır).',
+      LEGACY_ENCODING: (p: { charset?: string }) =>
+        `Bu altyazı eski bir kodlamada (${p.charset ?? '?'}); Türkçe karakterler doğru okunacak ve çıktı UTF-8 olacak.`,
     } as Record<string, string | ((p: Record<string, unknown>) => string)>,
     terms: {
       lossless: {
@@ -762,6 +770,17 @@ export const tr = {
       body: 'Stüdyo çıktıları kaynağın yanına ya da indirme klasörüne yazılır.',
     },
     SUBTITLE_EMPTY: { title: 'Altyazı boş kaldı', body: 'Kaydırma bütün satırları sıfırın öncesine itti.' },
+    OUTPUT_EMPTY: {
+      title: 'FFmpeg boş bir dosya üretti',
+      body: 'Seçilen aralıkta kopyalanabilecek veri yok. Aralığı genişlet ya da “Kare hassas”ı dene.',
+    },
+    LOUDNESS_SILENT: { title: 'Ses tamamen sessiz', body: 'Sessiz bir kaydın seviyesi eşitlenemez.' },
+    INVALID_OPTION: { title: 'Geçersiz değer', body: 'Alanlardan biri sayı bekliyor.' },
+    UNKNOWN_OPERATION: { title: 'Bilinmeyen işlem', body: 'Sayfayı yenileyip tekrar dene.' },
+    UNKNOWN_CONTAINER: { title: 'Bilinmeyen kap', body: 'MKV, MP4 veya MOV seç.' },
+    UNKNOWN_SUBTITLE_FORMAT: { title: 'Bilinmeyen altyazı biçimi', body: 'SRT, VTT veya ASS seç.' },
+    UNKNOWN_SUBTITLE_ACTION: { title: 'Bilinmeyen altyazı işlemi', body: 'Sayfayı yenileyip tekrar dene.' },
+    UNKNOWN_AUDIO_CODEC: { title: 'Bilinmeyen ses biçimi', body: 'Listeden bir biçim seç.' },
     LOUDNESS_MEASURE_FAILED: {
       title: 'Ses seviyesi ölçülemedi',
       body: 'Ham kayda bak. Eşitlemeyi kapatıp tekrar dene.',

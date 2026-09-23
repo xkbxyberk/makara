@@ -12,6 +12,7 @@ from typing import Any
 
 import pytest
 
+from app import errors
 from app.ffmpeg.probe import probe
 from app.studio import ops
 from app.workers import studio_worker
@@ -336,3 +337,246 @@ def test_probe_recognises_youtube_auto_captions(workspace: Path) -> None:
     vtt.write_text(YOUTUBE_ASR, encoding="utf-8")
     assert ops.probe_source(vtt)["youtube_auto_captions"] is True
     assert ops.probe_source(workspace / "sub_en.vtt")["youtube_auto_captions"] is False
+
+
+# ---- regression tests for the M4 adversarial review ----------------------------------------
+
+
+def _ffmpeg(*args: str) -> None:
+    subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", *args], check=True)
+
+
+def test_keyframe_prediction_inside_the_first_group_of_pictures(workspace: Path) -> None:
+    # ffprobe prints the first keyframe as "0.000000," -- it must still count.
+    assert ops.keyframe_at_or_before(workspace / "video_h264.mp4", 0.5) == pytest.approx(0.0)
+
+
+def test_cover_art_is_not_mistaken_for_video(workspace: Path) -> None:
+    song = workspace / "song.m4a"
+    _ffmpeg(
+        "-i",
+        str(workspace / "audio_en.m4a"),
+        "-i",
+        str(Path(__file__).parent / "fixtures" / "media" / "thumb.jpg"),
+        "-map",
+        "0",
+        "-map",
+        "1",
+        "-c",
+        "copy",
+        "-disposition:v",
+        "attached_pic",
+        str(song),
+    )
+    # Audio cuts at packet granularity: nothing moves, so there is nothing to warn about.
+    assert ops.keyframe_at_or_before(song, 1.5) == 1.5
+
+
+def test_long_groups_of_pictures_are_still_found(workspace: Path) -> None:
+    long_gop = workspace / "long_gop.mp4"
+    _ffmpeg(
+        "-f",
+        "lavfi",
+        "-i",
+        "testsrc2=size=64x64:rate=25:duration=32",
+        "-c:v",
+        "libx264",
+        "-g",
+        "1000",
+        "-keyint_min",
+        "1000",
+        "-sc_threshold",
+        "0",
+        str(long_gop),
+    )
+    assert ops.keyframe_at_or_before(long_gop, 25.0) == pytest.approx(0.0)
+
+
+def test_a_non_zero_start_time_is_accounted_for(workspace: Path) -> None:
+    ts = workspace / "offset.ts"
+    _ffmpeg(
+        "-i", str(workspace / "video_h264.mp4"), "-c", "copy", "-output_ts_offset", "10", str(ts)
+    )
+    assert ops.keyframe_at_or_before(ts, 1.5) == pytest.approx(1.0, abs=0.05)
+
+
+def test_an_empty_output_is_an_error_not_a_success(tmp_path: Path) -> None:
+    empty = tmp_path / "output.mp4"
+    empty.write_bytes(b"")
+    with pytest.raises(errors.AppError) as caught:
+        studio_worker._verify([empty])
+    assert caught.value.code == "OUTPUT_EMPTY"
+
+
+def test_joining_a_file_with_cover_art_losslessly(workspace: Path) -> None:
+    song = workspace / "song.m4a"
+    _ffmpeg(
+        "-i",
+        str(workspace / "audio_en.m4a"),
+        "-i",
+        str(Path(__file__).parent / "fixtures" / "media" / "thumb.jpg"),
+        "-map",
+        "0",
+        "-map",
+        "1",
+        "-c",
+        "copy",
+        "-disposition:v",
+        "attached_pic",
+        str(song),
+    )
+    code, events = run_op(
+        workspace,
+        song,
+        "trim",
+        {
+            "mode": "lossless",
+            "join": True,
+            "segments": [{"start": 0, "end": 1}, {"start": 2, "end": 3}],
+        },
+    )
+    assert code == 0, events[-1]
+    [output] = outputs(events)
+    kinds = [s["codec_type"] for s in probe(output)["streams"]]
+    assert kinds == ["audio"]  # the cover does not turn into a video track
+
+
+def test_failed_work_leaves_no_scratch_next_to_the_source(workspace: Path) -> None:
+    code, events = run_op(
+        workspace, workspace / "audio_en.m4a", "audio", {"codec": "mp3", "sample_rate": 1}
+    )
+    assert code == 1 and events[-1]["code"] == "FFMPEG_FAILED"
+    assert not (workspace / "out" / ".vd-work").exists()
+    assert list((workspace / "out").iterdir()) == []
+
+
+def test_legacy_turkish_srt_is_shifted_and_converted_without_mojibake(workspace: Path) -> None:
+    legacy = workspace / "eski.srt"
+    legacy.write_bytes("1\r\n00:00:01,000 --> 00:00:02,000\r\nŞişli'de ığdır\r\n".encode("cp1254"))
+    assert ops.probe_source(legacy)["charset"] == "CP1254"
+    code, events = run_op(
+        workspace,
+        legacy,
+        "subtitle",
+        {"action": "shift", "offset": 1, "target": "srt"},
+        name="shifted",
+    )
+    assert code == 0, events[-1]
+    assert "Şişli'de ığdır" in outputs(events)[0].read_text(encoding="utf-8")
+    code, events = run_op(
+        workspace, legacy, "subtitle", {"action": "convert", "target": "ass"}, name="converted"
+    )
+    assert code == 0, events[-1]
+    assert "Şişli'de ığdır" in outputs(events)[0].read_text(encoding="utf-8")
+
+
+def test_opus_at_44_1_khz_becomes_48_khz(workspace: Path) -> None:
+    code, events = run_op(
+        workspace, workspace / "audio_en.m4a", "audio", {"codec": "opus", "sample_rate": 44100}
+    )
+    assert code == 0, events[-1]
+    [stream] = probe(outputs(events)[0])["streams"]
+    assert int(stream["sample_rate"]) == 48000
+
+
+def test_a_slash_in_the_output_name_is_not_a_folder(workspace: Path) -> None:
+    code, events = run_op(
+        workspace, workspace / "audio_en.m4a", "audio", {"codec": "mp3"}, name="AC/DC - Live"
+    )
+    assert code == 0, events[-1]
+    [output] = outputs(events)
+    assert output.parent == (workspace / "out").resolve()
+    assert output.name == "AC" + chr(0x29F8) + "DC - Live.mp3"  # BIG SOLIDUS, not a path
+
+
+def test_remux_follows_the_track_order_and_flags(workspace: Path) -> None:
+    multi = workspace / "multi.mkv"
+    _ffmpeg(
+        "-i",
+        str(workspace / "video_h264.mp4"),
+        "-i",
+        str(workspace / "audio_en.m4a"),
+        "-i",
+        str(workspace / "audio_tr.m4a"),
+        "-map",
+        "0",
+        "-map",
+        "1",
+        "-map",
+        "2",
+        "-c",
+        "copy",
+        "-metadata:s:a:0",
+        "language=eng",
+        "-metadata:s:a:1",
+        "language=tur",
+        str(multi),
+    )
+    tracks = [
+        {"input": 0, "stream": 0, "keep": True},
+        {"input": 0, "stream": 2, "keep": True, "language": "tr", "default": True},
+        {"input": 0, "stream": 1, "keep": True, "language": "", "default": False},  # cleared
+    ]
+    code, events = run_op(workspace, multi, "remux", {"container": "mkv", "tracks": tracks})
+    assert code == 0, events[-1]
+    audio = [s for s in probe(outputs(events)[0])["streams"] if s["codec_type"] == "audio"]
+    assert [s["tags"].get("language", "und") for s in audio] == ["tur", "und"]
+    assert [s["disposition"]["default"] for s in audio] == [1, 0]
+
+
+def test_remux_rejects_a_track_that_does_not_exist(workspace: Path) -> None:
+    info = ops.probe_source(workspace / "video_h264.mp4")
+    for bad in ({"input": 0, "stream": 7, "keep": True}, {"input": -1, "stream": 0, "keep": True}):
+        plan = ops.plan_remux(info, {"container": "mkv", "tracks": [bad]}, "out.mkv")
+        assert plan.blocking and "UNKNOWN_TRACK" in {n["code"] for n in plan.notices}
+
+
+def test_remux_keeps_mkv_font_attachments(workspace: Path) -> None:
+    (workspace / "font.ttf").write_bytes(b"\x00\x01\x00\x00" + bytes(252))  # stands in for a font
+    with_font = workspace / "with_font.mkv"
+    _ffmpeg(
+        "-i",
+        str(workspace / "video_h264.mp4"),
+        "-attach",
+        str(workspace / "font.ttf"),
+        "-metadata:s:t",
+        "mimetype=font/ttf",
+        "-c",
+        "copy",
+        str(with_font),
+    )
+    code, events = run_op(workspace, with_font, "remux", {"container": "mkv"})
+    assert code == 0, events[-1]
+    kinds = [s["codec_type"] for s in probe(outputs(events)[0])["streams"]]
+    assert "attachment" in kinds
+
+
+def test_silent_audio_cannot_be_loudness_normalised(workspace: Path) -> None:
+    silence = workspace / "silence.m4a"
+    _ffmpeg("-f", "lavfi", "-i", "anullsrc=r=44100:cl=mono", "-t", "2", "-c:a", "aac", str(silence))
+    code, events = run_op(workspace, silence, "audio", {"codec": "mp3", "loudnorm": True})
+    assert code == 1 and events[-1]["code"] == "LOUDNESS_SILENT"
+
+
+def test_frame_accurate_cut_of_an_mp3_stays_mp3(workspace: Path) -> None:
+    mp3 = workspace / "tone.mp3"
+    _ffmpeg("-i", str(workspace / "audio_en.m4a"), "-c:a", "libmp3lame", str(mp3))
+    code, events = run_op(
+        workspace, mp3, "trim", {"mode": "accurate", "segments": [{"start": 1, "end": 2.5}]}
+    )
+    assert code == 0, events[-1]
+    [output] = outputs(events)
+    assert output.suffix == ".mp3"
+    assert probe(output)["streams"][0]["codec_name"] == "mp3"
+
+
+def test_malformed_options_are_a_coded_error() -> None:
+    info = {
+        "streams": [{"index": 0, "type": "audio", "codec": "aac", "attached_pic": False}],
+        "path": "/x.m4a",
+        "ext": "m4a",
+        "duration": 4.0,
+    }
+    with pytest.raises(errors.AppError) as caught:
+        ops.plan_audio(info, {"codec": "mp3", "bitrate": "loud"}, "out.mp3")
+    assert caught.value.code == "INVALID_OPTION"

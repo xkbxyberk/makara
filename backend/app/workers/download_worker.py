@@ -171,46 +171,6 @@ def _base_params(work: Path, log: Collector) -> dict[str, Any]:
     return options
 
 
-def _side_pass(req: dict[str, Any], work: Path, log: Collector) -> dict[str, Any] | None:
-    import yt_dlp
-
-    extras = req.get("extras") or {}
-    subs = (req.get("subtitle_keys") or []) if req["mode"] != "audio" else []
-    want_thumb = req["mode"] != "audio" and bool(
-        extras.get("thumbnail") or extras.get("thumbnail_file")
-    )
-    if not (subs or want_thumb or extras.get("description") or extras.get("info_json")):
-        return None
-    emit({"t": "stage", "stage": "preparing", "detail": "extras"})
-    options = {
-        **_base_params(work, log),
-        "skip_download": True,
-        "format": _selected(req)[0],
-        "writesubtitles": bool(subs),
-        "writeautomaticsub": bool(subs),
-        # --sub-langs is a regex list; anchor and escape so "en" does not also match "en-GB".
-        "subtitleslangs": [f"^{re.escape(k)}$" for k in subs],
-        "subtitlesformat": "srt/vtt/best",
-        "writethumbnail": want_thumb,
-        "writedescription": bool(extras.get("description")),
-        "writeinfojson": bool(extras.get("info_json")),
-        "outtmpl": {
-            "default": "side.%(ext)s",
-            "subtitle": "sub",
-            "thumbnail": "thumb",
-            "description": "meta",
-            "infojson": "meta",
-        },
-        "postprocessors": (
-            [{"key": "FFmpegThumbnailsConvertor", "format": "jpg", "when": "before_dl"}]
-            if want_thumb
-            else []
-        ),
-    }
-    with yt_dlp.YoutubeDL(options) as ydl:
-        return _fetch(ydl, req)
-
-
 FORBIDDEN_RETRY_DELAY = 3.0
 
 
@@ -237,13 +197,41 @@ def _stream_pass(req: dict[str, Any], work: Path, log: Collector) -> dict[str, A
 
     selected = _selected(req)
     progress = Progress(selected, {k: v for k, v in (req.get("expected_sizes") or {}).items()})
+    extras = req.get("extras") or {}
+    audio_mode = req["mode"] == "audio"
+    subs = [] if audio_mode else list(req.get("subtitle_keys") or [])
+    want_thumb = not audio_mode and bool(extras.get("thumbnail") or extras.get("thumbnail_file"))
+    # One extraction per job: the side files (subtitles, cover, description, info.json) come
+    # from the same pass as the streams. A second extraction doubled the requests YouTube sees
+    # and could fail on its own. With several formats yt-dlp writes these once and skips them
+    # afterwards ("already present"); we find them by our fixed names, never by the paths it
+    # reports.
     options: dict[str, Any] = {
         **_base_params(work, log),
         # "," downloads each format as its own file; muxing is ours, not yt-dlp's merger.
         "format": ",".join(selected),
-        "outtmpl": {"default": "stream.%(format_id)s.%(ext)s", "thumbnail": "thumb"},
+        "outtmpl": {
+            "default": "stream.%(format_id)s.%(ext)s",
+            "thumbnail": "thumb",
+            "subtitle": "sub",
+            "description": "meta",
+            "infojson": "meta",
+        },
         "progress_hooks": [progress.hook],
         "postprocessor_hooks": [_pp_hook],
+        "writesubtitles": bool(subs),
+        "writeautomaticsub": bool(subs),
+        # --sub-langs is a regex list; anchor and escape so "en" does not also match "en-GB".
+        "subtitleslangs": [f"^{re.escape(k)}$" for k in subs],
+        "subtitlesformat": "srt/vtt/best",
+        "writethumbnail": want_thumb,
+        "writedescription": bool(extras.get("description")),
+        "writeinfojson": bool(extras.get("info_json")),
+        "postprocessors": (
+            [{"key": "FFmpegThumbnailsConvertor", "format": "jpg", "when": "before_dl"}]
+            if want_thumb
+            else []
+        ),
     }
     if req["mode"] == "audio":
         extras = req.get("extras") or {}
@@ -452,7 +440,6 @@ def run(req: dict[str, Any]) -> int:
     try:
         work.mkdir(parents=True, exist_ok=True)
         emit({"t": "stage", "stage": "preparing"})
-        _side_pass(req, work, log)
         # Names, chapters and metadata come from the pass that actually downloaded the streams.
         info = _stream_pass_with_retry(req, work, log)
         files, plan, warnings = _finalize(req, info, work)

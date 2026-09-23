@@ -8,6 +8,7 @@ except `probe_source` / `keyframes_near`, which only read.
 from __future__ import annotations
 
 import json
+import math
 import shutil
 import subprocess
 from dataclasses import dataclass, field
@@ -84,21 +85,20 @@ def _progress(output: str) -> list[str]:
 
 
 # ---- reading the source ------------------------------------------------------------------
+SUBTITLE_EXTS = (".srt", ".vtt", ".ass", ".ssa", ".sub")
+
+
 def probe_source(path: Path) -> dict[str, Any]:
     """Streams, duration and chapters of a user-chosen file. Refuses anything not media."""
     if not path.is_absolute() or not path.is_file():
         raise errors.AppError(code="SOURCE_NOT_FOUND", raw=str(path))
-    argv = [
-        shutil.which("ffprobe") or "ffprobe",
-        "-v",
-        "error",
-        "-print_format",
-        "json",
-        "-show_streams",
-        "-show_format",
-        "-show_chapters",
-        str(path),
-    ]
+    charset = "UTF-8"
+    if path.suffix.lower() in SUBTITLE_EXTS and path.stat().st_size < 20_000_000:
+        charset = read_subtitle_text(path)[1]
+    argv = [shutil.which("ffprobe") or "ffprobe", "-v", "error"]
+    if charset != "UTF-8":
+        argv += ["-sub_charenc", charset]  # FFmpeg rejects non-UTF-8 text subtitles otherwise
+    argv += ["-print_format", "json", "-show_streams", "-show_format", "-show_chapters", str(path)]
     proc = subprocess.run(argv, capture_output=True, text=True, timeout=60, check=False)
     data = json.loads(proc.stdout or "{}") if proc.returncode == 0 else {}
     streams = data.get("streams") or []
@@ -109,10 +109,9 @@ def probe_source(path: Path) -> dict[str, Any]:
     if path.suffix.lower() == ".vtt" and path.stat().st_size < 5_000_000:
         from app.studio.subtitles import looks_like_youtube_auto_captions
 
-        youtube_auto = looks_like_youtube_auto_captions(
-            path.read_text(encoding="utf-8", errors="replace")
-        )
+        youtube_auto = looks_like_youtube_auto_captions(read_subtitle_text(path)[0])
     return {
+        "charset": charset,
         "youtube_auto_captions": youtube_auto,
         "path": str(path),
         "name": path.name,
@@ -121,19 +120,19 @@ def probe_source(path: Path) -> dict[str, Any]:
         "duration": float(duration) if duration else None,
         "streams": [
             {
-                "index": s.get("index"),
-                "type": s.get("codec_type"),
-                "codec": s.get("codec_name"),
-                "language": (s.get("tags") or {}).get("language"),
-                "title": (s.get("tags") or {}).get("title"),
-                "default": bool((s.get("disposition") or {}).get("default")),
-                "attached_pic": bool((s.get("disposition") or {}).get("attached_pic")),
-                "width": s.get("width"),
-                "height": s.get("height"),
-                "channels": s.get("channels"),
-                "sample_rate": s.get("sample_rate"),
+                "index": st.get("index"),
+                "type": st.get("codec_type"),
+                "codec": st.get("codec_name"),
+                "language": (st.get("tags") or {}).get("language"),
+                "title": (st.get("tags") or {}).get("title"),
+                "default": bool((st.get("disposition") or {}).get("default")),
+                "attached_pic": bool((st.get("disposition") or {}).get("attached_pic")),
+                "width": st.get("width"),
+                "height": st.get("height"),
+                "channels": st.get("channels"),
+                "sample_rate": st.get("sample_rate"),
             }
-            for s in streams
+            for st in streams
         ],
         "chapters": [
             {
@@ -146,39 +145,115 @@ def probe_source(path: Path) -> dict[str, Any]:
     }
 
 
-def keyframe_at_or_before(path: Path, seconds: float) -> float | None:
-    """Where a stream-copy cut requested at `seconds` will really start: the last video
-    keyframe at or before it. Reads only a small window of the file."""
-    if seconds <= 0:
-        return 0.0
-    window = f"{max(0.0, seconds - 20):.3f}%{seconds + 0.05:.3f}"
-    argv = [
-        shutil.which("ffprobe") or "ffprobe",
-        "-v",
-        "error",
-        "-select_streams",
-        "v:0",
-        "-skip_frame",
-        "nokey",
-        "-show_entries",
-        "frame=pts_time",
-        "-of",
-        "csv=p=0",
-        "-read_intervals",
-        window,
-        str(path),
-    ]
+def _ffprobe_json(argv: list[str]) -> dict[str, Any]:
     try:
         out = subprocess.run(argv, capture_output=True, text=True, timeout=30, check=False).stdout
-    except (OSError, subprocess.SubprocessError):
-        return None
-    times = [float(t) for t in out.split() if t.replace(".", "", 1).isdigit()]
-    before = [t for t in times if t <= seconds + 1e-3]
-    return max(before) if before else None
+        data: dict[str, Any] = json.loads(out or "{}")
+        return data
+    except (OSError, subprocess.SubprocessError, ValueError):
+        return {}
+
+
+def keyframe_at_or_before(path: Path, seconds: float) -> float | None:
+    """Where a stream-copy cut requested at `seconds` will really start: the last video
+    keyframe at or before it (seconds from the start of the file).
+
+    `V` (capital) skips attached pictures, so an audio file's cover is not mistaken for video;
+    without real video a stream copy cuts at packet granularity and nothing moves. Times are
+    made relative to the container's start_time (MPEG-TS files rarely start at 0), and the
+    search window widens for long groups of pictures.
+    """
+    if seconds <= 0:
+        return 0.0
+    ffprobe = shutil.which("ffprobe") or "ffprobe"
+    info = _ffprobe_json(
+        [
+            ffprobe,
+            "-v",
+            "error",
+            "-select_streams",
+            "V:0",
+            "-show_entries",
+            "stream=index:format=start_time",
+            "-of",
+            "json",
+            str(path),
+        ]
+    )
+    if not info.get("streams"):
+        return seconds
+    try:
+        origin = float(info.get("format", {}).get("start_time") or 0)
+    except ValueError:
+        origin = 0.0
+    for window in (20.0, 120.0, 900.0):
+        lo = max(origin, origin + seconds - window)
+        data = _ffprobe_json(
+            [
+                ffprobe,
+                "-v",
+                "error",
+                "-select_streams",
+                "V:0",
+                "-skip_frame",
+                "nokey",
+                "-show_entries",
+                "frame=pts_time",
+                "-of",
+                "json",
+                "-read_intervals",
+                f"{lo:.3f}%{origin + seconds + 0.05:.3f}",
+                str(path),
+            ]
+        )
+        times = []
+        for frame in data.get("frames") or []:
+            try:
+                times.append(float(frame["pts_time"]) - origin)
+            except (KeyError, ValueError):
+                continue
+        before = [t for t in times if t <= seconds + 1e-3]
+        if before:
+            return max(0.0, max(before))
+        if lo <= origin:
+            break
+    return 0.0
+
+
+def read_subtitle_text(path: Path) -> tuple[str, str]:
+    """-> (text, FFmpeg charset name). Old Turkish SRT files are Windows-1254, not UTF-8;
+    decoding them as UTF-8 would silently turn "Şişli" into "�i�li"."""
+    raw = path.read_bytes()
+    try:
+        return raw.decode("utf-8-sig"), "UTF-8"
+    except UnicodeDecodeError:
+        return raw.decode("cp1254", errors="replace"), "CP1254"
+
+
+# ---- option parsing -----------------------------------------------------------------------
+def _number(options: dict[str, Any], key: str, default: float | None = None) -> float | None:
+    """Options arrive from the UI as JSON; a malformed value is a coded error, never a 500."""
+    value = options.get(key)
+    if value in (None, ""):
+        return default
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        raise errors.AppError(code="INVALID_OPTION", raw=f"{key}={value!r}") from None
+    if not math.isfinite(number):
+        raise errors.AppError(code="INVALID_OPTION", raw=f"{key}={value!r}")
+    return number
+
+
+def _video_streams(source: dict[str, Any]) -> list[dict[str, Any]]:
+    return [s for s in source["streams"] if s["type"] == "video" and not s["attached_pic"]]
 
 
 # ---- audio: convert / extract / loudness -----------------------------------------------------
-def audio_encoder_args(codec: str, bitrate: str | None, aac_encoder: str = "aac") -> list[str]:
+OPUS_RATES = {48000, 24000, 16000, 12000, 8000}
+
+
+def audio_encoder_args(codec: str, bitrate: float | None, aac_encoder: str = "aac") -> list[str]:
     encoder = aac_encoder if codec == "m4a" else AUDIO_TARGETS[codec][0]
     args = ["-c:a", encoder]
     if codec in LOSSY_AUDIO and bitrate:
@@ -187,9 +262,8 @@ def audio_encoder_args(codec: str, bitrate: str | None, aac_encoder: str = "aac"
 
 
 def loudnorm_filter(measured: dict[str, Any] | None = None) -> str:
-    base = (
-        f"loudnorm=I={LOUDNESS_TARGET['I']}:TP={LOUDNESS_TARGET['TP']}:LRA={LOUDNESS_TARGET['LRA']}"
-    )
+    target = LOUDNESS_TARGET
+    base = f"loudnorm=I={target['I']}:TP={target['TP']}:LRA={target['LRA']}"
     if measured is None:
         return base + ":print_format=json"
     return (
@@ -204,14 +278,14 @@ def plan_audio(
 ) -> Plan:
     codec = options.get("codec") or "mp3"
     if codec not in AUDIO_TARGETS:
-        raise errors.AppError(code="UNKNOWN_AUDIO_CODEC", raw=codec)
+        raise errors.AppError(code="UNKNOWN_AUDIO_CODEC", raw=str(codec))
     audio = [s for s in source["streams"] if s["type"] == "audio"]
     plan = Plan(steps=[], ext=AUDIO_TARGETS[codec][1])
     if not audio:
         plan.note("NO_AUDIO_IN_SOURCE", ERROR)
         return plan
-    pick = int(options.get("audio_index") or 0)
-    if pick >= len(audio):
+    pick = int(_number(options, "audio_index", 0) or 0)
+    if not 0 <= pick < len(audio):
         pick = 0
     duration = source.get("duration")
     covers = [s for s in source["streams"] if s["attached_pic"]]
@@ -221,87 +295,53 @@ def plan_audio(
     if keep_cover:
         maps += ["-map", f"0:{covers[0]['index']}"]
         extra += ["-c:v", "copy", "-disposition:v:0", "attached_pic"]
-    rate: list[str] = []
-    if options.get("sample_rate"):
-        rate = ["-ar", str(int(options["sample_rate"]))]
-    elif options.get("loudnorm"):
+    sample_rate = _number(options, "sample_rate")
+    if codec == "opus" and sample_rate and int(sample_rate) not in OPUS_RATES:
+        plan.note("OPUS_48K", INFO, requested=int(sample_rate))
+        sample_rate = 48000  # libopus only encodes 48/24/16/12/8 kHz
+    if not sample_rate and options.get("loudnorm"):
         # loudnorm resamples to 192 kHz internally; pin a normal rate for the output.
-        rate = ["-ar", "48000" if codec == "opus" else "44100"]
-    channels = ["-ac", str(int(options["channels"]))] if options.get("channels") else []
-    encode = audio_encoder_args(codec, options.get("bitrate"), aac_encoder)
+        sample_rate = 48000 if codec == "opus" else 44100
+    rate = ["-ar", str(int(sample_rate))] if sample_rate else []
+    channels_n = _number(options, "channels")
+    channels = ["-ac", str(int(channels_n))] if channels_n else []
+    encode = audio_encoder_args(codec, _number(options, "bitrate"), aac_encoder)
+    tail = [*encode, *rate, *channels, *extra, "-map_metadata", "0", *_progress(output)]
     if options.get("loudnorm"):
         # Two passes: measure, then correct linearly -- the accurate way to hit -16 LUFS.
+        measure = [
+            shutil.which("ffmpeg") or "ffmpeg",
+            "-hide_banner",
+            "-nostdin",
+            # loudnorm prints its measurement at "info" level, on stderr.
+            "-loglevel",
+            "info",
+            "-progress",
+            "pipe:1",
+            "-nostats",
+            "-i",
+            source["path"],
+            "-map",
+            f"0:a:{pick}",
+            "-af",
+            loudnorm_filter(),
+            "-f",
+            "null",
+            "-",
+        ]
+        plan.steps.append(Step("ffmpeg", measure, action="LOUDNESS_MEASURE", duration=duration))
         plan.steps.append(
             Step(
                 "ffmpeg",
-                [
-                    shutil.which("ffmpeg") or "ffmpeg",
-                    "-hide_banner",
-                    "-nostdin",
-                    # loudnorm prints its measurement at "info" level, on stderr.
-                    "-loglevel",
-                    "info",
-                    "-progress",
-                    "pipe:1",
-                    "-nostats",
-                    "-i",
-                    source["path"],
-                    "-map",
-                    f"0:a:{pick}",
-                    "-af",
-                    loudnorm_filter(),
-                    "-f",
-                    "null",
-                    "-",
-                ],
-                action="LOUDNESS_MEASURE",
-                duration=duration,
-                weight=1.0,
-            )
-        )
-        plan.steps.append(
-            Step(
-                "ffmpeg",
-                [
-                    *_ffmpeg(),
-                    "-i",
-                    source["path"],
-                    *maps,
-                    "-af",
-                    "{LOUDNORM_MEASURED}",
-                    *encode,
-                    *rate,
-                    *channels,
-                    *extra,
-                    "-map_metadata",
-                    "0",
-                    *_progress(output),
-                ],
+                [*_ffmpeg(), "-i", source["path"], *maps, "-af", "{LOUDNORM_MEASURED}", *tail],
                 action="LOUDNESS_APPLY",
                 duration=duration,
-                weight=1.0,
             )
         )
         plan.note("LOUDNESS_TWO_PASS", INFO, target=LOUDNESS_TARGET["I"])
     else:
         plan.steps.append(
-            Step(
-                "ffmpeg",
-                [
-                    *_ffmpeg(),
-                    "-i",
-                    source["path"],
-                    *maps,
-                    *encode,
-                    *rate,
-                    *channels,
-                    *extra,
-                    "-map_metadata",
-                    "0",
-                    *_progress(output),
-                ],
-                duration=duration,
-            )
+            Step("ffmpeg", [*_ffmpeg(), "-i", source["path"], *maps, *tail], duration=duration)
         )
     source_codec = audio[pick]["codec"]
     if codec in ("flac", "wav") and source_codec not in ("flac", "alac", "pcm_s16le", "pcm_s24le"):
@@ -316,7 +356,8 @@ def _validate_segments(
     duration = source.get("duration") or 0
     clean: list[tuple[float, float]] = []
     for seg in segments:
-        start, end = float(seg.get("start") or 0), float(seg.get("end") or 0)
+        start = _number(seg, "start", 0.0) or 0.0
+        end = _number(seg, "end", 0.0) or 0.0
         if start < 0 or end <= start or (duration and start >= duration):
             plan.note("INVALID_SEGMENT", ERROR, start=start, end=end)
             continue
@@ -326,13 +367,22 @@ def _validate_segments(
     return clean
 
 
+# Frame-accurate cuts of audio-only files keep the family of the source.
+AUDIO_ONLY_ACCURATE = {
+    "mp3": ("mp3", ["-c:a", "libmp3lame", "-q:a", "2"]),
+    "flac": ("flac", ["-c:a", "flac"]),
+    "wav": ("wav", ["-c:a", "pcm_s16le"]),
+    "opus": ("opus", ["-c:a", "libopus", "-b:a", "160k"]),
+    "ogg": ("ogg", ["-c:a", "libopus", "-b:a", "160k"]),
+}
+
+
 def trim_output_ext(source: dict[str, Any], mode: str) -> str:
     ext = source["ext"]
     if mode == "lossless":
         return ext
-    has_video = any(s["type"] == "video" and not s["attached_pic"] for s in source["streams"])
-    if not has_video:
-        return "m4a"
+    if not _video_streams(source):
+        return AUDIO_ONLY_ACCURATE.get(ext, ("m4a", []))[0]
     return "mp4" if ext in ("mp4", "m4v", "mov") else "mkv"
 
 
@@ -352,8 +402,15 @@ def plan_trim(
         return plan
     if len(segments) > 1 and not join:
         plan.note("SEGMENTS_SEPARATE", INFO, count=len(segments))
-    has_video = any(s["type"] == "video" and not s["attached_pic"] for s in source["streams"])
+    has_video = bool(_video_streams(source))
     has_audio = any(s["type"] == "audio" for s in source["streams"])
+    has_cover = any(s["attached_pic"] for s in source["streams"])
+    joined = join and len(segments) > 1
+
+    def target(n: int) -> str:
+        if joined:
+            return f"{work}/segment_{n}.{ext}"
+        return output if len(segments) == 1 else output.replace("{N}", str(n + 1))
 
     if mode == "lossless":
         plan.note("LOSSLESS_KEYFRAMES", INFO)
@@ -361,14 +418,14 @@ def plan_trim(
             actual = (keyframes or {}).get(start)
             if actual is not None and start - actual > 0.05:
                 plan.note("CUT_MOVES_TO_KEYFRAME", WARN, requested=start, actual=round(actual, 3))
+        # A joined cut must not carry cover art: the concat demuxer loses the attached-picture
+        # flag and the cover turns into a video track (or fails outright in M4A).
+        maps = ["-map", "0:V?", "-map", "0:a?", "-map", "0:s?"] if joined else ["-map", "0"]
+        if joined and has_cover:
+            plan.note("JOIN_DROPS_COVER", INFO)
         pieces = []
         for n, (start, end) in enumerate(segments):
-            target = (
-                f"{work}/segment_{n}.{ext}"
-                if (join and len(segments) > 1)
-                else (output if len(segments) == 1 else output.replace("{N}", str(n + 1)))
-            )
-            pieces.append(target)
+            pieces.append(target(n))
             plan.steps.append(
                 Step(
                     "ffmpeg",
@@ -380,18 +437,17 @@ def plan_trim(
                         f"{end:.3f}",
                         "-i",
                         source["path"],
-                        "-map",
-                        "0",
+                        *maps,
                         "-c",
                         "copy",
                         "-avoid_negative_ts",
                         "make_zero",
-                        *_progress(target),
+                        *_progress(target(n)),
                     ],
                     duration=end - start,
                 )
             )
-        if join and len(segments) > 1:
+        if joined:
             listing = f"{work}/segments.txt"
             plan.steps.append(
                 Step("python", action="WRITE_CONCAT_LIST", argv=[listing, *pieces], weight=0.0)
@@ -419,16 +475,22 @@ def plan_trim(
         return plan
 
     # Frame-accurate: re-encode. H.264/AAC plays everywhere; CRF 18 is visually lossless.
-    plan.note("ACCURATE_REENCODES", INFO)
     video_enc = ["-c:v", "libx264", "-crf", "18", "-preset", "medium", "-pix_fmt", "yuv420p"]
-    audio_enc = ["-c:a", "aac", "-b:a", "192k"]
-    if join and len(segments) > 1:
+    if has_video:
+        plan.note("ACCURATE_REENCODES", INFO)
+        audio_enc = ["-c:a", "aac", "-b:a", "192k"]
+    else:
+        plan.note("ACCURATE_AUDIO_REENCODES", INFO)
+        audio_enc = AUDIO_ONLY_ACCURATE.get(
+            source["ext"], ("m4a", ["-c:a", "aac", "-b:a", "192k"])
+        )[1]
+    if joined:
         plan.note("JOIN_FIRST_TRACKS_ONLY", INFO)
         parts, labels = [], []
         for n, (start, end) in enumerate(segments):
             if has_video:
                 parts.append(
-                    f"[0:v:0]trim=start={start:.3f}:end={end:.3f},setpts=PTS-STARTPTS[v{n}]"
+                    f"[0:V:0]trim=start={start:.3f}:end={end:.3f},setpts=PTS-STARTPTS[v{n}]"
                 )
                 labels.append(f"[v{n}]")
             if has_audio:
@@ -439,7 +501,7 @@ def plan_trim(
         concat = f"{''.join(labels)}concat=n={len(segments)}:v={int(has_video)}:a={int(has_audio)}"
         outs = (["[v]"] if has_video else []) + (["[a]"] if has_audio else [])
         graph = ";".join([*parts, concat + "".join(outs)])
-        maps = [x for label in outs for x in ("-map", label)]
+        maps_out = [x for label in outs for x in ("-map", label)]
         plan.steps.append(
             Step(
                 "ffmpeg",
@@ -449,7 +511,7 @@ def plan_trim(
                     source["path"],
                     "-filter_complex",
                     graph,
-                    *maps,
+                    *maps_out,
                     *(video_enc if has_video else []),
                     *(audio_enc if has_audio else []),
                     *_progress(output),
@@ -459,8 +521,7 @@ def plan_trim(
         )
         return plan
     for n, (start, end) in enumerate(segments):
-        target = output if len(segments) == 1 else output.replace("{N}", str(n + 1))
-        subs = ["-map", "0:s?", "-c:s", "mov_text" if ext == "mp4" else "copy"]
+        subs = ["-map", "0:s?", "-c:s", "mov_text" if ext == "mp4" else "copy"] if has_video else []
         plan.steps.append(
             Step(
                 "ffmpeg",
@@ -472,13 +533,13 @@ def plan_trim(
                     source["path"],
                     "-t",
                     f"{end - start:.3f}",
-                    *(["-map", "0:v:0"] if has_video else []),
+                    *(["-map", "0:V:0"] if has_video else []),
                     "-map",
                     "0:a?",
                     *subs,
                     *(video_enc if has_video else []),
                     *audio_enc,
-                    *_progress(target),
+                    *_progress(target(n)),
                 ],
                 duration=end - start,
             )
@@ -493,10 +554,14 @@ def plan_remux(
     output: str,
     extras: list[dict[str, Any]] | None = None,
 ) -> Plan:
-    """Change container and edit tracks without re-encoding (subtitles may be converted)."""
+    """Change container and edit tracks without re-encoding (subtitles may be converted).
+
+    The output order follows the track list. Every kept track gets an explicit language
+    ("und" when cleared) and title, so clearing a field really clears it.
+    """
     container = options.get("container") or "mkv"
     if container not in ("mkv", "mp4", "mov"):
-        raise errors.AppError(code="UNKNOWN_CONTAINER", raw=container)
+        raise errors.AppError(code="UNKNOWN_CONTAINER", raw=str(container))
     plan = Plan(steps=[], ext=container)
     extras = extras or []
     inputs = [source, *extras]
@@ -510,6 +575,7 @@ def plan_remux(
             "title": s.get("title"),
         }
         for s in source["streams"]
+        if s["type"] in ("video", "audio", "subtitle")
     ]
     argv = [*_ffmpeg()]
     for item in inputs:
@@ -522,15 +588,15 @@ def plan_remux(
     for track in tracks:
         if not track.get("keep", True):
             continue
-        index = int(track.get("input") or 0)
-        if index >= len(inputs):
+        index = int(_number(track, "input", 0) or 0)
+        stream = None
+        if 0 <= index < len(inputs):
+            stream = next(
+                (s for s in inputs[index]["streams"] if s["index"] == track.get("stream")), None
+            )
+        if stream is None or stream["type"] not in counts:
             plan.note("UNKNOWN_TRACK", ERROR)
             continue
-        stream = next(
-            (s for s in inputs[index]["streams"] if s["index"] == track.get("stream")), None
-        )
-        if stream is None or stream["type"] not in counts:
-            continue  # data/attachment streams are not offered in the editor
         kind, codec = stream["type"], stream["codec"]
         n = counts[kind]
         spec = f"{short[kind]}:{n}"
@@ -548,11 +614,12 @@ def plan_remux(
             plan.note("CODEC_NOT_IN_MP4", ERROR, codec=codec, kind=kind)
         else:
             per_stream += [f"-c:{spec}", "copy"]
-        language = track.get("language")
-        if language:
-            per_stream += [f"-metadata:s:{spec}", f"language={iso639_2(str(language))}"]
-        if track.get("title") is not None:
-            per_stream += [f"-metadata:s:{spec}", f"title={track['title']}"]
+        language = str(track.get("language") or "").strip()
+        per_stream += [
+            f"-metadata:s:{spec}",
+            f"language={iso639_2(language) if language else 'und'}",
+        ]
+        per_stream += [f"-metadata:s:{spec}", f"title={track.get('title') or ''}"]
         if stream["attached_pic"]:
             per_stream += [f"-disposition:{spec}", "attached_pic"]
         else:
@@ -561,11 +628,22 @@ def plan_remux(
         kept += 1
     if kept == 0:
         plan.note("NO_TRACKS_KEPT", ERROR)
+    # MKV fonts (and other attachments) travel along; ASS subtitles need them to render.
+    attachments = ["-map", "0:t?", "-c:t", "copy"] if container == "mkv" else []
     tail = ["-movflags", "+faststart"] if container in ("mp4", "mov") else []
     plan.steps.append(
         Step(
             "ffmpeg",
-            [*argv, *maps, *per_stream, "-map_chapters", "0", *tail, *_progress(output)],
+            [
+                *argv,
+                *maps,
+                *attachments,
+                *per_stream,
+                "-map_chapters",
+                "0",
+                *tail,
+                *_progress(output),
+            ],
             duration=source.get("duration"),
         )
     )
@@ -574,23 +652,29 @@ def plan_remux(
 
 
 # ---- subtitle files ----------------------------------------------------------------------------
+def _subtitle_input(source: dict[str, Any]) -> list[str]:
+    charset = source.get("charset") or "UTF-8"
+    return (["-sub_charenc", charset] if charset != "UTF-8" else []) + ["-i", source["path"]]
+
+
 def plan_subtitle(source: dict[str, Any], options: dict[str, Any], output: str, work: str) -> Plan:
     action = options.get("action") or "convert"
     target = options.get("target") or "srt"
     if target not in SUBTITLE_FORMATS:
-        raise errors.AppError(code="UNKNOWN_SUBTITLE_FORMAT", raw=target)
+        raise errors.AppError(code="UNKNOWN_SUBTITLE_FORMAT", raw=str(target))
     plan = Plan(steps=[], ext=target)
     if not any(s["type"] == "subtitle" for s in source["streams"]):
         plan.note("NOT_A_SUBTITLE", ERROR)
         return plan
+    if source.get("charset", "UTF-8") != "UTF-8":
+        plan.note("LEGACY_ENCODING", INFO, charset=source["charset"])
     if action == "convert":
         plan.steps.append(
             Step(
                 "ffmpeg",
                 [
                     *_ffmpeg(),
-                    "-i",
-                    source["path"],
+                    *_subtitle_input(source),
                     "-map",
                     "0:s:0",
                     "-c:s",
@@ -603,7 +687,10 @@ def plan_subtitle(source: dict[str, Any], options: dict[str, Any], output: str, 
             plan.note("ASS_STYLING_LOST", INFO)
         return plan
     if action not in ("shift", "clean"):
-        raise errors.AppError(code="UNKNOWN_SUBTITLE_ACTION", raw=action)
+        raise errors.AppError(code="UNKNOWN_SUBTITLE_ACTION", raw=str(action))
+    offset = _number(options, "offset", 0.0) or 0.0
+    if source["ext"] in ("ass", "ssa"):
+        plan.note("ASS_STYLING_LOST", INFO)
     # Shift and clean run on parsed cues in Python, via SRT; FFmpeg converts back if needed.
     srt = output if target == "srt" else f"{work}/intermediate.srt"
     if source["ext"] not in ("srt", "vtt"):
@@ -611,13 +698,12 @@ def plan_subtitle(source: dict[str, Any], options: dict[str, Any], output: str, 
         plan.steps.append(
             Step(
                 "ffmpeg",
-                [*_ffmpeg(), "-i", source["path"], "-map", "0:s:0", "-c:s", "srt", normalised],
+                [*_ffmpeg(), *_subtitle_input(source), "-map", "0:s:0", "-c:s", "srt", normalised],
             )
         )
         text_source = normalised
     else:
         text_source = source["path"]
-    offset = float(options.get("offset") or 0)
     plan.steps.append(
         Step(
             "python",

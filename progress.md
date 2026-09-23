@@ -167,4 +167,14 @@ a line containing a single space, which a naive parser treats as the end of the 
 first sentence; stream-copy joins run a couple of frames long per piece (B-frames), which the
 tests now state as an explicit bound instead of pretending otherwise.
 
-**Next:** adversarial review of M4 (running), then stop for Berk before M5.
+**M4 review** (16 findings, most reproduced): keyframe predictions were wrong inside the first
+GOP, false on audio with cover art, and blind to long GOPs and non-zero start times; an empty
+output counted as success; joined lossless cuts broke on cover art; the preview differed from the
+run (encoder, name); failed jobs left scratch next to Berk's file; Windows-1254 Turkish SRT files
+were mangled; "/" in an output name made folders. All fixed with regression tests. It also found
+that the download worker's separate side pass did its own extraction, which could fail the job
+over subtitles alone and doubled the requests YouTube sees; side files now come from the single
+stream pass (verified live with TR+EN subtitles). A transient-403 retry was added after live runs
+showed YouTube refusing freshly signed URLs for a few minutes at a time.
+
+**Next:** HIG redesign of the UI (Berk's request), then stop before M5.

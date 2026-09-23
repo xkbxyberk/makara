@@ -323,6 +323,12 @@
           "text": "Real YouTube downloads work (no HTTP 403): extraction and download share one YoutubeDL instance",
           "pass": true,
           "proof": "RUN_LIVE_TESTS=1 uv run pytest -m live (2 passed on 2026-09-23); verified on xnP7qKxwzjg"
+        },
+        {
+          "id": "M2.24",
+          "text": "One extraction per job: side files come from the stream pass (no second request burst, no side-pass format failures)",
+          "pass": true,
+          "proof": "offline suite; live run 2026-09-23 on 0e3GPea1Tyg with TR+EN subtitles, cover and description"
         }
       ]
     },
@@ -461,6 +467,42 @@
           "text": "Screenshots of the Studio reviewed in light, dark and at 420px",
           "pass": true,
           "proof": "test-results/screenshots/studio-*.png"
+        },
+        {
+          "id": "M4.10",
+          "text": "Keyframe prediction is right inside the first GOP, ignores cover art, handles long GOPs and non-zero start times",
+          "pass": true,
+          "proof": "tests/test_studio.py::test_keyframe_prediction_inside_the_first_group_of_pictures, test_cover_art_is_not_mistaken_for_video, test_long_groups_of_pictures_are_still_found, test_a_non_zero_start_time_is_accounted_for"
+        },
+        {
+          "id": "M4.11",
+          "text": "An empty output is an error; failed or cancelled Studio work leaves no scratch next to the source",
+          "pass": true,
+          "proof": "test_an_empty_output_is_an_error_not_a_success; test_failed_work_leaves_no_scratch_next_to_the_source"
+        },
+        {
+          "id": "M4.12",
+          "text": "Legacy Windows-1254 Turkish subtitles shift and convert without mojibake",
+          "pass": true,
+          "proof": "test_legacy_turkish_srt_is_shifted_and_converted_without_mojibake"
+        },
+        {
+          "id": "M4.13",
+          "text": "The preview names the file claim() will use and uses the same encoder as the run",
+          "pass": true,
+          "proof": "tests/test_studio_api.py::test_the_preview_names_the_file_claim_will_really_use"
+        },
+        {
+          "id": "M4.14",
+          "text": "Remux follows the track order, sets defaults, clears languages, keeps MKV attachments, rejects unknown tracks",
+          "pass": true,
+          "proof": "test_remux_follows_the_track_order_and_flags; test_remux_keeps_mkv_font_attachments; test_remux_rejects_a_track_that_does_not_exist"
+        },
+        {
+          "id": "M4.15",
+          "text": "Separate segments are separate library items",
+          "pass": true,
+          "proof": "test_separate_segments_become_separate_library_items"
         }
       ]
     }

@@ -88,8 +88,10 @@ export function parseTime(text: string): number | null {
 
 /** Seconds -> "m:ss.ms" (or "h:mm:ss.ms"), the inverse of parseTime for input fields. */
 export function formatTime(seconds: number): string {
-  const whole = Math.floor(seconds);
-  const fraction = Math.round((seconds - whole) * 1000);
+  // Round to milliseconds first: 212.9996 must become 3:33, not 3:32 plus a lost second.
+  const ms = Math.round(seconds * 1000);
+  const whole = Math.floor(ms / 1000);
+  const fraction = ms % 1000;
   const base = formatDuration(whole);
   return fraction ? `${base}.${String(fraction).padStart(3, '0').replace(/0+$/, '')}` : base;
 }

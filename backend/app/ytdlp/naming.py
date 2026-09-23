@@ -71,6 +71,24 @@ def safe_component(part: str) -> str:
     return trim_bytes(part, MAX_COMPONENT_BYTES) or "_"
 
 
+def safe_filename(name: str) -> str:
+    """A name typed by Berk ("AC/DC - Live") is one file name, never a path: "/" becomes the
+    look-alike BIG SOLIDUS U+29F8 (as yt-dlp does), then the usual component rules apply."""
+    return safe_component(name.replace("/", "\u29f8"))
+
+
+def first_free(root: Path, stem: str, suffixes: list[str]) -> list[Path]:
+    """What claim() would pick right now -- for previews; nothing is created."""
+    base = root.expanduser().resolve()
+    clean = [safe_suffix(s) for s in suffixes]
+    for n in range(1, 1000):
+        name = stem if n == 1 else f"{stem} ({n})"
+        targets = [base / f"{name}{suffix}" for suffix in clean]
+        if not any(t.exists() for t in targets):
+            return targets
+    raise errors.AppError(code="PATH_EXHAUSTED", raw=str(base / stem))
+
+
 def safe_suffix(suffix: str) -> str:
     """Suffixes are built from our own strings plus subtitle/language keys; keep them inert."""
     cleaned = _UNSAFE_SUFFIX.sub("_", suffix)

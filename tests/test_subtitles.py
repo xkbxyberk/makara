@@ -84,3 +84,8 @@ def test_srt_output_round_trips() -> None:
 def test_hours_and_crlf_are_handled() -> None:
     cues = subtitles.parse("1\r\n01:02:03,004 --> 01:02:04,000\r\nx\r\n")
     assert cues[0].start == 3723.004
+
+
+def test_a_separator_line_of_spaces_ends_a_cue() -> None:
+    text = "1\n00:00:01,000 --> 00:00:02,000\nA\n \t\n2\n00:00:03,000 --> 00:00:04,000\nB\n"
+    assert [c.lines for c in subtitles.parse(text)] == [["A"], ["B"]]

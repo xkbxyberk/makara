@@ -119,6 +119,13 @@ class Library:
     # ---- writing ---------------------------------------------------------------------------
     def add(self, *, job: dict[str, Any], outcome: dict[str, Any]) -> dict[str, Any] | None:
         """Catalogue a finished job from what the worker reported (it already ran ffprobe)."""
+        if outcome.get("separate"):
+            added = None
+            for output in outcome.get("outputs") or []:
+                added = self.add(
+                    job=job, outcome={**outcome, "outputs": [output], "separate": False}
+                )
+            return added
         files = outcome.get("outputs") or []
         primary = next(
             (f for f in files if f.get("role") == "primary"), files[0] if files else None
@@ -132,7 +139,9 @@ class Library:
         item = {
             "id": uuid.uuid4().hex[:12],
             "job_id": job["id"],
-            "title": meta.get("title") or job.get("title"),
+            "title": (Path(primary["path"]).stem if meta.get("extractor_key") == "Studio" else None)
+            or meta.get("title")
+            or job.get("title"),
             "source_url": meta.get("webpage_url") or job.get("source_url"),
             "site": meta.get("extractor_key"),
             "channel": meta.get("channel"),

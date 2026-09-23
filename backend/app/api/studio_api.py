@@ -62,6 +62,10 @@ def _output_dir(body: StudioBody, source: Path) -> Path:
 
 
 def _prepare(body: StudioBody) -> tuple[dict[str, Any], Path, ops.Plan, list[str]]:
+    """Build exactly the plan the worker will run: same encoder choice, the output name that
+    claim() will pick right now, and a neutral stand-in for the job's scratch folder."""
+    from app.workers.download_worker import _aac_encoder
+
     source_path = Path(body.source_path).expanduser()
     source = ops.probe_source(source_path)
     extras = [ops.probe_source(Path(p).expanduser()) for p in body.extra_paths]
@@ -70,13 +74,19 @@ def _prepare(body: StudioBody) -> tuple[dict[str, Any], Path, ops.Plan, list[str
     keyframes: dict[float, float | None] = {}
     if body.op == "trim" and (body.options.get("mode") or "lossless") == "lossless":
         for seg in body.options.get("segments") or []:
-            start = float(seg.get("start") or 0)
+            start = ops._number(seg, "start", 0.0) or 0.0
             keyframes[start] = ops.keyframe_at_or_before(source_path, start)
     count = ops.separate_outputs(body.op, body.options)
-    stem = naming.safe_component(body.output_name)
-    preview = f"{out_dir}/{stem}.{{N}}.{ext}" if count > 1 else f"{out_dir}/{stem}.{ext}"
-    plan = ops.build(body.op, source, body.options, preview, "<geçici>", extras, "aac", keyframes)
-    names = [preview.replace("{N}", str(n + 1)) for n in range(count)]
+    suffixes = [f".{n + 1}.{ext}" for n in range(count)] if count > 1 else [f".{ext}"]
+    names = [
+        str(p) for p in naming.first_free(out_dir, naming.safe_filename(body.output_name), suffixes)
+    ]
+    base = names[0][: -len(naming.safe_suffix(suffixes[0]))]
+    template = f"{base}.{{N}}.{ext}" if count > 1 else names[0]
+    scratch = f"{out_dir}/.vd-work/<job>"
+    plan = ops.build(
+        body.op, source, body.options, template, scratch, extras, _aac_encoder(), keyframes
+    )
     return source, out_dir, plan, names
 
 
@@ -136,6 +146,7 @@ async def post_job(body: StudioBody, request: Request) -> Any:
         "op": body.op,
         "options": body.options,
         "output_dir": str(out_dir),
+        "scratch_root": str(out_dir / ".vd-work"),
         "output_name": body.output_name,
         "extra_paths": body.extra_paths,
     }
@@ -145,7 +156,7 @@ async def post_job(body: StudioBody, request: Request) -> Any:
             "kind": "studio",
             "status": "queued",
             "stage": "queued",
-            "title": naming.safe_component(body.output_name),
+            "title": naming.safe_filename(body.output_name),
             "source_url": None,
             "mode": "studio",
             "request": request_body,

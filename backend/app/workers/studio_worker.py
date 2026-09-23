@@ -9,10 +9,11 @@ from __future__ import annotations
 
 import contextlib
 import json
+import math
 import os
 import re
 import shutil
-import subprocess
+import signal
 import sys
 import time
 from pathlib import Path, PurePosixPath
@@ -44,7 +45,7 @@ def _run_python(step: ops.Step) -> None:
         return
     if step.action in ("SHIFT", "CLEAN_CAPTIONS"):
         source, target, offset = step.argv
-        text = Path(source).read_text(encoding="utf-8-sig", errors="replace")
+        text = ops.read_subtitle_text(Path(source))[0]  # UTF-8, or Windows-1254 for old files
         cues = subtitles.parse(text)
         if step.action == "SHIFT":
             cues = subtitles.shift(cues, float(offset))
@@ -96,7 +97,28 @@ def _execute(plan: ops.Plan) -> None:
         stderr = mux.run_with_progress(argv, step.duration, report)
         if step.action == "LOUDNESS_MEASURE":
             measured = _loudnorm_measurement(stderr)
+            if not math.isfinite(float(measured.get("input_i", "-inf"))):
+                raise errors.AppError(code="LOUDNESS_SILENT", raw=str(measured))
         done += weight
+
+
+def _verify(produced: list[Path]) -> None:
+    """FFmpeg can exit 0 having written nothing usable (CLAUDE.md gotcha 19)."""
+    for path in produced:
+        if not path.is_file() or path.stat().st_size == 0:
+            raise errors.AppError(code="OUTPUT_EMPTY", raw=str(path))
+        if path.suffix.lstrip(".") in ops.SUBTITLE_FORMATS:
+            continue
+        try:
+            ops.probe_source(path)
+        except errors.AppError:
+            raise errors.AppError(code="OUTPUT_EMPTY", raw=str(path)) from None
+
+
+def _discard_scratch(work: Path) -> None:
+    shutil.rmtree(work, ignore_errors=True)
+    with contextlib.suppress(OSError):
+        work.parent.rmdir()  # the hidden .vd-work next to Berk's file, only if now empty
 
 
 def run(req: dict[str, Any]) -> int:
@@ -106,8 +128,8 @@ def run(req: dict[str, Any]) -> int:
         work.mkdir(parents=True, exist_ok=True)
         emit({"t": "stage", "stage": "preparing"})
         # Re-read the source now: it may have changed since the plan was shown.
-        source = ops.probe_source(Path(req["source_path"]))
-        extras = [ops.probe_source(Path(p)) for p in req.get("extra_paths") or []]
+        source = ops.probe_source(Path(req["source_path"]).expanduser())
+        extras = [ops.probe_source(Path(p).expanduser()) for p in req.get("extra_paths") or []]
         op, options = req["op"], req.get("options") or {}
         ext = ops.output_ext(op, source, options)
         count = ops.separate_outputs(op, options)
@@ -117,44 +139,63 @@ def run(req: dict[str, Any]) -> int:
             codes = ", ".join(n["code"] for n in plan.notices if n["level"] == "error")
             raise errors.AppError(code="SELECTION_INVALID", raw=codes)
         _execute(plan)
-        emit({"t": "stage", "stage": "finalizing"})
         produced = [Path(output.replace("{N}", str(n + 1))) for n in range(count)]
+        _verify(produced)
+        emit({"t": "stage", "stage": "finalizing"})
         suffixes = [f".{n + 1}.{ext}" for n in range(count)] if count > 1 else [f".{ext}"]
         placeholders = naming.claim(
             Path(req["output_dir"]),
-            PurePosixPath(naming.safe_component(req["output_name"])),
+            PurePosixPath(naming.safe_filename(req["output_name"])),
             suffixes,
         )
         for source_file, target in zip(produced, placeholders, strict=True):
             os.replace(source_file, target)
         files = [str(p) for p in placeholders]
-    except errors.AppError as exc:
+    except BaseException as exc:
+        # Studio work has nothing worth resuming: never leave scratch next to Berk's file.
         naming.release(placeholders)
-        emit({"t": "error", "code": exc.code, "raw": exc.raw})
+        _discard_scratch(work)
+        if isinstance(exc, errors.AppError):
+            emit({"t": "error", "code": exc.code, "raw": exc.raw})
+        elif isinstance(exc, RuntimeError):
+            emit({"t": "error", "code": "FFMPEG_FAILED", "raw": str(exc)})
+        elif isinstance(exc, OSError) and exc.errno == 28:
+            emit({"t": "error", "code": "DISK_FULL", "raw": repr(exc)})
+        elif isinstance(exc, Exception):
+            emit({"t": "error", "code": errors.UNKNOWN, "raw": repr(exc)})
+        else:
+            raise  # SIGTERM / KeyboardInterrupt: the manager handles cancellation
         return 1
-    except RuntimeError as exc:
-        naming.release(placeholders)
-        emit({"t": "error", "code": "FFMPEG_FAILED", "raw": str(exc)})
-        return 1
-    except (OSError, subprocess.SubprocessError, ValueError) as exc:
-        naming.release(placeholders)
-        code = "DISK_FULL" if isinstance(exc, OSError) and exc.errno == 28 else errors.UNKNOWN
-        emit({"t": "error", "code": code, "raw": repr(exc)})
-        return 1
-    shutil.rmtree(work, ignore_errors=True)
-    with contextlib.suppress(OSError):
-        work.parent.rmdir()  # the hidden .vd-work next to Berk's file, if nothing else is in it
+    _discard_scratch(work)
     media = [f for f in files if Path(f).suffix.lstrip(".") not in ops.SUBTITLE_FORMATS]
-    outputs = _describe(media, req["job_id"]) if media else []
+    # Separate segments are separate files: each becomes its own library item, so trashing
+    # one never trashes the others.
+    outputs = [
+        {**_describe([f], f"{req['job_id']}-{i}")[0], "role": "primary"}
+        for i, f in enumerate(media)
+    ]
     meta = {"title": Path(files[0]).stem, "extractor_key": "Studio", "channel": None}
     emit(
-        {"t": "done", "files": files, "plan": {}, "outputs": outputs, "meta": meta, "warnings": []}
+        {
+            "t": "done",
+            "files": files,
+            "plan": {},
+            "outputs": outputs,
+            "meta": meta,
+            "warnings": [],
+            "separate": len(outputs) > 1,
+        }
     )
     return 0
 
 
+def _terminate(signum: int, frame: Any) -> None:
+    raise KeyboardInterrupt  # unwinds run(): scratch cleanup, then exit
+
+
 def main() -> int:
     global OUT
+    signal.signal(signal.SIGTERM, _terminate)
     request = json.loads(sys.stdin.read())
     OUT = os.fdopen(os.dup(1), "w")
     os.dup2(2, 1)

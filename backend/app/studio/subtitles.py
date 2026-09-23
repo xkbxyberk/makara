@@ -44,8 +44,11 @@ def parse(text: str) -> list[Cue]:
             current = None  # an empty line ends a cue
             continue
         if not raw.strip():
-            # A whitespace-only line is *inside* the cue: YouTube starts rolling cues with " ".
-            # Treating it as the end of the cue would silently drop the first sentence.
+            # YouTube starts rolling cues with a " " line right after the timing: still inside
+            # the cue. But once a cue has text, a line of spaces or tabs is a separator (plenty
+            # of hand-edited SRT files have them) and must end the cue.
+            if current is not None and current.lines:
+                current = None
             continue
         if current is not None:
             current.lines.append(raw.rstrip())

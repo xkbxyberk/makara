@@ -312,6 +312,7 @@ class JobManager:
             outcome["outputs"] = event.get("outputs") or []
             outcome["meta"] = event.get("meta") or {}
             outcome["warnings"] = event.get("warnings") or []
+            outcome["separate"] = bool(event.get("separate"))
         elif kind == "error":
             outcome.update(code=event.get("code"), raw=event.get("raw"))
 
@@ -384,7 +385,9 @@ class JobManager:
         """Delete the job's own scratch directory -- never the downloaded media."""
         request = job.get("request") or {}
         work = Path(request.get("work_dir") or "")
-        root = Path(request.get("download_dir") or "") / ".vd-work"
+        root = Path(
+            request.get("scratch_root") or Path(request.get("download_dir") or "") / ".vd-work"
+        )
         if work.name == job["id"] and work.resolve().parent == root.resolve() and work.exists():
             shutil.rmtree(work, ignore_errors=True)
 
