@@ -180,6 +180,9 @@ sections). In the desktop window the sidebar shows the real vibrancy material be
 transparent web view (`?shell=native`, only while the theme follows the system). Icons are
 Lucide glyphs mapped to SF Symbol names in `components/Icon.tsx`; SF Symbols themselves cannot
 be used outside Apple's native frameworks. Below 720 px the sidebar collapses and floats.
+Motion is short and only marks change: segmented selections slide, screens fade in, the sidebar
+slides, sheets drop from the top, the Library inspector slides in, theme changes cross-fade.
+"Reduce motion" turns all of it off. Help tags float above the window and never get clipped.
 
 ### Inspect (M1, built)
 - **Empty:** a panel explaining that pasting a link lists every quality, language and subtitle,

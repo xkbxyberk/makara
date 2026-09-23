@@ -1,7 +1,9 @@
 import path from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
 
-/** The e2e suite drives the real server in fixture mode: realistic URLs, zero network. */
+/** The e2e suite drives the real server in fixture mode: realistic URLs, zero network. Its own
+ * port keeps it clear of the real app, which may be open on 8787. */
+const PORT = 8788;
 export default defineConfig({
   testDir: './e2e',
   outputDir: '../test-results',
@@ -10,7 +12,7 @@ export default defineConfig({
   retries: 0,
   reporter: [['list']],
   use: {
-    baseURL: 'http://127.0.0.1:8787',
+    baseURL: `http://127.0.0.1:${PORT}`,
     trace: 'retain-on-failure',
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
@@ -23,11 +25,12 @@ export default defineConfig({
       // Everything the server logs is kept, so check.sh can fail the run on a hidden traceback.
       'uv run python -m app.main 2>&1 | tee test-results/e2e-server.log',
     cwd: '..',
-    url: 'http://127.0.0.1:8787/api/health',
+    url: `http://127.0.0.1:${PORT}/api/health`,
     reuseExistingServer: false,
     timeout: 120_000,
     env: {
       VD_FIXTURE_MODE: '1',
+      VD_PORT: String(PORT),
       PYTHONPATH: 'backend',
       VD_DATA_DIR: path.resolve(__dirname, '../test-results/e2e-data'),
       VD_DOWNLOAD_DIR: path.resolve(__dirname, '../test-results/e2e-downloads'),

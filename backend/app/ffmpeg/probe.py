@@ -3,14 +3,15 @@
 from __future__ import annotations
 
 import json
-import shutil
 import subprocess
 from pathlib import Path
 from typing import Any
 
+from app.ffmpeg import binaries
+
 
 def ffprobe_path() -> str:
-    return shutil.which("ffprobe") or "ffprobe"
+    return binaries.ffprobe()
 
 
 def probe(path: Path) -> dict[str, Any]:

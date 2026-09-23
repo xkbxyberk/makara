@@ -9,13 +9,13 @@ from __future__ import annotations
 
 import json
 import math
-import shutil
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from app import errors
+from app.ffmpeg import binaries
 from app.ffmpeg.mux import iso639_2
 
 INFO, WARN, ERROR = "info", "warn", "error"
@@ -71,7 +71,7 @@ class Plan:
 
 def _ffmpeg() -> list[str]:
     return [
-        shutil.which("ffmpeg") or "ffmpeg",
+        binaries.ffmpeg(),
         "-hide_banner",
         "-nostdin",
         "-loglevel",
@@ -95,7 +95,7 @@ def probe_source(path: Path) -> dict[str, Any]:
     charset = "UTF-8"
     if path.suffix.lower() in SUBTITLE_EXTS and path.stat().st_size < 20_000_000:
         charset = read_subtitle_text(path)[1]
-    argv = [shutil.which("ffprobe") or "ffprobe", "-v", "error"]
+    argv = [binaries.ffprobe(), "-v", "error"]
     if charset != "UTF-8":
         argv += ["-sub_charenc", charset]  # FFmpeg rejects non-UTF-8 text subtitles otherwise
     argv += ["-print_format", "json", "-show_streams", "-show_format", "-show_chapters", str(path)]
@@ -165,7 +165,7 @@ def keyframe_at_or_before(path: Path, seconds: float) -> float | None:
     """
     if seconds <= 0:
         return 0.0
-    ffprobe = shutil.which("ffprobe") or "ffprobe"
+    ffprobe = binaries.ffprobe()
     info = _ffprobe_json(
         [
             ffprobe,
@@ -310,7 +310,7 @@ def plan_audio(
     if options.get("loudnorm"):
         # Two passes: measure, then correct linearly -- the accurate way to hit -16 LUFS.
         measure = [
-            shutil.which("ffmpeg") or "ffmpeg",
+            binaries.ffmpeg(),
             "-hide_banner",
             "-nostdin",
             # loudnorm prints its measurement at "info" level, on stderr.

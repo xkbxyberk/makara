@@ -117,17 +117,17 @@ test('screenshots: library grid and list in light, dark and narrow', async ({ pa
   await openLibrary(page);
   await page.getByRole('radio', { name: 'Izgara' }).click();
   await expect(page.getByTestId('library-item').first()).toBeVisible();
-  await page.screenshot({ path: `${SHOTS}/library-grid-light.png` });
+  await page.screenshot({ animations: 'disabled', path: `${SHOTS}/library-grid-light.png` });
   await page.getByTestId('library-item').first().locator('.lib-card-button').click();
   await expect(page.getByTestId('inspector')).toBeVisible();
-  await page.screenshot({ path: `${SHOTS}/library-inspector-light.png` });
+  await page.screenshot({ animations: 'disabled', path: `${SHOTS}/library-inspector-light.png` });
   await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'));
-  await page.screenshot({ path: `${SHOTS}/library-grid-dark.png` });
+  await page.screenshot({ animations: 'disabled', path: `${SHOTS}/library-grid-dark.png` });
   await page.getByRole('radio', { name: 'Liste' }).click();
-  await page.screenshot({ path: `${SHOTS}/library-list-dark.png` });
+  await page.screenshot({ animations: 'disabled', path: `${SHOTS}/library-list-dark.png` });
   await page.setViewportSize({ width: 420, height: 900 });
   await page.getByRole('radio', { name: 'Izgara' }).click();
-  await page.screenshot({ path: `${SHOTS}/library-narrow.png` });
+  await page.screenshot({ animations: 'disabled', path: `${SHOTS}/library-narrow.png` });
 });
 
 test('a library item opens in the Studio', async ({ page, request }) => {

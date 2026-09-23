@@ -404,7 +404,7 @@ export function LibraryRoute({
         </Panel>
 
         {chosen && (
-          <aside className="inspector" aria-label={tr.library.details} data-testid="inspector">
+          <aside key={chosen.id} className="inspector" aria-label={tr.library.details} data-testid="inspector">
             <div className="panel-body inspector-body">
               <Thumb item={chosen} />
               <div className="inspector-title">{chosen.title}</div>

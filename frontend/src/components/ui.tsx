@@ -1,4 +1,5 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { tr } from '../i18n/tr';
 import { Icon, type SymbolName } from './Icon';
 
@@ -28,27 +29,84 @@ export function Panel({
   );
 }
 
-/** Every technical term in the UI can explain itself. Keyboard and pointer both work. */
+/**
+ * Every technical term in the UI can explain itself. Keyboard and pointer both work.
+ * Like a macOS help tag, the bubble floats above the window (a portal with fixed position), so no
+ * scrolling or clipped container can cut it off; it opens below the term, or above when there
+ * is no room, and never leaves the viewport.
+ */
 export function Term({ label, body }: { label: string; body: string }) {
   const [open, setOpen] = useState(false);
+  const [place, setPlace] = useState<{ left: number; top: number; above: boolean } | null>(null);
+  const anchor = useRef<HTMLSpanElement>(null);
+  const bubble = useRef<HTMLSpanElement>(null);
+  const timer = useRef<number | undefined>(undefined);
   const id = useId();
+
+  const show = (delay: number) => {
+    window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => setOpen(true), delay);
+  };
+  const hide = () => {
+    window.clearTimeout(timer.current);
+    setOpen(false);
+    setPlace(null);
+  };
+
+  useLayoutEffect(() => {
+    if (!open || !anchor.current || !bubble.current) return;
+    const term = anchor.current.getBoundingClientRect();
+    const tip = bubble.current.getBoundingClientRect();
+    const margin = 8;
+    const gap = 6;
+    const fitsBelow = term.bottom + gap + tip.height <= window.innerHeight - margin;
+    setPlace({
+      left: Math.max(margin, Math.min(term.left, window.innerWidth - tip.width - margin)),
+      top: fitsBelow ? term.bottom + gap : Math.max(margin, term.top - gap - tip.height),
+      above: !fitsBelow,
+    });
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    // A help tag belongs to a spot on screen; once the page moves under it, it goes away.
+    const close = () => hide();
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('resize', close);
+    return () => {
+      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('resize', close);
+    };
+  }, [open]);
+
+  useEffect(() => () => window.clearTimeout(timer.current), []);
+
   return (
     <span
+      ref={anchor}
       className="term"
       tabIndex={0}
       aria-describedby={open ? id : undefined}
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
-      onFocus={() => setOpen(true)}
-      onBlur={() => setOpen(false)}
-      onKeyDown={(event) => event.key === 'Escape' && setOpen(false)}
+      onMouseEnter={() => show(250)}
+      onMouseLeave={hide}
+      onFocus={() => show(0)}
+      onBlur={hide}
+      onKeyDown={(event) => event.key === 'Escape' && hide()}
     >
       {label}
-      {open && (
-        <span className="term-bubble" role="tooltip" id={id}>
-          {body}
-        </span>
-      )}
+      {open &&
+        createPortal(
+          <span
+            ref={bubble}
+            className={place ? `term-bubble shown${place.above ? ' above' : ''}` : 'term-bubble'}
+            role="tooltip"
+            id={id}
+            style={place ? { left: place.left, top: place.top } : undefined}
+          >
+            {body}
+          </span>,
+          document.body,
+        )}
     </span>
   );
 }

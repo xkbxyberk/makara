@@ -9,13 +9,14 @@ Always an argv list; never a shell string.
 from __future__ import annotations
 
 import re
-import shutil
 import subprocess
 import tempfile
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+
+from app.ffmpeg import binaries
 
 COPYABLE_VIDEO_MP4 = {"h264": "avc1", "hevc": "hvc1"}  # codec -> the tag QuickTime insists on
 COPYABLE_AUDIO_MP4 = {"aac", "alac", "mp3"}
@@ -183,7 +184,7 @@ def run_with_progress(
     argv: list[str], duration: float | None, on_progress: Callable[[float], None]
 ) -> str:
     """Run FFmpeg, reporting 0..1 from its machine-readable `-progress` stream."""
-    argv = [shutil.which("ffmpeg") or "ffmpeg", *argv[1:]]
+    argv = [binaries.ffmpeg(), *argv[1:]]
     with tempfile.TemporaryFile() as stderr:
         proc = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=stderr, text=True)
         assert proc.stdout is not None

@@ -6,7 +6,8 @@ import os
 from pathlib import Path
 
 SERVER_HOST = "127.0.0.1"
-SERVER_PORT = 8787
+# The e2e suite uses its own port (VD_PORT) so it can run while the real app is open.
+SERVER_PORT = int(os.environ.get("VD_PORT", "8787"))
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 FIXTURE_DIR = PROJECT_ROOT / "tests" / "fixtures" / "infojson"

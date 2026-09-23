@@ -186,4 +186,16 @@ library's details moved from the card into the inspector); every assertion is ke
 screenshot run caught the floating sidebar covering the page after a resize; the sidebar now
 collapses when the window gets narrow, like a Mac split view.
 
+**Berk's first look at the redesign** (screenshots from the real window): he asked for animated
+transitions, for the FFmpeg gaps to be filled, and reported help-tag bubbles clipped inside a
+frame. The bubbles were absolutely positioned inside panels that clip their overflow; they are now
+a portal with fixed positioning that flips above when there is no room (regression test at the
+bottom edge of a narrow window). FFmpeg: with Berk's approval Homebrew's keg-only `ffmpeg-full`
+was installed beside the plain build; the app prefers it (libass, libwebp, zimg all present,
+doctor fully green, live downloads re-verified). Motion: sliding segmented thumbs, screen
+fade-ins, sidebar collapse, sheet drop-down, inspector slide-in, theme cross-fade, press
+feedback; all off under Reduce motion. Two e2e hover tests turned out to rely on timing (the page
+shifts when the download plan arrives); they now wait for the page to settle. The e2e server
+moved to port 8788 so it no longer collides with the running app.
+
 **Next:** M5 (sections/clips + SponsorBlock) — waiting for Berk's go-ahead.

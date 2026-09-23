@@ -15,6 +15,12 @@ async function inspect(page: Page, url: string) {
   await page.getByRole('main').getByRole('button', { name: 'İncele', exact: true }).click();
 }
 
+/** Hover only once the download plan has arrived: it grows the panel and shifts the page, which
+ * would slide the term out from under a pointer that got there first. */
+async function settled(page: Page) {
+  await expect(page.getByRole('button', { name: 'İndir', exact: true })).toBeEnabled();
+}
+
 test('empty state invites a paste', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByText('Henüz bir şey incelemedin')).toBeVisible();
@@ -69,8 +75,30 @@ test('subtitles are split into manual, automatic and machine-translated', async 
 test('a technical term explains itself on hover', async ({ page }) => {
   await page.goto('/');
   await inspect(page, MULTI_AUDIO);
+  await settled(page);
   await page.locator('.term', { hasText: 'HDR' }).first().hover();
   await expect(page.getByRole('tooltip')).toContainText('Yüksek dinamik aralık');
+});
+
+test('a help tag is never clipped by its panel, even at the bottom edge of a narrow window', async ({ page }) => {
+  await page.setViewportSize({ width: 420, height: 900 });
+  await page.goto('/');
+  await inspect(page, MULTI_AUDIO);
+  await settled(page);
+  // A term inside a table panel that clips its overflow, scrolled to the very bottom of the window.
+  const term = page.locator('tbody .term', { hasText: 'VP9' }).first();
+  await term.evaluate((el) => el.scrollIntoView({ block: 'end' }));
+  await term.hover();
+  const tip = page.getByRole('tooltip');
+  await expect(tip).toContainText('QuickTime');
+  expect(await tip.evaluate((el) => el.parentElement === document.body)).toBe(true);
+  const box = (await tip.boundingBox())!;
+  const termBox = (await term.boundingBox())!;
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.y).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(420);
+  expect(box.y + box.height).toBeLessThanOrEqual(900);
+  expect(box.y + box.height).toBeLessThanOrEqual(termBox.y); // no room below, so it opens above
 });
 
 test('every technical column header and codec explains itself', async ({ page }) => {
@@ -83,6 +111,7 @@ test('every technical column header and codec explains itself', async ({ page })
   const audioHead = page.locator('section.panel', { hasText: 'Ses parçaları' }).first().locator('thead');
   await expect(audioHead.locator('.term')).toHaveCount(5);
 
+  await settled(page);
   await page.locator('tbody .term', { hasText: 'VP9' }).first().hover();
   await expect(page.getByRole('tooltip')).toContainText('QuickTime');
 });
@@ -115,11 +144,11 @@ test('screenshots: inspect in light, dark and at a narrow width', async ({ page 
   await page.goto('/');
   await inspect(page, MULTI_AUDIO);
   await expect(page.getByRole('heading', { name: /Squid Game/ })).toBeVisible();
-  await page.screenshot({ path: `${SHOTS}/inspect-light.png`, fullPage: false });
+  await page.screenshot({ animations: 'disabled', path: `${SHOTS}/inspect-light.png`, fullPage: false });
 
   await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'));
-  await page.screenshot({ path: `${SHOTS}/inspect-dark.png`, fullPage: false });
+  await page.screenshot({ animations: 'disabled', path: `${SHOTS}/inspect-dark.png`, fullPage: false });
 
   await page.setViewportSize({ width: 420, height: 900 });
-  await page.screenshot({ path: `${SHOTS}/inspect-narrow.png`, fullPage: false });
+  await page.screenshot({ animations: 'disabled', path: `${SHOTS}/inspect-narrow.png`, fullPage: false });
 });

@@ -139,12 +139,12 @@ test('screenshots: studio in light, dark and narrow', async ({ page }) => {
   await openFile(page, clip);
   await page.getByLabel('Başlangıç 1').fill('1.5');
   await expect(page.getByText('Başlangıç 1.5 sn yerine 1 sn olacak')).toBeVisible();
-  await page.screenshot({ path: `${SHOTS}/studio-light.png`, fullPage: true });
+  await page.screenshot({ animations: 'disabled', path: `${SHOTS}/studio-light.png`, fullPage: true });
   await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'));
-  await page.screenshot({ path: `${SHOTS}/studio-dark.png`, fullPage: true });
+  await page.screenshot({ animations: 'disabled', path: `${SHOTS}/studio-dark.png`, fullPage: true });
   // The content area scrolls inside the window: bring the command preview into view too.
   await page.getByTestId('studio-command').scrollIntoViewIfNeeded();
-  await page.screenshot({ path: `${SHOTS}/studio-commands-dark.png` });
+  await page.screenshot({ animations: 'disabled', path: `${SHOTS}/studio-commands-dark.png` });
   await page.setViewportSize({ width: 420, height: 900 });
-  await page.screenshot({ path: `${SHOTS}/studio-narrow.png`, fullPage: true });
+  await page.screenshot({ animations: 'disabled', path: `${SHOTS}/studio-narrow.png`, fullPage: true });
 });

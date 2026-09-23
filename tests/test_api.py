@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -91,3 +92,42 @@ def test_our_own_origin_may_post(client: TestClient) -> None:
         headers={"origin": "http://127.0.0.1:8787"},
     )
     assert response.status_code == 200
+
+
+def test_ffmpeg_full_is_preferred_when_installed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Homebrew's keg-only ffmpeg-full is never on PATH; the app must still find and prefer it."""
+    from app.ffmpeg import binaries
+
+    monkeypatch.setattr(binaries, "FULL_KEG", tmp_path / "missing")
+    plain = binaries.find("ffmpeg")
+    assert not binaries.is_full(plain)
+
+    keg = tmp_path / "keg"
+    keg.mkdir()
+    for name in ("ffmpeg", "ffprobe"):
+        (keg / name).write_text("#!/bin/sh\n")
+        (keg / name).chmod(0o755)
+    monkeypatch.setattr(binaries, "FULL_KEG", keg)
+    assert binaries.find("ffmpeg") == str(keg / "ffmpeg")
+    assert binaries.find("ffprobe") == str(keg / "ffprobe")
+    assert binaries.is_full(binaries.ffmpeg())
+
+    (keg / "ffprobe").unlink()  # half an install: never mix binaries from two builds
+    assert binaries.find("ffmpeg") == plain
+
+
+def test_doctor_points_at_ffmpeg_full_when_the_plain_build_lacks_libass(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app import doctor
+    from app.ffmpeg import binaries
+
+    monkeypatch.setattr(binaries, "FULL_KEG", tmp_path / "not-installed")
+    check = doctor._ffmpeg_check()
+    if check["values"]["missing_optional"]:
+        assert check["status"] == "warn"
+        assert check["fix"] == {"kind": "command", "command": "brew install ffmpeg-full"}
+    else:  # a plain build that already has everything needs no advice
+        assert check["fix"]["kind"] == "none"

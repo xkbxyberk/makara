@@ -168,7 +168,7 @@ test('screenshots: download panel and queue in light, dark and narrow', async ({
   const panel = page.locator('section.panel', { hasText: 'Kaydedileceği yer' });
   const shoot = async (name: string) => {
     await panel.evaluate((el) => el.scrollIntoView({ block: 'start' }));
-    await page.screenshot({ path: `${SHOTS}/${name}.png` });
+    await page.screenshot({ animations: 'disabled', path: `${SHOTS}/${name}.png` });
   };
   await shoot('download-light');
   await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'));
@@ -182,11 +182,11 @@ test('screenshots: download panel and queue in light, dark and narrow', async ({
   await waitDone(request, id);
   await page.getByRole('navigation').getByRole('button', { name: /^İndirmeler/ }).click();
   await expect(page.getByTestId('job').first()).toBeVisible();
-  await page.screenshot({ path: `${SHOTS}/queue-light.png` });
+  await page.screenshot({ animations: 'disabled', path: `${SHOTS}/queue-light.png` });
   await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'));
-  await page.screenshot({ path: `${SHOTS}/queue-dark.png` });
+  await page.screenshot({ animations: 'disabled', path: `${SHOTS}/queue-dark.png` });
   await page.setViewportSize({ width: 420, height: 900 });
-  await page.screenshot({ path: `${SHOTS}/queue-narrow.png` });
+  await page.screenshot({ animations: 'disabled', path: `${SHOTS}/queue-narrow.png` });
 });
 
 test('⌘↵ downloads from Inspect only, once per press', async ({ page }) => {

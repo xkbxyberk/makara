@@ -3,6 +3,7 @@ import './theme.css';
 import { tr } from './i18n/tr';
 import { Icon, type SymbolName } from './components/Icon';
 import { ToolbarSlot } from './components/Toolbar';
+import { installSegmentThumbs, withViewTransition } from './components/motion';
 import { InspectRoute } from './routes/InspectRoute';
 import { DoctorRoute } from './routes/DoctorRoute';
 import { QueueRoute } from './routes/QueueRoute';
@@ -36,16 +37,26 @@ if (new URLSearchParams(window.location.search).get('shell') === 'native') {
   document.documentElement.classList.add('native');
 }
 
+function applyTheme(theme: Theme) {
+  const root = document.documentElement;
+  if (theme === 'system') root.removeAttribute('data-theme');
+  else root.setAttribute('data-theme', theme);
+}
+
 function useTheme() {
-  const [theme, setTheme] = useState<Theme>(
+  const [theme, setThemeState] = useState<Theme>(
     () => (localStorage.getItem('vd-theme') as Theme | null) ?? 'system',
   );
   useEffect(() => {
-    const root = document.documentElement;
-    if (theme === 'system') root.removeAttribute('data-theme');
-    else root.setAttribute('data-theme', theme);
+    applyTheme(theme);
     localStorage.setItem('vd-theme', theme);
   }, [theme]);
+  // The colours change inside the view transition's callback, so the window cross-fades
+  // between the old and the new appearance instead of snapping.
+  const setTheme = useCallback((next: Theme) => {
+    withViewTransition(() => applyTheme(next));
+    setThemeState(next);
+  }, []);
   return { theme, setTheme };
 }
 
@@ -62,6 +73,8 @@ export function App() {
   const [inspectRequest, setInspectRequest] = useState<{ url: string; n: number } | null>(null);
   const [studioRequest, setStudioRequest] = useState<{ itemId: string; n: number } | null>(null);
   const notifications = useRef(true);
+
+  useEffect(() => installSegmentThumbs(document.body), []);
 
   // Like a Mac window, shrinking below the split-view width collapses the sidebar and widening
   // brings it back; in between the toggle decides.

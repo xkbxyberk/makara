@@ -539,6 +539,24 @@
           "text": "Desktop window opens with vibrancy and no errors",
           "pass": true,
           "proof": "manual: scripts/desktop.py with isolated VD_DATA_DIR, log clean apart from a pywebview WebKit deprecation notice"
+        },
+        {
+          "id": "UI.6",
+          "text": "Help tags are never clipped by a panel and stay inside the window, flipping above near the bottom edge",
+          "pass": true,
+          "proof": "e2e 'a help tag is never clipped by its panel, even at the bottom edge of a narrow window'"
+        },
+        {
+          "id": "UI.7",
+          "text": "The app prefers Homebrew's ffmpeg-full when installed and never mixes ffmpeg/ffprobe from two builds; the doctor points at it when the plain build lacks libass/libwebp",
+          "pass": true,
+          "proof": "tests/test_api.py::test_ffmpeg_full_is_preferred_when_installed; ::test_doctor_points_at_ffmpeg_full_when_the_plain_build_lacks_libass; e2e doctor spec; RUN_LIVE_TESTS=1 pytest -m live"
+        },
+        {
+          "id": "UI.8",
+          "text": "Transitions animate (segment thumb, screens, sidebar, sheets, inspector, theme) and stop under Reduce motion",
+          "pass": true,
+          "proof": "manual frame capture: thumb at 278px of 297px after 90 ms; theme.css prefers-reduced-motion block"
         }
       ]
     }

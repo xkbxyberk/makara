@@ -79,9 +79,9 @@ test('screenshots: settings in light, dark and narrow', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('vd-theme', 'light'));
   await openSettings(page);
   await expect(page.getByTestId('template-preview')).toContainText('Örnek video başlığı');
-  await page.screenshot({ path: `${SHOTS}/settings-light.png` });
+  await page.screenshot({ animations: 'disabled', path: `${SHOTS}/settings-light.png` });
   await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'));
-  await page.screenshot({ path: `${SHOTS}/settings-dark.png` });
+  await page.screenshot({ animations: 'disabled', path: `${SHOTS}/settings-dark.png` });
   await page.setViewportSize({ width: 420, height: 900 });
-  await page.screenshot({ path: `${SHOTS}/settings-narrow.png` });
+  await page.screenshot({ animations: 'disabled', path: `${SHOTS}/settings-narrow.png` });
 });

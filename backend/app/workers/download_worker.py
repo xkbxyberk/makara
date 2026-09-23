@@ -31,7 +31,7 @@ from typing import Any, TextIO
 
 from app import errors, paths
 from app.doctor import listing_has
-from app.ffmpeg import mux
+from app.ffmpeg import binaries, mux
 from app.ffmpeg.probe import probe
 from app.workers.inspect_worker import Collector
 from app.ytdlp import naming, params
@@ -110,7 +110,7 @@ def _pp_hook(d: dict[str, Any]) -> None:
 
 def _aac_encoder() -> str:
     """AudioToolbox's AAC is better than FFmpeg's native one; use it when this build has it."""
-    ffmpeg = shutil.which("ffmpeg") or "ffmpeg"
+    ffmpeg = binaries.ffmpeg()
     listing = subprocess.run(
         [ffmpeg, "-hide_banner", "-encoders"], capture_output=True, text=True, check=False
     ).stdout
@@ -155,7 +155,7 @@ def _fetch(ydl: Any, req: dict[str, Any]) -> dict[str, Any]:
 
 
 def _base_params(work: Path, log: Collector) -> dict[str, Any]:
-    ffmpeg = shutil.which("ffmpeg")
+    ffmpeg = binaries.find("ffmpeg")
     options = {
         **params.base_params(ffmpeg_location=ffmpeg),
         "logger": log,
@@ -277,7 +277,7 @@ def _metadata(info: dict[str, Any]) -> dict[str, str]:
 
 def _ffmpeg_quiet(*args: str) -> bool:
     argv = [
-        shutil.which("ffmpeg") or "ffmpeg",
+        binaries.ffmpeg(),
         "-hide_banner",
         "-nostdin",
         "-loglevel",
@@ -524,7 +524,7 @@ def _library_thumbnail(path: Path, duration: float | None, job_id: str) -> str |
     # cover-art packet -- and FFmpeg then exits 0 without writing anything.
     seek = ["-ss", f"{min(duration * 0.1, 30):.2f}"] if duration else []
     argv = [
-        shutil.which("ffmpeg") or "ffmpeg",
+        binaries.ffmpeg(),
         "-hide_banner",
         "-loglevel",
         "error",

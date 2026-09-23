@@ -56,9 +56,11 @@ Local-only media workstation on yt-dlp + FFmpeg. macOS arm64, single user (Berk)
 6. **Sizes have three tiers** (`filesize`, `filesize_approx`, `tbr * duration`). For HLS/DASH
    formats `tbr` is often the *peak* bitrate, so those estimates read high — the model flags
    them with `filesize_unreliable` and the UI must keep saying so.
-7. **This FFmpeg build has no libass and no libwebp.** Burning subtitles into the picture and
-   animated WebP output are therefore impossible. The doctor detects this at runtime; never
-   ship a feature that assumes them.
+7. **Two FFmpeg builds.** Homebrew's plain `ffmpeg` (on PATH) has no libass, libwebp or zimg;
+   the keg-only `ffmpeg-full` (`/opt/homebrew/opt/ffmpeg-full/bin`, installed 2026-09-23 with
+   Berk's approval) has them. `app/ffmpeg/binaries.py` prefers ffmpeg-full and never mixes
+   ffmpeg/ffprobe from two builds; always get binaries from there, never `shutil.which`. The
+   doctor detects capabilities at runtime; a feature that needs libass/libwebp must check them.
 8. **Lossless vs frame-accurate cuts** (for M4): stream-copy cuts land on keyframes and will
    drift by up to a GOP; frame-accurate cuts require re-encoding. The UI must offer both and
    explain the trade-off, never silently pick one.
@@ -107,6 +109,16 @@ Local-only media workstation on yt-dlp + FFmpeg. macOS arm64, single user (Berk)
 23. The desktop window is `transparent=True, vibrancy=True` and loads `/?shell=native`; that CSS
     (`html.native`) only turns the sidebar see-through when the theme follows the system, since
     the material follows the system appearance, not ours.
+
+24. **Motion** lives in `theme.css` (the "motion" block) plus `components/motion.ts`, which
+    slides every `.segmented` thumb by observing the DOM and cross-fades theme changes with view
+    transitions. Everything stops under "Reduce motion". Screenshots pass
+    `animations: 'disabled'`; hover a term only after the page has settled (the download plan
+    grows the panel and shifts the page).
+25. Help tags (`<Term>`) render into `document.body` with fixed positioning, so panels with
+    `overflow: hidden` cannot clip them.
+26. The e2e server runs on port 8788 (`VD_PORT`), so the suite can run while the real app is open
+    on 8787.
 
 ## Rules
 

@@ -137,7 +137,7 @@ p { margin: 0; }
 .sf-red { color: var(--red); }
 
 /* ---- window: sidebar + content ---- */
-.shell { display: grid; grid-template-columns: 220px 1fr; height: 100%; }
+.shell { display: grid; grid-template-columns: 220px 1fr; height: 100%; transition: grid-template-columns 0.28s var(--ease-out); }
 .shell.sidebar-hidden { grid-template-columns: 0 1fr; }
 .sidebar {
   background: var(--sidebar-bg);
@@ -151,7 +151,8 @@ p { margin: 0; }
   overflow: hidden;
   min-width: 0;
 }
-.shell.sidebar-hidden .sidebar { visibility: hidden; padding: 0; border: none; }
+.shell .sidebar { transition: opacity 0.2s var(--ease-out), visibility 0s; }
+.shell.sidebar-hidden .sidebar { visibility: hidden; opacity: 0; padding-left: 0; padding-right: 0; border: none; transition: opacity 0.16s var(--ease-out), visibility 0s linear 0.28s; }
 /* Desktop window with vibrancy (NSVisualEffectView behind the web view): let it show through,
    but only when the theme follows the system -- the material follows the system appearance. */
 html.native:not([data-theme]) body,
@@ -311,6 +312,23 @@ select.input, .select { width: auto; max-width: 340px; appearance: auto; padding
   white-space: nowrap;
 }
 .segment.active { background: var(--button-bg); box-shadow: var(--shadow-control); font-weight: 500; }
+/* motion.ts measures the active segment; the container then draws one thumb that slides. */
+.segmented { position: relative; isolation: isolate; }
+.segmented[data-thumb]::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  top: 2px;
+  bottom: 2px;
+  left: 0;
+  width: var(--thumb-w);
+  transform: translateX(var(--thumb-x));
+  background: var(--button-bg);
+  box-shadow: var(--shadow-control);
+  border-radius: 5px;
+}
+.segmented.thumb-ready::before { transition: transform 0.24s var(--ease-spring), width 0.24s var(--ease-spring); }
+.segmented[data-thumb] .segment.active { background: none; box-shadow: none; }
 .segment:disabled { color: var(--label-3); }
 .segmented.icons .segment { padding: 0 8px; }
 
@@ -413,11 +431,13 @@ table.grid td.num, table.grid th.num { text-align: right; }
 /* ---- help tags (macOS tooltips) ---- */
 .term { border-bottom: 1px dotted var(--label-3); cursor: help; position: relative; }
 .term-bubble {
-  position: absolute;
-  z-index: 30;
+  position: fixed;
+  z-index: 100;
   left: 0;
-  top: calc(100% + 6px);
-  width: 260px;
+  top: 0;
+  visibility: hidden; /* measured first, then placed */
+  width: max-content;
+  max-width: min(280px, calc(100vw - 16px));
   padding: 6px 9px;
   border-radius: 6px;
   background: var(--tooltip-bg);
@@ -428,7 +448,12 @@ table.grid td.num, table.grid th.num { text-align: right; }
   line-height: 1.4;
   white-space: normal;
   text-align: left;
+  pointer-events: none;
 }
+.term-bubble.shown { visibility: visible; animation: tip-in 0.14s ease-out; }
+.term-bubble.shown.above { animation-name: tip-in-above; }
+@keyframes tip-in { from { opacity: 0; transform: translateY(-3px); } }
+@keyframes tip-in-above { from { opacity: 0; transform: translateY(3px); } }
 
 /* ---- progress ---- */
 .progress { height: 5px; border-radius: 3px; background: var(--fill-1); overflow: hidden; }
@@ -603,8 +628,48 @@ button.lang-head:hover { background: var(--fill-3); }
 }
 .clipboard-banner code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 
+
+/* ---- motion: short, quiet, and only where something changed ---- */
+:root {
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-spring: cubic-bezier(0.3, 1.25, 0.4, 1);
+}
+.btn, .btn-icon, .nav-item, .segment, .input, .select, .lib-card-button, .linklike {
+  transition: background-color 0.14s var(--ease-out), box-shadow 0.18s var(--ease-out), color 0.14s var(--ease-out), opacity 0.14s var(--ease-out);
+}
+.btn:active:not(:disabled), .btn-icon:active:not(:disabled) { transform: scale(0.97); }
+.btn, .btn-icon { transition-property: background-color, box-shadow, color, opacity, transform; }
+.lib-thumb { transition: box-shadow 0.2s var(--ease-out), transform 0.2s var(--ease-out); }
+.lib-card-button:active .lib-thumb { transform: scale(0.985); }
+
+/* A screen appears (also when a kept-alive screen is un-hidden: display none restarts it). */
+.content > * { animation: route-in 0.22s var(--ease-out); }
+@keyframes route-in { from { opacity: 0; transform: translateY(6px); } }
+
+/* Things that open where you are looking */
+.inspector { animation: slide-in-right 0.24s var(--ease-out); }
+@keyframes slide-in-right { from { opacity: 0; transform: translateX(10px); } }
+.picker, .notice, .job, .description.open, .lang-group > :not(:first-child) { animation: fade-down 0.2s var(--ease-out); }
+.clipboard-banner { animation: fade-down 0.24s var(--ease-out); }
+@keyframes fade-down { from { opacity: 0; transform: translateY(-4px); } }
+
+/* Sheets drop from the top of the window, as on macOS */
+dialog.confirm[open] { animation: sheet-in 0.26s var(--ease-out); }
+dialog.confirm[open]::backdrop { animation: backdrop-in 0.26s var(--ease-out); }
+@keyframes sheet-in { from { opacity: 0; transform: translateY(-16px) scale(0.98); } }
+@keyframes backdrop-in { from { opacity: 0; } }
+
+/* Theme changes: the window cross-fades (view transitions, where supported) */
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: 0.3s; animation-timing-function: var(--ease-out); }
+
 @media (prefers-reduced-motion: reduce) {
-  .spinner { animation-duration: 3s; }
+  *, *::before, *::after, ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
+  }
+  .spinner { animation-duration: 3s !important; animation-iteration-count: infinite !important; }
   .progress-fill { transition: none; }
   .progress.indeterminate .progress-fill { animation: none; width: 100%; opacity: 0.4; }
 }
@@ -620,7 +685,10 @@ button.lang-head:hover { background: var(--fill-3); }
     visibility: visible;
     background: var(--sidebar-bg);
     box-shadow: var(--shadow-window);
+    opacity: 1;
+    animation: sidebar-in 0.24s var(--ease-out);
   }
+  @keyframes sidebar-in { from { transform: translateX(-100%); } }
   .content { padding: var(--s3); }
   .toolbar { padding: var(--s2) var(--s3); }
   .toolbar-actions { flex-wrap: wrap; }

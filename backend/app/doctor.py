@@ -6,10 +6,10 @@ Every check returns a stable id and status; the frontend turns those into Turkis
 from __future__ import annotations
 
 import importlib.metadata
-import shutil
 import subprocess
 from typing import Any
 
+from app.ffmpeg import binaries
 from app.system import installed_ytdlp
 from app.ytdlp.params import find_js_runtimes
 
@@ -102,8 +102,8 @@ def _js_runtime_check() -> dict[str, Any]:
 
 
 def _ffmpeg_check() -> dict[str, Any]:
-    ffmpeg = shutil.which("ffmpeg")
-    ffprobe = shutil.which("ffprobe")
+    ffmpeg = binaries.find("ffmpeg")
+    ffprobe = binaries.find("ffprobe")
     if not ffmpeg or not ffprobe:
         return {
             "id": "ffmpeg",
@@ -129,7 +129,12 @@ def _ffmpeg_check() -> dict[str, Any]:
             "capabilities": capabilities,
             "missing_optional": missing_optional,
         },
-        "fix": {"kind": "none", "command": ""},
+        # Homebrew's `ffmpeg-full` has what the plain formula lacks and installs beside it.
+        "fix": (
+            {"kind": "command", "command": f"brew install {binaries.FULL_FORMULA}"}
+            if missing_optional and not binaries.is_full(ffmpeg)
+            else {"kind": "none", "command": ""}
+        ),
     }
 
 
