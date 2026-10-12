@@ -559,6 +559,66 @@
           "proof": "manual frame capture: thumb at 278px of 297px after 90 ms; theme.css prefers-reduced-motion block"
         }
       ]
+    },
+    "N0": {
+      "title": "Native spike: signing, extension persistence, native messaging, XCUITest",
+      "status": "planned",
+      "criteria": [
+        {
+          "id": "N0.1",
+          "text": "Xcode project (app + Safari extension) builds and signs from xcodebuild",
+          "pass": false,
+          "proof": ""
+        },
+        {
+          "id": "N0.2",
+          "text": "Development-signed extension stays enabled after Safari restarts, without 'Allow unsigned extensions'",
+          "pass": false,
+          "proof": ""
+        },
+        {
+          "id": "N0.3",
+          "text": "sendNativeMessage -> sandboxed handler -> 127.0.0.1 backend round trip",
+          "pass": false,
+          "proof": ""
+        },
+        {
+          "id": "N0.4",
+          "text": "XCUITest launches and drives the app from the command line",
+          "pass": false,
+          "proof": ""
+        }
+      ]
+    },
+    "N1": {
+      "title": "Profiles and one-click download (backend)",
+      "status": "planned",
+      "criteria": [
+        {
+          "id": "N1.1",
+          "text": "Built-in and user profiles; each maps to a concrete selection for any inspected video",
+          "pass": false,
+          "proof": ""
+        },
+        {
+          "id": "N1.2",
+          "text": "POST /api/quick queues a job from a URL and a profile, reporting what it chose",
+          "pass": false,
+          "proof": ""
+        },
+        {
+          "id": "N1.3",
+          "text": "GET /api/supports answers offline; the generic extractor alone does not count",
+          "pass": false,
+          "proof": ""
+        },
+        {
+          "id": "N1.4",
+          "text": "Profiles editable in Settings and selectable in the download panel",
+          "pass": false,
+          "proof": ""
+        }
+      ]
     }
   }
 }

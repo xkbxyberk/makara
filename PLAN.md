@@ -83,8 +83,83 @@ Proof: `./scripts/check.sh` (now also fails if the e2e server logged an exceptio
 Proof: `./scripts/check.sh`; `frontend/e2e/studio.spec.cts` trims a local file losslessly and
 checks the duration with ffprobe.
 
+## Native macOS app + Safari extension (N0–N8, before M5)
+
+Berk's decision (2026-10-12): path B — a real `VideoDownloader.app` whose screens move to
+SwiftUI one by one, over the same Python backend and HTTP API; a Safari extension that detects
+downloadable media and downloads it with **one click using a chosen profile** (never
+automatically). Berk is in the Apple Developer Program. App Store distribution is impossible
+(guideline 5.2.3) and not wanted; the app is built and signed on this Mac.
+
+Ground rules for the whole track:
+- The backend stays the single source of truth: yt-dlp, FFmpeg, naming, library, queue. Swift
+  never runs yt-dlp or FFmpeg itself and never builds an output path.
+- The app is usable at every step: screens not yet ported are shown by the existing web UI in an
+  embedded web view (`?embedded=1` hides its own sidebar/toolbar), so the migration never
+  breaks a working feature.
+- Swift code lives in a local Swift package (`macos/VideoDownloaderKit`: API client, models, view
+  models, views) so `swift test` runs from the command line; the Xcode project only holds the
+  app and the extension targets. No new system-wide tools (no XcodeGen/Tuist): the project
+  skeleton comes from Apple's own `safari-web-extension-packager`.
+- Contract tests: pytest writes sample API responses to `tests/fixtures/api/*.json`; Swift
+  tests decode every one of them. A backend change that breaks the app fails the gate.
+- UI tests: XCUITest drives the app against the backend in fixture mode (port 8788), with
+  light/dark/narrow screenshots like the web suite. `scripts/check.sh` gains `swift test` and
+  `xcodebuild test`.
+- Strings: the SwiftUI screens get their Turkish text from one String Catalog
+  (`Localizable.xcstrings`), the native counterpart of `tr.ts`; error codes are rendered there.
+
+### N0 — Spike: prove the risky parts first
+- [ ] Xcode project skeleton (app + Safari web extension) generated with Apple's packager,
+      signed with Berk's team, building from `xcodebuild` without opening Xcode
+- [ ] A development-signed extension stays enabled after Safari is quit and reopened, without
+      "Allow unsigned extensions"
+- [ ] Extension → `sendNativeMessage` → sandboxed handler → `127.0.0.1:8787` round trip works
+      (`com.apple.security.network.client` only, no temporary exceptions)
+- [ ] XCUITest can launch and drive the app from the command line
+Stop and report if any of these fails; the plan changes with it.
+
+### N1 — Profiles and one-click download (backend)
+- [ ] Profiles: built-in ones plus Berk's own, each = output mode + quality cap + codec
+      preference + audio format + audio language rule + subtitle rule (pulls the profile half
+      of M7 forward; cookies stay in M7)
+- [ ] `POST /api/quick` `{url, profile}`: inspect, apply the profile to the default selection,
+      queue the job; reports what it chose and any compatibility warning
+- [ ] `GET /api/supports?url=`: offline check against yt-dlp's extractors (no network), so the
+      extension can light up its icon instantly; the generic extractor alone does not count
+- [ ] Profiles are editable in the web UI's Settings and selectable in the download panel
+
+### N2 — App shell in SwiftUI
+- [ ] `NavigationSplitView` window with the sidebar and toolbar of today's design, a real
+      Settings window (⌘,), menu commands and keyboard shortcuts
+- [ ] Starts the backend as a child process (from this project checkout), waits for health,
+      stops it on quit; shows a clear state when the backend cannot start
+- [ ] SSE event client; system notifications via UserNotifications; `videodownloader://` URL
+      scheme; a URL dropped on the Dock icon or window is inspected
+- [ ] Every screen still reachable (embedded web view); `pywebview` launcher retired
+
+### N3 — Safari extension
+- [ ] Toolbar icon lights up on pages yt-dlp supports, and on pages with a `<video>`/`<audio>`
+      or a streaming manifest; nothing is sent anywhere until Berk clicks
+- [ ] Popup: title, duration, best quality and size estimate from the inspect, a profile
+      picker (video and audio profiles, last choice remembered per site), one "İndir" button,
+      "Uygulamada incele" for the full track picker; DRM pages say so and offer nothing
+- [ ] Right-click a link → "VideoDownloader ile indir" with a profile submenu; keyboard shortcut
+- [ ] Job progress visible in the popup; the app's queue shows the same job
+
+### N4 — İndirmeler (queue) and Sistem (doctor) in SwiftUI
+### N5 — İncele + download panel + track picker in SwiftUI
+### N6 — Kütüphane in SwiftUI (grid/list, inspector, Quick Look, Trash with confirmation)
+### N7 — Stüdyo and Ayarlar in SwiftUI
+Each: feature parity with the web screen (same backend calls, same states: empty, loading,
+error), its XCUITest scenarios and screenshots, then the embedded web view for it is removed.
+
+### N8 — Wrap-up
+- [ ] Decide with Berk whether the web UI stays reachable in a browser or is removed
+- [ ] App installed in `~/Applications`, signed with Developer ID; docs and CLAUDE.md updated
+
 ## M5 — Sections and SponsorBlock · M6 — Playlists and channels
-## M7 — Presets and browser cookies · M8 — Transcode and target size
+## M7 — Browser cookies (profiles moved to N1) · M8 — Transcode and target size
 
 Then P2: subscriptions, live recording, local Whisper transcription (ask before any model
 download). Burn-in stays impossible until an FFmpeg build with libass is installed.
