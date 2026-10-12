@@ -8,7 +8,11 @@ import {
   type AudioLanguageGroup,
   type Extras,
   type Mode,
+  type AudioOffer,
   type Notice as PlanNotice,
+  type OfferStep,
+  type QuickRule,
+  type VideoOffer,
   type Plan,
   type Selection,
   type SubtitleTrack,
@@ -19,6 +23,7 @@ import {
 import { formatBitrate, formatBytes, languageName, sizePrefix } from '../lib/format';
 import { Badge, CopyButton, ErrorState, Notice, Panel, Term } from './ui';
 import { Icon } from './Icon';
+import { saveRule } from '../lib/quickRule';
 
 const MODES: Mode[] = ['mkv', 'compat_mp4', 'separate', 'audio'];
 const CODECS: AudioCodec[] = ['mp3', 'm4a', 'opus', 'flac', 'wav'];
@@ -49,21 +54,53 @@ function trackLabel(track: AudioFormat): string {
   return `${track.format_id} · ${parts.filter((p) => p && p !== '–').join(' · ')}`;
 }
 
+type Start = { mode: Mode; tracks: TrackSelection; audioCodec: AudioCodec } | null;
+
+/** The quick choice the server preselected for a remembered rule, as the panel's first state. */
+function startFrom(model: VideoModel, remembered: boolean): Start {
+  const pre = model.offers?.preselected;
+  if (!remembered || !pre) return null;
+  const video = model.offers.video.find((r) => r.id === pre.offer_id);
+  if (video && pre.output) {
+    const { video_format_id, audio_format_ids, subtitle_keys } = video.outputs[pre.output].selection;
+    return { mode: pre.output, tracks: { video_format_id, audio_format_ids, subtitle_keys }, audioCodec: 'mp3' };
+  }
+  const audio = model.offers.audio.find((r) => r.id === pre.offer_id);
+  if (audio) {
+    return {
+      mode: 'audio',
+      tracks: { video_format_id: null, audio_format_ids: audio.selection.audio_format_ids, subtitle_keys: [] },
+      audioCodec: audio.format,
+    };
+  }
+  return null;
+}
+
+function ruleFor(row: VideoOffer | AudioOffer, mode: Mode): QuickRule {
+  return row.kind === 'video' ? { ...row.rule, output: mode === 'compat_mp4' ? 'compat_mp4' : 'mkv' } : row.rule;
+}
+
 export function DownloadPanel({
   model,
+  remembered,
   active,
   onQueued,
   onReinspect,
 }: {
   model: VideoModel;
+  /** The inspect was asked with a remembered quick choice; start from what it preselected. */
+  remembered: boolean;
   /** Whether the Inspect screen is the one on show; ⌘↵ only works there. */
   active: boolean;
   onQueued: () => void;
   onReinspect: () => void;
 }) {
-  const [mode, setMode] = useState<Mode>('mkv');
-  const [tracks, setTracks] = useState<Record<Mode, TrackSelection>>(model.defaults);
-  const [audioCodec, setAudioCodec] = useState<AudioCodec>('mp3');
+  const [start] = useState<Start>(() => startFrom(model, remembered));
+  const [mode, setMode] = useState<Mode>(start?.mode ?? 'mkv');
+  const [tracks, setTracks] = useState<Record<Mode, TrackSelection>>(() =>
+    start ? { ...model.defaults, [start.mode]: start.tracks } : model.defaults,
+  );
+  const [audioCodec, setAudioCodec] = useState<AudioCodec>(start?.audioCodec ?? 'mp3');
   const [audioQuality, setAudioQuality] = useState('192');
   const [extras, setExtras] = useState<Extras>(DEFAULT_EXTRAS);
   const [template, setTemplate] = useState<string | null>(null);
@@ -76,7 +113,14 @@ export function DownloadPanel({
   const [failure, setFailure] = useState<ApiError | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [queued, setQueued] = useState(false);
-  const touchedMode = useRef(false);
+  // A remembered choice already decided the mode; the settings' default must not override it.
+  const touchedMode = useRef(start !== null);
+  // Only a quick choice Berk actually made (or the remembered one he kept) becomes the rule for
+  // the next video. Downloading the untouched default must not: on a site whose video happens
+  // to top out at 240p, that would quietly cap every later video at 240p.
+  const [chosenId, setChosenId] = useState<string | null>(() =>
+    start ? (model.offers.preselected?.offer_id ?? null) : null,
+  );
   const planTicket = useRef(0);
 
   // The user's preferred mode, unless they already picked one on this screen.
@@ -132,18 +176,40 @@ export function DownloadPanel({
   const update = (patch: Partial<TrackSelection>) =>
     setTracks((all) => ({ ...all, [mode]: { ...all[mode], ...patch } }));
 
+  const quickRows: (VideoOffer | AudioOffer)[] =
+    mode === 'audio' ? (model.offers?.audio ?? []) : mode === 'separate' ? [] : (model.offers?.video ?? []);
+  const activeRow = quickRows.find((row) =>
+    row.kind === 'video'
+      ? (mode === 'mkv' || mode === 'compat_mp4') && row.outputs[mode].video_format_id === current.video_format_id
+      : row.format === audioCodec && current.audio_format_ids[0] === row.format_id,
+  );
+  const applyRow = (row: VideoOffer | AudioOffer) => {
+    if (row.kind === 'video') {
+      if (mode !== 'mkv' && mode !== 'compat_mp4') return;
+      const { video_format_id, audio_format_ids } = row.outputs[mode].selection;
+      update({ video_format_id, audio_format_ids }); // subtitles stay as chosen
+    } else {
+      update({ audio_format_ids: row.selection.audio_format_ids });
+      setAudioCodec(row.format);
+      if (row.selection.audio_quality) setAudioQuality(row.selection.audio_quality);
+    }
+    setChosenId(row.id);
+  };
+
   const submit = useCallback(async () => {
     if (submitting || !plan || !planIsCurrent || plan.blocking) return;
     setSubmitting(true);
     try {
       await api.createJob(selection);
       setQueued(true);
+      // Remember the shape of this choice for the next video from the same site.
+      if (activeRow && activeRow.id === chosenId) saveRule(model.source_url, ruleFor(activeRow, mode));
     } catch (error) {
       setFailure(error instanceof ApiError ? error : new ApiError('UNKNOWN', String(error)));
     } finally {
       setSubmitting(false);
     }
-  }, [plan, planIsCurrent, selection, submitting]);
+  }, [plan, planIsCurrent, selection, submitting, activeRow, chosenId, mode, model.source_url]);
 
   // ⌘↵ downloads -- only while Inspect is on screen, and once per press (not per key repeat).
   useEffect(() => {
@@ -212,6 +278,16 @@ export function DownloadPanel({
           ))}
         </div>
         <p className="muted mode-help">{tr.download.modeHelp[mode]}</p>
+
+        {quickRows.length > 0 && (
+          <QuickChoices
+            rows={quickRows}
+            mode={mode}
+            activeId={activeRow?.id ?? null}
+            rememberedId={remembered ? (model.offers.preselected?.offer_id ?? null) : null}
+            onChoose={applyRow}
+          />
+        )}
 
         <div className="summary" data-testid="download-summary">
           {mode !== 'audio' && <span className="chip">{videoLabel(video)}</span>}
@@ -336,6 +412,103 @@ export function DownloadPanel({
         )}
       </div>
     </Panel>
+  );
+}
+
+function stepBadge(step: OfferStep) {
+  if (step === 'copy') return <Badge tone="ok">{tr.download.quick.copy}</Badge>;
+  if (step === 'probe') return <Badge>{tr.download.quick.probe}</Badge>;
+  return <Badge tone="warn">{tr.download.quick.transcode}</Badge>;
+}
+
+/** Same honesty as the panel's own size: estimated, manifest-based and partial sizes explain
+ * themselves, and "unknown until converted" is only said of a conversion. */
+function OfferSize({ size, step }: { size: VideoOffer['outputs']['mkv']['size']; step: OfferStep }) {
+  if (!size.bytes) {
+    return <span className="dim">{step === 'transcode' ? tr.download.quick.sizeLater : tr.download.unknownSize}</span>;
+  }
+  const text = `${sizePrefix(size.kind)}${formatBytes(size.bytes)}`;
+  if (size.kind === 'exact') return <span>{text}</span>;
+  const body =
+    size.kind === 'partial'
+      ? tr.terms.partialSize.body
+      : size.unreliable
+        ? tr.terms.manifest.body
+        : tr.terms.approxSize.body;
+  return <Term label={text} body={body} />;
+}
+
+/** One click per quality the video really has; the full picker stays below for everything else. */
+function QuickChoices({
+  rows,
+  mode,
+  activeId,
+  rememberedId,
+  onChoose,
+}: {
+  rows: (VideoOffer | AudioOffer)[];
+  mode: Mode;
+  activeId: string | null;
+  rememberedId: string | null;
+  onChoose: (row: VideoOffer | AudioOffer) => void;
+}) {
+  return (
+    <div className="quick" role="radiogroup" aria-label={tr.download.quick.title} data-testid="quick-choices">
+      <div className="quick-head">
+        <span className="quick-title">{tr.download.quick.title}</span>
+        <span className="dim">{mode === 'audio' ? tr.download.quick.audioHelp : tr.download.quick.videoHelp}</span>
+      </div>
+      {rows.map((row) => {
+        const checked = row.id === activeId;
+        let label: string;
+        let detail: string;
+        let size: VideoOffer['outputs']['mkv']['size'];
+        let step: OfferStep;
+        let badges: React.ReactNode;
+        if (row.kind === 'video') {
+          const out = row.outputs[mode === 'compat_mp4' ? 'compat_mp4' : 'mkv'];
+          label = row.height ? `${row.height}p` : tr.download.quick.unknownHeight;
+          detail = [out.vcodec_label, row.fps ? tr.download.quick.fps(row.fps) : null].filter(Boolean).join(' · ');
+          size = out.size;
+          step = out.step;
+          badges = (
+            <>
+              {row.dynamic_range && row.dynamic_range !== 'SDR' && <Badge tone="accent">{row.dynamic_range}</Badge>}
+              {row.ai_upscaled && <Badge tone="warn">{tr.terms.aiUpscaled.label}</Badge>}
+              {out.step !== 'copy' && stepBadge(out.step)}
+            </>
+          );
+        } else {
+          label = tr.download.quick.formats[row.format];
+          detail = [row.source_codec_label, row.abr ? formatBitrate(row.abr) : null].filter(Boolean).join(' · ');
+          size = row.size;
+          step = row.step;
+          badges = stepBadge(row.step);
+        }
+        return (
+          <button
+            key={row.id}
+            type="button"
+            role="radio"
+            aria-checked={checked}
+            className={checked ? 'quick-row checked' : 'quick-row'}
+            data-offer-id={row.id}
+            onClick={() => onChoose(row)}
+          >
+            <Icon name={checked ? 'checkmark.circle.fill' : 'circle'} tone={checked ? 'accent' : 'secondary'} size={16} />
+            <span className="quick-label">{label}</span>
+            <span className="quick-detail dim">{detail}</span>
+            <span className="quick-badges">
+              {badges}
+              {row.id === rememberedId && <span className="dim">{tr.download.quick.remembered}</span>}
+            </span>
+            <span className="quick-size">
+              <OfferSize size={size} step={step} />
+            </span>
+          </button>
+        );
+      })}
+    </div>
   );
 }
 

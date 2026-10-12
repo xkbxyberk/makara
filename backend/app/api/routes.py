@@ -1,19 +1,46 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from app import doctor, errors, inspect_service, paths
-from app.ytdlp import command
+from app import settings as settings_store
+from app.ytdlp import command, offers, support
 
 router = APIRouter(prefix="/api")
 
 
+class Rule(BaseModel):
+    """The remembered shape of a quick choice ("1080p, MKV"), carried over to the next video."""
+
+    kind: Literal["video", "audio"]
+    height: int | None = Field(default=None, ge=1, le=10_000)
+    fps: float | None = Field(default=None, ge=0, le=1000)
+    hdr: bool = False
+    output: Literal["mkv", "compat_mp4"] | None = None
+    format: Literal["opus", "m4a", "mp3"] | None = None
+
+
 class InspectRequest(BaseModel):
     url: str = Field(min_length=1, max_length=2048)
+    # The Safari popup reuses a recent inspection of the same page; the İncele button does not.
+    reuse: bool = False
+    rule: Rule | None = None
+
+
+def with_preselection(model: dict[str, Any], rule: Rule | None) -> dict[str, Any]:
+    """The model plus which quick choice to preselect. The cached model is never mutated."""
+    if "offers" not in model:
+        return model
+    preselected = offers.match(
+        model["offers"],
+        rule.model_dump() if rule else None,
+        settings_store.load().default_mode,
+    )
+    return {**model, "offers": {**model["offers"], "preselected": preselected}}
 
 
 class CommandRequest(BaseModel):
@@ -42,9 +69,16 @@ def get_health() -> dict[str, Any]:
 @router.post("/inspect")
 async def post_inspect(request: InspectRequest) -> Any:
     try:
-        return await inspect_service.inspect(request.url)
+        model = await inspect_service.inspect(request.url, reuse=request.reuse)
     except errors.AppError as exc:
         return _error_response(exc)
+    return with_preselection(model, request.rule)
+
+
+@router.get("/supports")
+def get_supports(url: str = Query(min_length=1, max_length=2048)) -> dict[str, Any]:
+    """Offline: does yt-dlp have an extractor for this page (the generic one aside)?"""
+    return support.supports(url)
 
 
 @router.post("/command")

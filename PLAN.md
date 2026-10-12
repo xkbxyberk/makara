@@ -119,21 +119,21 @@ Ground rules for the whole track:
 - [x] XCUITest can launch and drive the app from the command line
 Stop and report if any of these fails; the plan changes with it.
 
-### N1 — Quick choices from the source (backend)
+### N1 — Quick choices from the source (backend) ✅ done
 No fixed profiles: the choices come from the inspected video itself.
-- [ ] The inspect model gains `offers`: one video choice per distinct resolution/fps/HDR the
+- [x] The inspect model gains `offers`: one video choice per distinct resolution/fps/HDR the
       source has, each resolved for both outputs (MKV: best variant, no re-encode; MP4: a
       compatible variant, or the re-encode it needs, said up front), plus the audio-only
       choices (each native audio stream as-is, and conversion to M4A/MP3), each with its
       size estimate (exact vs estimated, as everywhere) and a ready-to-queue selection.
       Built on `selection.py`, so the download panel and the extension can never disagree
-- [ ] Language and subtitle defaults stay as today (original audio, manual TR/EN), changeable
+- [x] Language and subtitle defaults stay as today (original audio, manual TR/EN), changeable
       from the languages that video really has
-- [ ] A "last choice" rule (e.g. 1080p · MKV · original audio) maps to the closest offer of any
+- [x] A "last choice" rule (e.g. 1080p · MKV · original audio) maps to the closest offer of any
       other video, so the remembered choice is pre-selected and one click still suffices
-- [ ] `GET /api/supports?url=`: offline check against yt-dlp's extractors (no network), so the
+- [x] `GET /api/supports?url=`: offline check against yt-dlp's extractors (no network), so the
       extension can light up its icon instantly; the generic extractor alone does not count
-- [ ] The web download panel shows the same quick choices above the full track picker
+- [x] The web download panel shows the same quick choices above the full track picker
 
 ### N2 — App shell in SwiftUI
 - [ ] `NavigationSplitView` window with the sidebar and toolbar of today's design, a real

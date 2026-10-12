@@ -536,6 +536,30 @@ button.lang-head:hover { background: var(--fill-3); }
 .download { display: flex; flex-direction: column; gap: var(--s3); }
 .mode-help { color: var(--label-2); font-size: var(--callout); }
 .summary { display: flex; flex-wrap: wrap; gap: var(--s1); }
+/* Quick choices: a compact source list, one row per quality the video offers. */
+.quick { display: flex; flex-direction: column; border: 0.5px solid var(--separator); border-radius: 8px; overflow: hidden; }
+.quick-head { display: flex; align-items: baseline; gap: var(--s2); flex-wrap: wrap; padding: 6px var(--s3); background: var(--fill-3); border-bottom: 0.5px solid var(--separator); font-size: var(--subheadline); }
+.quick-title { font-weight: 600; }
+.quick-row {
+  display: grid;
+  grid-template-columns: 18px 84px minmax(0, 1fr) auto minmax(92px, max-content);
+  align-items: center;
+  gap: var(--s2);
+  padding: 5px var(--s3);
+  border: none;
+  border-bottom: 0.5px solid var(--separator);
+  background: none;
+  color: var(--label);
+  text-align: left;
+  font: inherit;
+}
+.quick-row:last-child { border-bottom: none; }
+.quick-row:hover { background: var(--fill-3); }
+.quick-row.checked { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.quick-label { font-weight: 600; font-variant-numeric: tabular-nums; }
+.quick-detail { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--callout); }
+.quick-badges { display: flex; gap: var(--s1); align-items: center; font-size: var(--subheadline); white-space: nowrap; }
+.quick-size { text-align: right; font-variant-numeric: tabular-nums; font-size: var(--callout); white-space: nowrap; }
 .summary .chip { font-size: var(--callout); padding: 2px 9px; color: var(--label); }
 .facts { display: grid; grid-template-columns: max-content 1fr; gap: 4px var(--s4); margin: 0; font-size: var(--callout); }
 .facts dt { color: var(--label-2); }
@@ -701,6 +725,8 @@ dialog.confirm[open]::backdrop { animation: backdrop-in 0.26s var(--ease-out); }
   .segment { padding: 0 var(--s2); }
   .job-head { flex-wrap: wrap; }
   .lib-layout.with-inspector { grid-template-columns: 1fr; }
+  .quick-row { grid-template-columns: 18px 64px minmax(0, 1fr) auto; }
+  .quick-badges { display: none; }
   .lib-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); padding: var(--s3); }
   .clipboard-banner { flex-wrap: wrap; padding: var(--s2) var(--s3); }
 }

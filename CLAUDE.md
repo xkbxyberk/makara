@@ -145,6 +145,12 @@ Local-only media workstation on yt-dlp + FFmpeg. macOS arm64, single user (Berk)
 31. `tests/fixtures/media/` once lost `video_h264.mp4` while `info.json` survived (1 Oct, outside
     any session). The `test_media` fixture now rebuilds the set when any file the info dict
     points at is missing.
+32. **Quick choices are computed once, in `app/ytdlp/offers.py`.** The web panel, `/api/quick`
+    and (from N3) the Safari popup all read its rows and their ready-made `selection`; never
+    re-derive a choice in JavaScript or Swift. A rule is saved only when a quick row was
+    clicked: saving the untouched default once capped a whole site at 240p (review finding).
+    The audio-only defaults (`selection.DEFAULT_AUDIO_CODEC/QUALITY`) mirror the panel's
+    initial `mp3`/`192`; change both together.
 
 ## Rules
 

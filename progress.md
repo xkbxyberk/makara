@@ -216,4 +216,15 @@ XCUITest target launches the app, screenshots it, closes it and sees it quit; it
 `scripts/check.sh`. Along the way the gate failed on 16 backend tests: a test clip had been
 deleted from `tests/fixtures/media/` on 1 Oct; the fixture now rebuilds missing media.
 
-**Next:** N1 — quick choices from the source (backend).
+**N1 — quick choices from the source.** `offers.py` builds one row per size/frame rate/range,
+each resolved for MKV and MP4 with its size and copy-or-re-encode promise, plus audio-only rows;
+`/api/quick` queues from a row or from a URL + remembered rule; `/api/supports` answers offline
+in ~1 ms (generic extractor excluded, `kind` video/playlist/unknown); the web panel shows the
+same rows and remembers the last clicked choice per site. The adversarial review found 11
+real issues, all fixed with regression tests; the worst: an untouched default download saved
+a rule, so a 240p-only video capped every later video from that site at 240p. Others: the
+no-rule default ignored the MP4 output, an unknown audio language silently became the
+original, audio re-encodes were not badged, a muxed file's size was shown as an audio size,
+the MP4 360p row preferred a muxed baseline file over video + original audio.
+
+**Next:** N2 — the SwiftUI app shell.

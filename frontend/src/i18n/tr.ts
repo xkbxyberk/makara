@@ -90,6 +90,19 @@ export const tr = {
     openQueue: 'İndirmeleri aç',
     reinspect: 'Yeniden incele',
     showPicker: 'Parçaları seç',
+    quick: {
+      title: 'Hızlı seçim',
+      videoHelp: 'Videonun sunduğu her kalite, orijinal sesle. Dil ve altyazı için: Parçaları seç.',
+      audioHelp: 'Yalnızca ses: kaynağın kendi akışları ve dönüştürmeler.',
+      copy: 'Yeniden kodlamasız',
+      transcode: 'Dönüştürülür',
+      probe: 'Gerekirse dönüştürülür',
+      sizeLater: 'boyut dönüştürünce belli olur',
+      unknownHeight: 'Kalite bilinmiyor',
+      fps: (fps: number) => `${fps} fps`,
+      remembered: 'bu sitede son seçimin',
+      formats: { m4a: 'M4A (AAC)', opus: 'Opus', mp3: 'MP3' } as Record<'m4a' | 'opus' | 'mp3', string>,
+    },
     hidePicker: 'Parçaları gizle',
     planning: 'Hesaplanıyor…',
     willSaveTo: 'Kaydedileceği yer',
@@ -709,6 +722,26 @@ export const tr = {
     INSPECT_EXPIRED: {
       title: 'İnceleme bilgisi eskidi',
       body: 'Uygulama yeniden başladığı için bu videonun bilgileri kayboldu. Yeniden inceleyip tekrar dene.',
+    },
+    OFFER_UNKNOWN: {
+      title: 'Bu seçenek bu videoda yok',
+      body: 'Seçtiğin kalite bu videoda bulunmuyor. Sayfayı yeniden inceleyip listeden seç.',
+    },
+    QUICK_NEEDS_SOURCE: {
+      title: 'İndirilecek bir şey belirtilmedi',
+      body: 'Tek tıkla indirmek için bir video bağlantısı ya da incelenmiş bir video gerekir.',
+    },
+    QUICK_NEEDS_VIDEO: {
+      title: 'Bu bir oynatma listesi',
+      body: 'Tek tıkla indirme tek bir video içindir. Listeyi uygulamada incele ve videoyu oradan seç.',
+    },
+    AUDIO_LANGUAGE_UNKNOWN: {
+      title: 'Bu dilde ses yok',
+      body: 'Seçtiğin dilde bir ses parçası bu videoda bulunmuyor. Videonun sunduğu dillerden birini seç.',
+    },
+    QUICK_NOTHING_OFFERED: {
+      title: 'Bu videoda indirilebilir bir kalite yok',
+      body: 'Site hiçbir indirilebilir görüntü ya da ses sunmuyor; içerik DRM korumalı olabilir.',
     },
     SELECTION_INVALID: {
       title: 'Seçim eksik',

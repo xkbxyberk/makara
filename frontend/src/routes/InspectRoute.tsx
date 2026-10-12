@@ -23,12 +23,13 @@ import {
 import { Badge, CopyButton, EmptyState, ErrorState, LoadingState, Notice, Panel, Term } from '../components/ui';
 import { DownloadPanel } from '../components/DownloadPanel';
 import { Icon } from '../components/Icon';
+import { loadRule } from '../lib/quickRule';
 
 type State =
   | { phase: 'empty' }
   | { phase: 'loading'; url: string }
   | { phase: 'error'; code: string; raw: string; url: string }
-  | { phase: 'ready'; model: InspectModel };
+  | { phase: 'ready'; model: InspectModel; remembered: boolean };
 
 function SizeCell({ format }: { format: { filesize: number | null; filesize_kind: string; filesize_unreliable: boolean } }) {
   const text = `${sizePrefix(format.filesize_kind)}${formatBytes(format.filesize)}`;
@@ -436,8 +437,9 @@ export function InspectRoute({
     setUrl(trimmed);
     setState({ phase: 'loading', url: trimmed });
     try {
-      const model = await api.inspect(trimmed);
-      if (ticket === latest.current) setState({ phase: 'ready', model });
+      const rule = loadRule(trimmed);
+      const model = await api.inspect(trimmed, rule);
+      if (ticket === latest.current) setState({ phase: 'ready', model, remembered: rule !== null });
     } catch (error) {
       if (ticket !== latest.current) return;
       const failure = error instanceof ApiError ? error : new ApiError('UNKNOWN', String(error));
@@ -524,6 +526,7 @@ export function InspectRoute({
       {state.phase === 'ready' && state.model.kind === 'video' && (
         <ResultView
           model={state.model}
+          remembered={state.remembered}
           active={active}
           onQueued={onOpenQueue}
           onReinspect={() => void run(state.model.source_url)}
@@ -538,11 +541,13 @@ function ResultView({
   active,
   onQueued,
   onReinspect,
+  remembered,
 }: {
   model: VideoModel;
   active: boolean;
   onQueued: () => void;
   onReinspect: () => void;
+  remembered: boolean;
 }) {
   const warnings = tr.warnings as Record<string, string>;
   const peak = Math.max(1, ...model.heatmap.map((p) => p.value ?? 0));
@@ -557,6 +562,7 @@ function ResultView({
       <DownloadPanel
         key={model.inspect_id}
         model={model}
+        remembered={remembered}
         active={active}
         onQueued={onQueued}
         onReinspect={onReinspect}

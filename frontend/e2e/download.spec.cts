@@ -77,6 +77,65 @@ test('two clicks: paste, then Download, gives the archive default', async ({ pag
   expect(of(streams, 'subtitle').map((s) => s.tags?.language)).toEqual(['tur', 'eng']);
 });
 
+test('quick choices: the video\'s own qualities, one click each, remembered per site', async ({
+  page,
+  request,
+}) => {
+  await inspectLocal(page);
+  const quick = page.getByTestId('quick-choices');
+  const row = (id: string) => quick.locator(`[data-offer-id="${id}"]`);
+  // One row per quality the clip really has; today's default is the one checked.
+  await expect(quick.getByRole('radio')).toHaveCount(2);
+  await expect(row('v360-25-sdr')).toHaveAttribute('aria-checked', 'true');
+  await expect(row('v360-25-sdr')).toContainText('VP9');
+
+  // MP4 resolves each size for itself and says when one must be re-encoded.
+  await page.getByRole('radio', { name: 'Uyumlu MP4' }).click();
+  await expect(row('v360-25-sdr')).toContainText('Dönüştürülür');
+  await expect(row('v240-25-sdr')).toContainText('H.264');
+  await expect(row('v240-25-sdr')).not.toContainText('Dönüştürülür');
+
+  // Audio only: the source's own streams are copied, MP3 is a conversion with no guessed size.
+  await page.getByRole('radio', { name: 'Sadece ses' }).click();
+  await expect(row('a-mp3')).toHaveAttribute('aria-checked', 'true'); // today's audio default
+  await expect(row('a-m4a')).toContainText('Yeniden kodlamasız');
+  await expect(row('a-opus')).toContainText('Yeniden kodlamasız');
+  await expect(row('a-mp3')).toContainText('Dönüştürülür');
+  await expect(row('a-mp3')).toContainText('boyut dönüştürünce belli olur');
+  await page.screenshot({ animations: 'disabled', path: `${SHOTS}/quick-audio-light.png` });
+
+  // One click sets the selection, and the plan follows.
+  await page.getByRole('radio', { name: 'Arşiv MKV' }).click();
+  await row('v240-25-sdr').click();
+  await expect(row('v240-25-sdr')).toHaveAttribute('aria-checked', 'true');
+  const summary = page.getByTestId('download-summary');
+  await expect(summary).toContainText('240p · H.264');
+  await expect(summary).toContainText('İngilizce (Orijinal)'); // still the original audio
+  await page.screenshot({ animations: 'disabled', path: `${SHOTS}/quick-video-light.png` });
+  const id = await startDownload(page);
+  const [file] = await waitDone(request, id);
+  expect(of(ffprobe(file!), 'video').map((s) => s.codec_name)).toEqual(['h264']);
+
+  // The next video from this site opens on the same choice.
+  await page.getByRole('main').getByRole('button', { name: 'İncele', exact: true }).click();
+  await expect(row('v240-25-sdr')).toHaveAttribute('aria-checked', 'true');
+  await expect(row('v240-25-sdr')).toContainText('bu sitede son seçimin');
+  await expect(summary).toContainText('240p · H.264');
+  await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'));
+  await page.screenshot({ animations: 'disabled', path: `${SHOTS}/quick-video-dark.png` });
+});
+
+test('downloading the untouched default remembers nothing', async ({ page, request }) => {
+  await inspectLocal(page);
+  const id = await startDownload(page);
+  await waitDone(request, id);
+  await page.getByRole('main').getByRole('button', { name: 'İncele', exact: true }).click();
+  const quick = page.getByTestId('quick-choices');
+  await expect(quick.locator('[data-offer-id="v360-25-sdr"]')).toHaveAttribute('aria-checked', 'true');
+  await expect(quick).not.toContainText('bu sitede son seçimin');
+  expect(await page.evaluate(() => localStorage.getItem('vd-quick-rules'))).toBeNull();
+});
+
 test('track picker: 1 video + 2 audio languages + 2 subtitles into one tagged MKV', async ({
   page,
   request,

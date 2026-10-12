@@ -131,3 +131,84 @@ def test_doctor_points_at_ffmpeg_full_when_the_plain_build_lacks_libass(
         assert check["fix"] == {"kind": "command", "command": "brew install ffmpeg-full"}
     else:  # a plain build that already has everything needs no advice
         assert check["fix"]["kind"] == "none"
+
+
+def test_inspect_lists_the_videos_own_quick_choices_and_preselects_one(
+    client: TestClient,
+) -> None:
+    url = "https://www.youtube.com/watch?v=0e3GPea1Tyg"
+    model = client.post("/api/inspect", json={"url": url}).json()
+    offers = model["offers"]
+    assert offers["video"][0]["id"] == "v1080-24-sdr"
+    assert {r["format"] for r in offers["audio"]} == {"m4a", "opus", "mp3"}
+    assert offers["preselected"] == {"offer_id": "v1080-24-sdr", "output": "mkv"}
+
+    rule = {"kind": "video", "height": 720, "output": "compat_mp4"}
+    model = client.post("/api/inspect", json={"url": url, "rule": rule}).json()
+    assert model["offers"]["preselected"] == {"offer_id": "v720-24-sdr", "output": "compat_mp4"}
+
+
+def test_a_reused_inspection_is_the_same_one_and_a_fresh_one_is_not(client: TestClient) -> None:
+    url = "https://www.youtube.com/watch?v=iG9CE55wbtY"
+    first = client.post("/api/inspect", json={"url": url}).json()
+    again = client.post("/api/inspect", json={"url": url, "reuse": True}).json()
+    fresh = client.post("/api/inspect", json={"url": url}).json()
+    assert again["inspect_id"] == first["inspect_id"]
+    assert fresh["inspect_id"] != first["inspect_id"]
+    # Preselection is computed per request; the cached model itself is never changed.
+    rule = {"kind": "audio", "format": "opus"}
+    with_rule = client.post("/api/inspect", json={"url": url, "reuse": True, "rule": rule}).json()
+    assert with_rule["offers"]["preselected"]["offer_id"] == "a-opus"
+    plain = client.post("/api/inspect", json={"url": url, "reuse": True}).json()
+    assert plain["offers"]["preselected"]["offer_id"] != "a-opus"
+
+
+def test_a_bad_rule_is_refused(client: TestClient) -> None:
+    response = client.post(
+        "/api/inspect",
+        json={"url": "https://www.youtube.com/watch?v=0e3GPea1Tyg", "rule": {"kind": "both"}},
+    )
+    assert response.status_code == 422
+
+
+@pytest.mark.parametrize(
+    ("url", "supported", "extractor"),
+    [
+        ("https://www.youtube.com/watch?v=xnP7qKxwzjg", True, "Youtube"),
+        ("https://www.youtube.com/@MrBeast", True, "YoutubeTab"),
+        ("https://vimeo.com/76979871", True, "Vimeo"),
+        # The generic extractor matches anything, so it does not count.
+        ("https://www.apple.com/", False, None),
+        ("https://www.netflix.com/watch/80100172", False, None),
+        ("file:///etc/passwd", False, None),
+        ("javascript:alert(1)", False, None),
+        # In fixture mode the recorded test URLs count, so the e2e suite can use them.
+        ("https://example.test/local-media", True, "fixture"),
+    ],
+)
+def test_supports_answers_offline_from_extractor_patterns(
+    client: TestClient, url: str, supported: bool, extractor: str | None
+) -> None:
+    response = client.get("/api/supports", params={"url": url}).json()
+    assert response["supported"] is supported
+    assert response["extractor"] == extractor
+
+
+@pytest.mark.parametrize(
+    ("url", "kind"),
+    [
+        ("https://www.youtube.com/watch?v=xnP7qKxwzjg", "video"),
+        ("https://vimeo.com/76979871", "video"),
+        # A channel or user page cannot be one click: the extension opens it in the app.
+        ("https://soundcloud.com/someartist", "playlist"),
+        # yt-dlp cannot say from the URL alone (a channel tab may be a list or a live video).
+        ("https://www.youtube.com/@MrBeast", "unknown"),
+        ("HTTPS://WWW.YOUTUBE.COM/watch?v=xnP7qKxwzjg", "video"),
+    ],
+)
+def test_supports_says_whether_a_page_is_one_video_or_a_list(
+    client: TestClient, url: str, kind: str
+) -> None:
+    response = client.get("/api/supports", params={"url": url}).json()
+    assert response["supported"] is True
+    assert response["kind"] == kind

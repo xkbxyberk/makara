@@ -9,12 +9,13 @@ import os
 import re
 import signal
 import sys
+import time
 import uuid
 from collections import OrderedDict
 from typing import Any
 
 from app import errors, paths
-from app.ytdlp import command, naming, normalize, selection
+from app.ytdlp import command, naming, normalize, offers, selection
 from app.ytdlp.params import find_js_runtimes
 
 INSPECT_TIMEOUT_SECONDS = 180
@@ -53,6 +54,10 @@ def _fixture_for(url: str) -> dict[str, Any]:
         if path.exists():
             return json.loads(path.read_text())
     raise errors.AppError(code="UNSUPPORTED_SITE", raw=f"no fixture matches {url}")
+
+
+def has_fixture(url: str) -> bool:
+    return any(re.search(pattern, url, re.IGNORECASE) for pattern, _ in _FIXTURE_MATCHERS)
 
 
 async def _run_worker(url: str) -> tuple[dict[str, Any], list[str]]:
@@ -104,6 +109,11 @@ async def _run_worker(url: str) -> tuple[dict[str, Any], list[str]]:
 # Only the fields a filename template can use are kept, not the (potentially huge) raw dict.
 _CACHE: OrderedDict[str, dict[str, Any]] = OrderedDict()
 CACHE_SIZE = 8
+# The Safari popup inspects the page it opens on; reopening it on the same page should be
+# instant. Downloads re-extract anyway (see CLAUDE.md gotcha 20), so a cached model is only
+# ever used to show and choose, never to fetch.
+_BY_URL: dict[str, tuple[str, float]] = {}
+REUSE_SECONDS = 15 * 60
 
 
 def remember(model: dict[str, Any], info: dict[str, Any]) -> str:
@@ -118,21 +128,38 @@ def remember(model: dict[str, Any], info: dict[str, Any]) -> str:
         # In fixture mode the worker is handed the info dict instead of re-extracting.
         "fixture_info": info if paths.fixture_mode() else None,
     }
+    _BY_URL[model["source_url"]] = (inspect_id, time.monotonic())
     while len(_CACHE) > CACHE_SIZE:
         _CACHE.popitem(last=False)
+    for url in [u for u, (i, _) in _BY_URL.items() if i not in _CACHE]:
+        del _BY_URL[url]
     return inspect_id
+
+
+def _reusable(url: str) -> dict[str, Any] | None:
+    inspect_id, at = _BY_URL.get(url, ("", 0.0))
+    entry = _CACHE.get(inspect_id)
+    if entry is None or time.monotonic() - at > REUSE_SECONDS:
+        return None
+    _CACHE.move_to_end(inspect_id)
+    model: dict[str, Any] = entry["model"]
+    return model
 
 
 def recall(inspect_id: str) -> dict[str, Any]:
     entry = _CACHE.get(inspect_id)
+    if entry is not None:
+        _CACHE.move_to_end(inspect_id)  # in use: the last to be evicted
     if entry is None:
         # The server restarted or the entry aged out: the UI re-inspects and tries again.
         raise errors.AppError(code="INSPECT_EXPIRED", raw=inspect_id)
     return entry
 
 
-async def inspect(url: str) -> dict[str, Any]:
+async def inspect(url: str, *, reuse: bool = False) -> dict[str, Any]:
     url = validate_url(url)
+    if reuse and (cached := _reusable(url)) is not None:
+        return cached
     warnings: list[str] = []
     if paths.fixture_mode():
         info = _fixture_for(url)
@@ -150,5 +177,6 @@ async def inspect(url: str) -> dict[str, Any]:
     }
     if model["kind"] == "video":
         model["defaults"] = selection.all_defaults(model)
+        model["offers"] = offers.build(model)
         model["inspect_id"] = remember(model, info)
     return model

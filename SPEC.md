@@ -132,7 +132,9 @@ On start-up, jobs left `running` are requeued; each job's scratch directory
 |---|---|---|
 | `GET` | `/api/health` | liveness + whether fixture mode is on |
 | `GET` | `/api/doctor` | dependency report (see below) |
-| `POST` | `/api/inspect` | `{url, flat?}` → the normalised model, or `{error: {code, raw}}` |
+| `POST` | `/api/inspect` | `{url, reuse?, rule?}` → the normalised model with `offers` (quick choices) and `offers.preselected`, or `{error: {code, raw}}`. `reuse` returns an inspection of the same URL from the last 15 minutes |
+| `GET` | `/api/supports?url=` | offline: does a yt-dlp extractor (other than the generic one) match this URL → `{supported, extractor, working}` |
+| `POST` | `/api/quick` | `{inspect_id, offer_id, output?}` or `{url, rule}`, plus optional `audio_language`, `subtitle_keys` → `{job, offer_id, output, rule, selection}` (400 `OFFER_UNKNOWN`, `QUICK_NEEDS_VIDEO`, `QUICK_NEEDS_SOURCE`, `QUICK_NOTHING_OFFERED`; 410 `INSPECT_EXPIRED`) |
 | `POST` | `/api/command` | selection → the equivalent `yt-dlp` argv, for display |
 | `POST` | `/api/plan` | selection → filename preview, size, compatibility notices, copy/transcode plan, command |
 | `GET` | `/api/jobs` | the queue |
@@ -166,8 +168,26 @@ Errors are `{"error": {"code", "raw", "detail"}}` with HTTP 400 for `INVALID_URL
 
 The doctor returns `{status, checks: [{id, status, values, fix}]}` for `yt_dlp`, `js_runtime`
 and `ffmpeg`. The ffmpeg check reports a capability matrix; `subtitles_filter` (libass) and
-`webp` (libwebp) are absent on this machine, which is why subtitle burn-in and animated WebP
-are not offered.
+`webp` (libwebp) are present only with Homebrew's `ffmpeg-full`, which this Mac now uses.
+
+### Quick choices (`offers`, N1)
+`offers.video` has one row per distinct height / frame rate / dynamic range the source has,
+largest first. Each row carries, for `mkv` and `compat_mp4` separately: the chosen variant
+(archive: the efficient codec, never re-encoded; MP4: a compatible variant, else the one that
+will be re-encoded, `video_step` says which), its size estimate (video + original audio, with
+the usual exact/estimated confidence) and a ready-to-queue `selection`. A row made only of
+YouTube's AI upscales says so (`ai_upscaled`) and is never matched by a rule when a real size
+exists. `outputs[o].recommended` marks today's two-click default in that output, and each
+output's `step` is the heaviest thing that happens to any track (copy < probe < transcode). `offers.audio` lists the source's own
+streams that copy into Opus or M4A (`step: copy`), then conversions to M4A/MP3 (`transcode`,
+or `probe` when the source codec is unknown); a conversion starts from the same track as the
+audio-only default and its size is never guessed. A *rule* (`{kind: video, height, fps, hdr,
+output}` or `{kind: audio, format}`) maps to the same size if present, else the nearest
+smaller real size, else the smallest larger one. The web panel remembers the last rule per
+site in browser storage, and only when a quick choice was actually clicked. An asked-for audio
+language the video lacks is refused (`AUDIO_LANGUAGE_UNKNOWN`), never swapped for the original.
+`/api/supports` also answers `kind`: `video`, `playlist` (a channel or user page: open it in
+the app) or `unknown`.
 
 ## 5. Screens
 

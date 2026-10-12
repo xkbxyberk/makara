@@ -521,3 +521,111 @@ def test_a_cancel_while_files_are_being_placed_is_ignored(app_env: Any) -> None:
     after = client.post(f"/api/jobs/{job['id']}/cancel").json()
     assert after["stage"] == "finalizing"
     assert job["id"] not in client.app.state.jobs.cancelling  # type: ignore[attr-defined]
+
+
+def test_a_quick_choice_downloads_exactly_what_its_row_promised(app_env: Any) -> None:
+    client = app_env()
+    model = inspect(client)
+    rows = {r["id"]: r for r in model["offers"]["video"]}
+    assert set(rows) == {"v360-25-sdr", "v240-25-sdr"}
+    response = client.post(
+        "/api/quick",
+        json={"inspect_id": model["inspect_id"], "offer_id": "v240-25-sdr", "output": "compat_mp4"},
+    )
+    assert response.status_code == 200, response.text
+    quick = response.json()
+    assert (
+        quick["selection"]["video_format_id"]
+        == rows["v240-25-sdr"]["outputs"]["compat_mp4"]["video_format_id"]
+    )
+    # The caller remembers this for the next video.
+    assert quick["rule"] == {
+        "kind": "video",
+        "height": 240,
+        "fps": 25,
+        "hdr": False,
+        "output": "compat_mp4",
+    }
+    done = wait_for(client, quick["job"]["id"], lambda j: j["status"] in ("done", "failed"))
+    assert done["status"] == "done", done
+    [output] = [Path(p) for p in done["output_files"]]
+    assert output.suffix == ".mp4"
+    streams = probe(output)["streams"]
+    video = next(s for s in streams if s["codec_type"] == "video")
+    assert (video["codec_name"], video["height"]) == ("h264", 240)
+    # Original audio and the manual TR/EN subtitles, as everywhere else.
+    assert [s["tags"]["language"] for s in streams if s["codec_type"] == "audio"] == ["eng"]
+    assert len([s for s in streams if s["codec_type"] == "subtitle"]) == 2
+
+
+def test_a_url_and_a_remembered_rule_are_enough_for_one_click(app_env: Any) -> None:
+    client = app_env()
+    response = client.post(
+        "/api/quick", json={"url": LOCAL_URL, "rule": {"kind": "audio", "format": "m4a"}}
+    )
+    assert response.status_code == 200, response.text
+    quick = response.json()
+    assert quick["offer_id"] == "a-m4a" and quick["output"] is None
+    assert quick["selection"]["mode"] == "audio" and quick["selection"]["audio_codec"] == "m4a"
+    done = wait_for(client, quick["job"]["id"], lambda j: j["status"] in ("done", "failed"))
+    assert done["status"] == "done", done
+    [output] = [Path(p) for p in done["output_files"]]
+    assert output.suffix == ".m4a"
+    [audio] = [s for s in probe(output)["streams"] if s["codec_type"] == "audio"]
+    assert audio["codec_name"] == "aac"  # copied, as the row said: no re-encode
+
+
+def test_quick_refuses_what_it_cannot_do(app_env: Any) -> None:
+    client = app_env()
+    model = inspect(client)
+    unknown = client.post(
+        "/api/quick", json={"inspect_id": model["inspect_id"], "offer_id": "v4320-60-hdr"}
+    )
+    assert (unknown.status_code, unknown.json()["error"]["code"]) == (400, "OFFER_UNKNOWN")
+    nothing = client.post("/api/quick", json={})
+    assert nothing.json()["error"]["code"] == "QUICK_NEEDS_SOURCE"
+    playlist = client.post("/api/quick", json={"url": "https://www.youtube.com/playlist?list=PL1"})
+    assert playlist.json()["error"]["code"] == "QUICK_NEEDS_VIDEO"
+    expired = client.post("/api/quick", json={"inspect_id": "gone", "offer_id": "v240-25-sdr"})
+    assert (expired.status_code, expired.json()["error"]["code"]) == (410, "INSPECT_EXPIRED")
+    assert client.get("/api/jobs").json() == []  # nothing was queued by any of these
+
+
+def test_quick_refuses_a_language_the_video_does_not_have(app_env: Any) -> None:
+    client = app_env()
+    model = inspect(client)
+    response = client.post(
+        "/api/quick",
+        json={"inspect_id": model["inspect_id"], "offer_id": "v240-25-sdr", "audio_language": "ja"},
+    )
+    assert (response.status_code, response.json()["error"]["code"]) == (
+        400,
+        "AUDIO_LANGUAGE_UNKNOWN",
+    )
+    german = client.post(
+        "/api/quick",
+        json={"inspect_id": model["inspect_id"], "offer_id": "v240-25-sdr", "audio_language": "de"},
+    ).json()
+    assert german["selection"]["audio_format_ids"] == ["a-de-m4a"]
+    assert [j["id"] for j in client.get("/api/jobs").json()] == [german["job"]["id"]]
+
+
+def test_quick_without_an_output_follows_the_default_mode(app_env: Any) -> None:
+    client = app_env()
+    settings = client.get("/api/settings").json()
+    saved = client.put("/api/settings", json={**settings, "default_mode": "compat_mp4"})
+    assert saved.status_code == 200, saved.text
+    model = inspect(client)
+    quick = client.post(
+        "/api/quick", json={"inspect_id": model["inspect_id"], "offer_id": "v360-25-sdr"}
+    ).json()
+    assert quick["selection"]["mode"] == "compat_mp4" and quick["output"] == "compat_mp4"
+
+
+def test_quick_reports_extraction_failures_like_inspect(app_env: Any) -> None:
+    client = app_env()
+    url = "https://unknown.example.com/watch"
+    inspected = client.post("/api/inspect", json={"url": url})
+    quick = client.post("/api/quick", json={"url": url, "rule": {"kind": "video"}})
+    assert quick.status_code == inspected.status_code
+    assert quick.json()["error"]["code"] == inspected.json()["error"]["code"]

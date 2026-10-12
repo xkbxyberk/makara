@@ -212,10 +212,75 @@ export interface UpdateResult {
   log: string;
 }
 
+/** The remembered shape of a quick choice ("1080p, MKV"), carried over to the next video. */
+export interface QuickRule {
+  kind: 'video' | 'audio';
+  height?: number | null;
+  fps?: number | null;
+  hdr?: boolean;
+  output?: 'mkv' | 'compat_mp4' | null;
+  format?: 'opus' | 'm4a' | 'mp3' | null;
+}
+
+export type OfferStep = 'copy' | 'transcode' | 'probe';
+export type OfferOutput = 'mkv' | 'compat_mp4';
+
+export interface OfferSelection extends TrackSelection {
+  mode: Mode;
+  audio_codec: AudioCodec | null;
+  audio_quality: string | null;
+}
+
+export interface VideoOffer {
+  id: string;
+  kind: 'video';
+  height: number | null;
+  fps: number | null;
+  dynamic_range: string | null;
+  ai_upscaled: boolean;
+  outputs: Record<
+    OfferOutput,
+    {
+      selection: OfferSelection;
+      video_format_id: string;
+      vcodec_label: string | null;
+      size: Plan['size'];
+      video_step: OfferStep;
+      audio_steps: OfferStep[];
+      /** The heaviest step of any track: what the row's badge says. */
+      step: OfferStep;
+      /** Today's two-click default in this output. */
+      recommended: boolean;
+      hdr_tonemap: boolean;
+    }
+  >;
+  rule: QuickRule;
+}
+
+export interface AudioOffer {
+  id: string;
+  kind: 'audio';
+  format: 'opus' | 'm4a' | 'mp3';
+  format_id: string;
+  source_codec_label: string | null;
+  abr: number | null;
+  step: OfferStep;
+  size: Plan['size'];
+  rule: QuickRule;
+  selection: OfferSelection;
+}
+
+export interface Offers {
+  video: VideoOffer[];
+  audio: AudioOffer[];
+  preselected: { offer_id: string; output: OfferOutput | null } | null;
+}
+
 export interface VideoModel {
   kind: 'video';
   inspect_id: string;
   defaults: Record<Mode, TrackSelection>;
+  offers: Offers;
   media: MediaMeta;
   video_formats: VideoFormat[];
   muxed_formats: VideoFormat[];
@@ -340,7 +405,8 @@ const post = (body: unknown): RequestInit => ({ method: 'POST', body: JSON.strin
 
 export const api = {
   doctor: () => request<DoctorReport>('/api/doctor'),
-  inspect: (url: string) => request<InspectModel>('/api/inspect', post({ url })),
+  inspect: (url: string, rule?: QuickRule | null) =>
+    request<InspectModel>('/api/inspect', post({ url, rule: rule ?? null })),
   plan: (selection: Selection) => request<Plan>('/api/plan', post(selection)),
   createJob: (selection: Selection) => request<Job>('/api/jobs', post(selection)),
   jobs: () => request<Job[]>('/api/jobs'),

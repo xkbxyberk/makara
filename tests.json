@@ -592,31 +592,31 @@
     },
     "N1": {
       "title": "Quick choices from the source (backend)",
-      "status": "planned",
+      "status": "done",
       "criteria": [
         {
           "id": "N1.1",
           "text": "Inspect model lists one video offer per distinct resolution/fps/HDR, resolved for MKV and MP4 (re-encode stated), plus audio-only offers, each with a size estimate and a queueable selection",
-          "pass": false,
-          "proof": ""
+          "pass": true,
+          "proof": "tests/test_offers.py (36 tests: rows per size/fps/HDR, both outputs, AI upscales, audio copies vs conversions, every row plans cleanly and as promised, row selection == resolved); test_api.py::test_inspect_lists_the_videos_own_quick_choices_and_preselects_one; test_jobs_api.py::test_a_quick_choice_downloads_exactly_what_its_row_promised (ffprobe)"
         },
         {
           "id": "N1.2",
           "text": "A remembered rule maps to the closest offer of another video",
-          "pass": false,
-          "proof": ""
+          "pass": true,
+          "proof": "tests/test_offers.py::test_a_remembered_rule_maps_to_the_closest_row (+ AI-upscale, unknown-height cases); test_jobs_api.py::test_a_url_and_a_remembered_rule_are_enough_for_one_click"
         },
         {
           "id": "N1.3",
           "text": "GET /api/supports answers offline; the generic extractor alone does not count",
-          "pass": false,
-          "proof": ""
+          "pass": true,
+          "proof": "tests/test_api.py::test_supports_answers_offline_from_extractor_patterns, ::test_supports_says_whether_a_page_is_one_video_or_a_list"
         },
         {
           "id": "N1.4",
           "text": "The web download panel shows the same quick choices",
-          "pass": false,
-          "proof": ""
+          "pass": true,
+          "proof": "e2e 'quick choices: the video's own qualities, one click each, remembered per site', 'downloading the untouched default remembers nothing'; screenshots quick-video-light/dark, quick-audio-light"
         }
       ]
     }

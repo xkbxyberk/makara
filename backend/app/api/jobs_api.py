@@ -14,10 +14,11 @@ from pydantic import BaseModel, Field
 
 from app import errors, inspect_service, notify
 from app import settings as settings_store
+from app.api.routes import Rule, _error_response
 from app.jobs import planning
 from app.jobs.manager import JobManager, public
 from app.settings import DEFAULT_TEMPLATE
-from app.ytdlp import naming
+from app.ytdlp import naming, offers
 
 router = APIRouter(prefix="/api")
 
@@ -43,6 +44,18 @@ class Selection(BaseModel):
     audio_quality: str | None = Field(default=None, pattern=r"^\d{1,3}$")
     filename_template: str | None = Field(default=None, max_length=500)
     extras: Extras = Field(default_factory=Extras)
+
+
+class QuickRequest(BaseModel):
+    """One click: a quick choice of an inspected video, or a URL plus a remembered rule."""
+
+    inspect_id: str | None = Field(default=None, min_length=1, max_length=64)
+    url: str | None = Field(default=None, min_length=1, max_length=2048)
+    offer_id: str | None = Field(default=None, min_length=1, max_length=64)
+    output: Literal["mkv", "compat_mp4"] | None = None
+    rule: Rule | None = None
+    audio_language: str | None = Field(default=None, max_length=64)
+    subtitle_keys: list[str] | None = Field(default=None, max_length=400)
 
 
 class SettingsBody(BaseModel):
@@ -99,6 +112,63 @@ async def post_job(selection: Selection, request: Request) -> Any:
     manager.publish({"type": "job", "job": public(job)})
     manager.wake()
     return public(job)
+
+
+@router.post("/quick")
+async def post_quick(body: QuickRequest, request: Request) -> Any:
+    """Queue a download from a quick choice. Answers with the job and what was chosen, so the
+    caller can remember the choice as a rule for the next video."""
+    manager = _manager(request)
+    settings = settings_store.load()
+    try:
+        if body.inspect_id:
+            entry = inspect_service.recall(body.inspect_id)
+        elif body.url:
+            try:
+                model = await inspect_service.inspect(body.url, reuse=True)
+            except errors.AppError as exc:
+                return _error_response(exc)  # extraction failures answer as /api/inspect does
+            if "inspect_id" not in model:
+                raise errors.AppError(code="QUICK_NEEDS_VIDEO", raw=body.url)
+            entry = inspect_service.recall(model["inspect_id"])
+        else:
+            raise errors.AppError(code="QUICK_NEEDS_SOURCE")
+        model = entry["model"]
+        choices = model.get("offers") or offers.build(model)
+        if body.offer_id:
+            offer_id, output = body.offer_id, body.output
+        else:
+            rule = body.rule.model_dump() if body.rule else None
+            if rule is not None and body.output:
+                rule["output"] = body.output  # an explicit output wins over the remembered one
+            picked = offers.match(choices, rule, settings.default_mode)
+            if picked is None:
+                raise errors.AppError(code="QUICK_NOTHING_OFFERED", raw=model["source_url"])
+            offer_id, output = picked["offer_id"], picked["output"] or body.output
+        rows = {r["id"]: r for r in [*choices["video"], *choices["audio"]]}
+        if offer_id not in rows:
+            raise errors.AppError(code="OFFER_UNKNOWN", raw=offer_id)
+        chosen = offers.resolve(
+            model,
+            offer_id,
+            output,
+            body.audio_language,
+            body.subtitle_keys,
+            default_mode=settings.default_mode,
+        )
+        selection = Selection(inspect_id=model["inspect_id"], **chosen).model_dump()
+        job = manager.store.insert(planning.build_job(entry, selection, settings))
+    except errors.AppError as exc:
+        return _error(exc, 410 if exc.code == "INSPECT_EXPIRED" else 400)
+    manager.publish({"type": "job", "job": public(job)})
+    manager.wake()
+    return {
+        "job": public(job),
+        "offer_id": offer_id,
+        "output": chosen["mode"] if chosen["mode"] != "audio" else None,
+        "rule": offers.rule_for(rows[offer_id], chosen["mode"]),
+        "selection": {k: v for k, v in selection.items() if k != "extras"},
+    }
 
 
 def _job_or_404(job: dict[str, Any] | None) -> Any:

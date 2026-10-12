@@ -9,6 +9,10 @@ from __future__ import annotations
 from typing import Any
 
 DEFAULT_SUBTITLE_LANGUAGES = ("tr", "en")
+# Audio only: the codec and quality the download panel starts with, and what a one-click
+# conversion uses -- one place, so the panel and the Safari extension cannot disagree.
+DEFAULT_AUDIO_CODEC = "mp3"
+DEFAULT_AUDIO_QUALITY = "192"
 
 # Higher is better. Archive prefers efficient codecs; compatibility prefers what Apple plays.
 _ARCHIVE_VIDEO = {"av01": 3, "vp09": 2, "vp9": 2, "hev1": 1, "hvc1": 1, "avc1": 1, "avc3": 1}
