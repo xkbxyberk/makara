@@ -562,31 +562,31 @@
     },
     "N0": {
       "title": "Native spike: signing, extension persistence, native messaging, XCUITest",
-      "status": "planned",
+      "status": "done",
       "criteria": [
         {
           "id": "N0.1",
           "text": "Xcode project (app + Safari extension) builds and signs from xcodebuild",
-          "pass": false,
-          "proof": ""
+          "pass": true,
+          "proof": "xcodebuild ... -allowProvisioningUpdates build (scripts/check.sh 'macOS app (build)'); codesign: Apple Development, team V88QY49A4T; extension entitlements = app-sandbox + network.client only; app not sandboxed"
         },
         {
           "id": "N0.2",
           "text": "Development-signed extension stays enabled after Safari restarts, without 'Allow unsigned extensions'",
-          "pass": false,
-          "proof": ""
+          "pass": true,
+          "proof": "Safari quit and reopened three times (osascript quit + open -a Safari); VideoDownloader.app --print-extension-state -> 'enabled: true' each time; 'Allow unsigned extensions' resets on quit and was never set"
         },
         {
           "id": "N0.3",
           "text": "sendNativeMessage -> sandboxed handler -> 127.0.0.1 backend round trip",
-          "pass": false,
-          "proof": ""
+          "pass": true,
+          "proof": "backend access log after a Safari restart: GET /api/health?from=safari-extension&stage=ping 200, then &stage=report-ok 200 (background.js -> sendNativeMessage -> handler -> 127.0.0.1:8787 -> back to JS -> handler)"
         },
         {
           "id": "N0.4",
           "text": "XCUITest launches and drives the app from the command line",
-          "pass": false,
-          "proof": ""
+          "pass": true,
+          "proof": "xcodebuild test (scripts/check.sh 'macOS app (UI tests)'): LaunchTests finds the window, saves a screenshot, closes it and sees the app quit"
         }
       ]
     },

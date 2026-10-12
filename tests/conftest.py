@@ -69,10 +69,24 @@ def test_media() -> Path:
         if line.startswith("MEDIA_VERSION")
     )
     info = MEDIA_DIR / "info.json"
-    current = json.loads(info.read_text()).get("_media_version") if info.exists() else None
-    if current != wanted:
+    data = json.loads(info.read_text()) if info.exists() else {}
+    # A clip can vanish while info.json survives (a cleanup tool, a stray rm): every file the
+    # info dict points at must exist, or the whole set is rebuilt.
+    missing = [name for name in _referenced_media(data) if not (MEDIA_DIR / name).is_file()]
+    if data.get("_media_version") != wanted or missing:
         subprocess.run([sys.executable, str(script)], check=True)
     return MEDIA_DIR
+
+
+def _referenced_media(node: Any) -> list[str]:
+    """Every `{base}/<file>` URL in the generated info dict."""
+    if isinstance(node, str):
+        return [node.removeprefix("{base}/")] if node.startswith("{base}/") else []
+    if isinstance(node, dict):
+        node = list(node.values())
+    if isinstance(node, list):
+        return [name for child in node for name in _referenced_media(child)]
+    return []
 
 
 @pytest.fixture(scope="session")

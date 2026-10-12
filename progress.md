@@ -204,4 +204,16 @@ also auto-removed two libraries nothing used, libnghttp3 and libngtcp2). The nex
 and the scan "restored" it into the old record. A real (rare) bug, fixed with a creation-time
 rule and two regression tests that fail without it; 100 stressed e2e runs clean.
 
-**Next:** M5 (sections/clips + SponsorBlock) — waiting for Berk's go-ahead.
+**Native track decided** (12 Oct): path B (SwiftUI screens over the same backend), Safari
+extension with one-click downloads from the video's own choices (no fixed profiles, never
+automatic). Plan N0–N8 in PLAN.md.
+
+**N0 — spike, all four risks retired.** Project skeleton from Apple's packager (app + Safari web
+extension), signed with Berk's team from `xcodebuild`. Safari kept the development-signed
+extension enabled across three quit/reopen cycles (it even enabled it on first launch).
+Round trip proven in the backend access log: `stage=ping` then `stage=report-ok`. A hand-added
+XCUITest target launches the app, screenshots it, closes it and sees it quit; it now runs in
+`scripts/check.sh`. Along the way the gate failed on 16 backend tests: a test clip had been
+deleted from `tests/fixtures/media/` on 1 Oct; the fixture now rebuilds missing media.
+
+**Next:** N1 — quick choices from the source (backend).

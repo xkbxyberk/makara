@@ -26,4 +26,11 @@ if grep -n "Traceback\|Exception in ASGI" test-results/e2e-server.log; then
 fi
 echo "no exceptions in test-results/e2e-server.log"
 
+# The native app: build and sign (app + Safari extension), then run its UI tests. The UI tests
+# launch the app, so a window appears briefly.
+XCODE=(xcodebuild -quiet -project macos/VideoDownloader/VideoDownloader.xcodeproj -scheme VideoDownloader
+       -derivedDataPath macos/build -allowProvisioningUpdates)
+step "macOS app (build)";  "${XCODE[@]}" build
+step "macOS app (UI tests)"; "${XCODE[@]}" test
+
 printf '\n\033[32m\033[1mALL CHECKS PASSED\033[0m\n'

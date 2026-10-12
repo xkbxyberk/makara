@@ -109,14 +109,14 @@ Ground rules for the whole track:
 - Strings: the SwiftUI screens get their Turkish text from one String Catalog
   (`Localizable.xcstrings`), the native counterpart of `tr.ts`; error codes are rendered there.
 
-### N0 — Spike: prove the risky parts first
-- [ ] Xcode project skeleton (app + Safari web extension) generated with Apple's packager,
+### N0 — Spike: prove the risky parts first ✅ done
+- [x] Xcode project skeleton (app + Safari web extension) generated with Apple's packager,
       signed with Berk's team, building from `xcodebuild` without opening Xcode
-- [ ] A development-signed extension stays enabled after Safari is quit and reopened, without
+- [x] A development-signed extension stays enabled after Safari is quit and reopened, without
       "Allow unsigned extensions"
-- [ ] Extension → `sendNativeMessage` → sandboxed handler → `127.0.0.1:8787` round trip works
+- [x] Extension → `sendNativeMessage` → sandboxed handler → `127.0.0.1:8787` round trip works
       (`com.apple.security.network.client` only, no temporary exceptions)
-- [ ] XCUITest can launch and drive the app from the command line
+- [x] XCUITest can launch and drive the app from the command line
 Stop and report if any of these fails; the plan changes with it.
 
 ### N1 — Quick choices from the source (backend)

@@ -1,0 +1,7 @@
+{
+  "extension_name": { "message": "VideoDownloader" },
+  "extension_description": { "message": "Sayfadaki videoyu VideoDownloader ile tek tıkla indir." },
+  "popup_checking": { "message": "Uygulamaya bağlanılıyor…" },
+  "popup_connected": { "message": "Uygulama hazır." },
+  "popup_unreachable": { "message": "Uygulama açık değil. VideoDownloader'ı başlat." }
+}

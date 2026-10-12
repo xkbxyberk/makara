@@ -13,3 +13,5 @@ data/
 tmp/
 tests/fixtures/media/
 *.tsbuildinfo
+macos/build/
+xcuserdata/

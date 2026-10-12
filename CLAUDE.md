@@ -15,6 +15,7 @@ Local-only media workstation on yt-dlp + FFmpeg. macOS arm64, single user (Berk)
 | Dev servers | `PYTHONPATH=backend uv run python -m app.main` + `cd frontend && npm run dev` |
 | Desktop app | `open VideoDownloader.command` |
 | Update yt-dlp | `uv lock --upgrade-package yt-dlp --upgrade-package yt-dlp-ejs && uv sync` (see gotcha 2) |
+| macOS app (build / UI tests) | `xcodebuild -project macos/VideoDownloader/VideoDownloader.xcodeproj -scheme VideoDownloader -derivedDataPath macos/build -allowProvisioningUpdates build` (or `test`) |
 | Re-record fixtures (network!) | `uv run python scripts/capture_fixtures.py [name ...]` |
 
 ## Architecture decisions
@@ -124,6 +125,26 @@ Local-only media workstation on yt-dlp + FFmpeg. macOS arm64, single user (Berk)
     `overflow: hidden` cannot clip them.
 27. The e2e server runs on port 8788 (`VD_PORT`), so the suite can run while the real app is open
     on 8787.
+
+28. **The macOS project** (`macos/VideoDownloader/`) was generated once by Apple's
+    `xcrun safari-web-extension-packager` and is maintained by hand. The web extension's files
+    live in `macos/extension/` and the project only references them. The UI-test target and the
+    shared scheme were added by hand (the test target uses a synchronized folder, so new test
+    files need no project edit). Team `V88QY49A4T`, automatic signing. The extension must stay
+    sandboxed with `network.client` only; the app is deliberately not sandboxed (it will run
+    Python, yt-dlp and FFmpeg).
+29. **Observing the extension.** This shell cannot read the unified log (`log show` returns
+    nothing), so `Logger` output is invisible here. Use the app's `--print-extension-state` flag
+    (only the containing app may ask Safari) and the backend's access log
+    (`uvicorn app.main:create_app --factory --log-level info`). Safari enabled the
+    development-signed extension on first launch of the app, with no checkbox, and kept it
+    across restarts.
+30. `scripts/check.sh` now builds the app and runs its UI tests, which open the app window for
+    a few seconds. Xcode attaches *any* crash report written during a UI test run to the
+    result (on this Mac, CleanMyMac's); read the process name before blaming the app.
+31. `tests/fixtures/media/` once lost `video_h264.mp4` while `info.json` survived (1 Oct, outside
+    any session). The `test_media` fixture now rebuilds the set when any file the info dict
+    points at is missing.
 
 ## Rules
 
