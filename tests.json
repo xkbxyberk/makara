@@ -591,18 +591,18 @@
       ]
     },
     "N1": {
-      "title": "Profiles and one-click download (backend)",
+      "title": "Quick choices from the source (backend)",
       "status": "planned",
       "criteria": [
         {
           "id": "N1.1",
-          "text": "Built-in and user profiles; each maps to a concrete selection for any inspected video",
+          "text": "Inspect model lists one video offer per distinct resolution/fps/HDR, resolved for MKV and MP4 (re-encode stated), plus audio-only offers, each with a size estimate and a queueable selection",
           "pass": false,
           "proof": ""
         },
         {
           "id": "N1.2",
-          "text": "POST /api/quick queues a job from a URL and a profile, reporting what it chose",
+          "text": "A remembered rule maps to the closest offer of another video",
           "pass": false,
           "proof": ""
         },
@@ -614,7 +614,7 @@
         },
         {
           "id": "N1.4",
-          "text": "Profiles editable in Settings and selectable in the download panel",
+          "text": "The web download panel shows the same quick choices",
           "pass": false,
           "proof": ""
         }

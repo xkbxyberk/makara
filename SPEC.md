@@ -13,8 +13,8 @@ Turkish is the only UI language shipped; every string lives in `frontend/src/i18
 |---|---|
 | Shell | pywebview desktop window + double-clickable `VideoDownloader.command`; also reachable in a browser at `http://127.0.0.1:8787` |
 | Shell (from N2) | A native `VideoDownloader.app` (SwiftUI) over the same backend; screens move from the web UI to SwiftUI one by one (N2–N7) |
-| Safari | A Safari web extension inside the app: detects downloadable media, downloads with one click using a chosen video or audio profile. Never downloads on its own |
-| Profiles | Built-in and user-made download profiles (mode, quality cap, codec, audio format, language and subtitle rules), used by the extension and the download panel |
+| Safari | A Safari web extension inside the app: detects downloadable media and downloads with one click from the qualities and audio streams that video actually offers. Never downloads on its own |
+| Quick choices | No fixed profiles. The inspect model lists the source's own video qualities (per output, MKV or MP4) and audio-only options with sizes; the last choice per site is remembered as a rule and pre-selected |
 | Distribution | Built and signed on this Mac with Berk's Apple Developer team; never the App Store (guideline 5.2.3) |
 | Default output | **Archive MKV** — no re-encoding, all selected tracks language-tagged |
 | Folder layout | `~/Movies/VideoDownloader/<site>/<channel>/<YYYY-MM-DD> - <title> [<id>].<ext>` |
