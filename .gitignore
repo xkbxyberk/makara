@@ -15,3 +15,5 @@ tests/fixtures/media/
 *.tsbuildinfo
 macos/build/
 xcuserdata/
+.build/
+.swiftpm/

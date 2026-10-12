@@ -76,6 +76,11 @@ class JobManager:
         self._loop_task = asyncio.create_task(self._loop())
         self._wake.set()
 
+    def announce_shutdown(self) -> None:
+        """Called from the signal handler: end every event stream so the server can stop."""
+        if self._event_loop is not None:
+            self._event_loop.call_soon_threadsafe(self._publish_now, {"type": "shutdown"})
+
     async def stop(self) -> None:
         self._publish_now({"type": "shutdown"})
         if self._loop_task:

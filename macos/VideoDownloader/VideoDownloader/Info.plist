@@ -4,5 +4,51 @@
 <dict>
 	<key>SFSafariWebExtensionConverterVersion</key>
 	<string>27.0</string>
+	<!-- The checkout this app runs its backend from (see BackendConfig). -->
+	<!-- Turkish only: the system's own menus (Ayarlar…, Çık) follow. -->
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>tr</string>
+	</array>
+	<key>VDProjectRoot</key>
+	<string>$(SRCROOT)/../..</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.berkakbay.VideoDownloader</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>videodownloader</string>
+			</array>
+		</dict>
+	</array>
+	<!-- Links dropped on the Dock icon (.webloc files and URLs); never the default handler. -->
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>Web Link</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>com.apple.web-internet-location</string>
+				<string>public.url</string>
+			</array>
+		</dict>
+	</array>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<!-- The backend is plain HTTP on 127.0.0.1, by design. -->
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+		<!-- The embedded page shows sites' thumbnails, some still served over http://. The app's
+		     own connections stay under ATS. -->
+		<key>NSAllowsArbitraryLoadsInWebContent</key>
+		<true/>
+	</dict>
 </dict>
 </plist>

@@ -135,14 +135,14 @@ No fixed profiles: the choices come from the inspected video itself.
       extension can light up its icon instantly; the generic extractor alone does not count
 - [x] The web download panel shows the same quick choices above the full track picker
 
-### N2 — App shell in SwiftUI
-- [ ] `NavigationSplitView` window with the sidebar and toolbar of today's design, a real
+### N2 — App shell in SwiftUI ✅ done
+- [x] `NavigationSplitView` window with the sidebar and toolbar of today's design, a real
       Settings window (⌘,), menu commands and keyboard shortcuts
-- [ ] Starts the backend as a child process (from this project checkout), waits for health,
+- [x] Starts the backend as a child process (from this project checkout), waits for health,
       stops it on quit; shows a clear state when the backend cannot start
-- [ ] SSE event client; system notifications via UserNotifications; `videodownloader://` URL
+- [x] SSE event client; system notifications via UserNotifications; `videodownloader://` URL
       scheme; a URL dropped on the Dock icon or window is inspected
-- [ ] Every screen still reachable (embedded web view); `pywebview` launcher retired
+- [x] Every screen still reachable (embedded web view); `pywebview` launcher retired
 
 ### N3 — Safari extension
 - [ ] Toolbar icon lights up on pages yt-dlp supports, and on pages with a `<video>`/`<audio>`

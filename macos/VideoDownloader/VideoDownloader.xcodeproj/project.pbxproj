@@ -7,13 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		C4A29F4E307D51CC001BA880 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4A29F4D307D51CC001BA880 /* AppDelegate.swift */; };
-		C4A29F52307D51CC001BA880 /* Main.html in Resources */ = {isa = PBXBuildFile; fileRef = C4A29F50307D51CC001BA880 /* Main.html */; };
-		C4A29F54307D51CC001BA880 /* Icon.png in Resources */ = {isa = PBXBuildFile; fileRef = C4A29F53307D51CC001BA880 /* Icon.png */; };
-		C4A29F56307D51CC001BA880 /* Style.css in Resources */ = {isa = PBXBuildFile; fileRef = C4A29F55307D51CC001BA880 /* Style.css */; };
-		C4A29F58307D51CC001BA880 /* Script.js in Resources */ = {isa = PBXBuildFile; fileRef = C4A29F57307D51CC001BA880 /* Script.js */; };
-		C4A29F5A307D51CC001BA880 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4A29F59307D51CC001BA880 /* ViewController.swift */; };
-		C4A29F5D307D51CC001BA880 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = C4A29F5B307D51CC001BA880 /* Main.storyboard */; };
+		C4A29F4E307D51CC001BA880 /* VideoDownloaderApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4A29F4D307D51CC001BA880 /* VideoDownloaderApp.swift */; };
 		C4A29F5F307D51CC001BA880 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C4A29F5E307D51CC001BA880 /* Assets.xcassets */; };
 		C4A29F66307D51CD001BA880 /* VideoDownloader Extension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C4A29F65307D51CD001BA880 /* VideoDownloader Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		C4A29F6B307D51CD001BA880 /* SafariWebExtensionHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4A29F6A307D51CD001BA880 /* SafariWebExtensionHandler.swift */; };
@@ -24,6 +18,7 @@
 		C4A29F82307D51CD001BA880 /* manifest.json in Resources */ = {isa = PBXBuildFile; fileRef = C4A29F7B307D51CD001BA880 /* manifest.json */; };
 		C4A29F83307D51CD001BA880 /* popup.css in Resources */ = {isa = PBXBuildFile; fileRef = C4A29F7C307D51CD001BA880 /* popup.css */; };
 		C4A29F84307D51CD001BA880 /* _locales in Resources */ = {isa = PBXBuildFile; fileRef = C4A29F7D307D51CD001BA880 /* _locales */; };
+		3C9B9A6498B8BD62DA0E15D3 /* VideoDownloaderKit in Frameworks */ = {isa = PBXBuildFile; productRef = DCCFF2F0D7B6E282DDD4D891 /* VideoDownloaderKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -57,13 +52,7 @@
 
 /* Begin PBXFileReference section */
 		C4A29F4A307D51CC001BA880 /* VideoDownloader.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VideoDownloader.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		C4A29F4D307D51CC001BA880 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
-		C4A29F51307D51CC001BA880 /* Base */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = Base; path = Base.lproj/Main.html; sourceTree = "<group>"; };
-		C4A29F53307D51CC001BA880 /* Icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Icon.png; sourceTree = "<group>"; };
-		C4A29F55307D51CC001BA880 /* Style.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = Style.css; sourceTree = "<group>"; };
-		C4A29F57307D51CC001BA880 /* Script.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = Script.js; sourceTree = "<group>"; };
-		C4A29F59307D51CC001BA880 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
-		C4A29F5C307D51CC001BA880 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		C4A29F4D307D51CC001BA880 /* VideoDownloaderApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoDownloaderApp.swift; sourceTree = "<group>"; };
 		C4A29F5E307D51CC001BA880 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		C4A29F60307D51CC001BA880 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		C4A29F65307D51CD001BA880 /* VideoDownloader Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "VideoDownloader Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -91,6 +80,7 @@
 		C4A29F47307D51CC001BA880 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
+				3C9B9A6498B8BD62DA0E15D3 /* VideoDownloaderKit in Frameworks */,
 			);
 		};
 		C4A29F62307D51CD001BA880 /* Frameworks */ = {
@@ -129,25 +119,11 @@
 		C4A29F4C307D51CC001BA880 /* VideoDownloader */ = {
 			isa = PBXGroup;
 			children = (
-				C4A29F4D307D51CC001BA880 /* AppDelegate.swift */,
-				C4A29F59307D51CC001BA880 /* ViewController.swift */,
-				C4A29F5B307D51CC001BA880 /* Main.storyboard */,
+				C4A29F4D307D51CC001BA880 /* VideoDownloaderApp.swift */,
 				C4A29F5E307D51CC001BA880 /* Assets.xcassets */,
 				C4A29F60307D51CC001BA880 /* Info.plist */,
-				C4A29F4F307D51CC001BA880 /* Resources */,
 			);
 			path = VideoDownloader;
-			sourceTree = "<group>";
-		};
-		C4A29F4F307D51CC001BA880 /* Resources */ = {
-			isa = PBXGroup;
-			children = (
-				C4A29F50307D51CC001BA880 /* Main.html */,
-				C4A29F53307D51CC001BA880 /* Icon.png */,
-				C4A29F55307D51CC001BA880 /* Style.css */,
-				C4A29F57307D51CC001BA880 /* Script.js */,
-			);
-			path = Resources;
 			sourceTree = "<group>";
 		};
 		C4A29F69307D51CD001BA880 /* VideoDownloader Extension */ = {
@@ -193,6 +169,9 @@
 				C4A29F68307D51CD001BA880 /* PBXTargetDependency */,
 			);
 			name = VideoDownloader;
+			packageProductDependencies = (
+				DCCFF2F0D7B6E282DDD4D891 /* VideoDownloaderKit */,
+			);
 			productName = VideoDownloader;
 			productReference = C4A29F4A307D51CC001BA880 /* VideoDownloader.app */;
 			productType = "com.apple.product-type.application";
@@ -256,13 +235,16 @@
 				};
 			};
 			buildConfigurationList = C4A29F45307D51CC001BA880 /* Build configuration list for PBXProject "VideoDownloader" */;
-			developmentRegion = en;
+			developmentRegion = tr;
 			hasScannedForEncodings = 0;
 			knownRegions = (
-				en,
+				tr,
 				Base,
 			);
 			mainGroup = C4A29F41307D51CC001BA880;
+			packageReferences = (
+				12146016C176F9FC968C8C69 /* XCLocalSwiftPackageReference "../VideoDownloaderKit" */,
+			);
 			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;
 			productRefGroup = C4A29F4B307D51CC001BA880 /* Products */;
@@ -280,12 +262,7 @@
 		C4A29F48307D51CC001BA880 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			files = (
-				C4A29F54307D51CC001BA880 /* Icon.png in Resources */,
-				C4A29F5D307D51CC001BA880 /* Main.storyboard in Resources */,
-				C4A29F58307D51CC001BA880 /* Script.js in Resources */,
-				C4A29F52307D51CC001BA880 /* Main.html in Resources */,
 				C4A29F5F307D51CC001BA880 /* Assets.xcassets in Resources */,
-				C4A29F56307D51CC001BA880 /* Style.css in Resources */,
 			);
 		};
 		C4A29F63307D51CD001BA880 /* Resources */ = {
@@ -311,8 +288,7 @@
 		C4A29F46307D51CC001BA880 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			files = (
-				C4A29F5A307D51CC001BA880 /* ViewController.swift in Sources */,
-				C4A29F4E307D51CC001BA880 /* AppDelegate.swift in Sources */,
+				C4A29F4E307D51CC001BA880 /* VideoDownloaderApp.swift in Sources */,
 			);
 		};
 		C4A29F61307D51CD001BA880 /* Sources */ = {
@@ -342,22 +318,6 @@
 /* End PBXTargetDependency section */
 
 /* Begin PBXVariantGroup section */
-		C4A29F50307D51CC001BA880 /* Main.html */ = {
-			isa = PBXVariantGroup;
-			children = (
-				C4A29F51307D51CC001BA880 /* Base */,
-			);
-			name = Main.html;
-			sourceTree = "<group>";
-		};
-		C4A29F5B307D51CC001BA880 /* Main.storyboard */ = {
-			isa = PBXVariantGroup;
-			children = (
-				C4A29F5C307D51CC001BA880 /* Base */,
-			);
-			name = Main.storyboard;
-			sourceTree = "<group>";
-		};
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
@@ -566,7 +526,6 @@
 				INFOPLIST_FILE = VideoDownloader/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = VideoDownloader;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				INFOPLIST_KEY_NSMainStoryboardFile = Main;
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
 				INFOPLIST_KEY_NSViewGestureRecognizerIsExclusive = NO;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -607,7 +566,6 @@
 				INFOPLIST_FILE = VideoDownloader/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = VideoDownloader;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				INFOPLIST_KEY_NSMainStoryboardFile = Main;
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
 				INFOPLIST_KEY_NSViewGestureRecognizerIsExclusive = NO;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -703,6 +661,20 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		12146016C176F9FC968C8C69 /* XCLocalSwiftPackageReference "../VideoDownloaderKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../VideoDownloaderKit;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		DCCFF2F0D7B6E282DDD4D891 /* VideoDownloaderKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = VideoDownloaderKit;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = C4A29F42307D51CC001BA880 /* Project object */;
 	validationLevel = 1;

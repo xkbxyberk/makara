@@ -16,11 +16,16 @@ cd frontend && npm install && npm run build && cd ..
 
 ## Çalıştırma
 
-Masaüstü penceresi olarak (Finder'dan çift tıklayabilirsin):
+Mac uygulaması olarak (Finder'dan çift tıklayabilirsin; gerekirse önce uygulamayı derler):
 
 ```bash
 open VideoDownloader.command
 ```
+
+Uygulama sunucuyu kendisi başlatır ve kapanırken durdurur. Günlük:
+`~/Library/Logs/VideoDownloader/backend.log`. Bağlantıları `videodownloader://inspect?url=…`
+ile, Dock simgesine sürükleyerek ya da pencereye bırakarak da inceletebilirsin. Ayarlar ⌘, ile
+açılır.
 
 Tarayıcıda:
 

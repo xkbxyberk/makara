@@ -14,6 +14,7 @@ from collections import deque
 from typing import Any
 
 from app import errors
+from app.workers import lifeline
 from app.ytdlp import params
 
 
@@ -69,6 +70,7 @@ def run(request: dict[str, Any]) -> dict[str, Any]:
 
 
 def main() -> int:
+    lifeline.hold()
     request = json.loads(sys.stdin.read())
     # Anything yt-dlp or a library prints must not corrupt the one JSON line we answer with.
     out = os.fdopen(os.dup(1), "w")

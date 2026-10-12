@@ -30,7 +30,10 @@ echo "no exceptions in test-results/e2e-server.log"
 # launch the app, so a window appears briefly.
 XCODE=(xcodebuild -quiet -project macos/VideoDownloader/VideoDownloader.xcodeproj -scheme VideoDownloader
        -derivedDataPath macos/build -allowProvisioningUpdates)
+step "Swift (VideoDownloaderKit)"; (cd macos/VideoDownloaderKit && swift test --quiet)
 step "macOS app (build)";  "${XCODE[@]}" build
-step "macOS app (UI tests)"; "${XCODE[@]}" test
+rm -rf macos/build/ui-tests.xcresult
+step "macOS app (UI tests)"; "${XCODE[@]}" -resultBundlePath macos/build/ui-tests.xcresult test
+step "native screenshots"; uv run python scripts/export_ui_screenshots.py macos/build/ui-tests.xcresult
 
 printf '\n\033[32m\033[1mALL CHECKS PASSED\033[0m\n'

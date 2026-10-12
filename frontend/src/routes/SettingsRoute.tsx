@@ -3,6 +3,7 @@ import { tr } from '../i18n/tr';
 import { ApiError, api, type Mode, type Settings } from '../lib/api';
 import { ErrorState, LoadingState, Notice, Panel, Term } from '../components/ui';
 import { Icon, type SymbolName } from '../components/Icon';
+import { embedded } from '../lib/embedded';
 
 export type Theme = 'system' | 'light' | 'dark';
 const MODES: Mode[] = ['mkv', 'compat_mp4', 'separate', 'audio'];
@@ -251,10 +252,13 @@ export function SettingsRoute({
             />
           </div>
 
-          <div className="setting">
-            <span className="setting-label">{tr.settings.theme}</span>
-            <Segmented label={tr.settings.theme} value={theme} options={THEMES} labels={tr.settings.themes} icons={THEME_ICONS} onChange={setTheme} />
-          </div>
+          {/* The native app follows the system appearance; the choice exists only in a browser. */}
+          {!embedded && (
+            <div className="setting">
+              <span className="setting-label">{tr.settings.theme}</span>
+              <Segmented label={tr.settings.theme} value={theme} options={THEMES} labels={tr.settings.themes} icons={THEME_ICONS} onChange={setTheme} />
+            </div>
+          )}
 
           <label className="setting setting-toggle">
             <input

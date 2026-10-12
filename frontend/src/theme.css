@@ -1,6 +1,7 @@
 /* macOS, as far as a web view can go: the system's semantic colours (light and dark values
    from AppKit), the user's own accent colour where WebKit exposes it, the system font and type
-   scale, native form controls, and real vibrancy behind the sidebar in the desktop window.
+   scale and native form controls. Inside the native app (?embedded=1) the window itself draws
+   the sidebar and its real vibrancy.
    Every colour is a token; dark mode redefines tokens, never components. */
 
 :root {
@@ -153,11 +154,6 @@ p { margin: 0; }
 }
 .shell .sidebar { transition: opacity 0.2s var(--ease-out), visibility 0s; }
 .shell.sidebar-hidden .sidebar { visibility: hidden; opacity: 0; padding-left: 0; padding-right: 0; border: none; transition: opacity 0.16s var(--ease-out), visibility 0s linear 0.28s; }
-/* Desktop window with vibrancy (NSVisualEffectView behind the web view): let it show through,
-   but only when the theme follows the system -- the material follows the system appearance. */
-html.native:not([data-theme]) body,
-html.native:not([data-theme]) #root { background: transparent; }
-html.native:not([data-theme]) .sidebar { background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; }
 .sidebar-brand {
   font-size: var(--subheadline);
   font-weight: 600;
@@ -652,6 +648,15 @@ button.lang-head:hover { background: var(--fill-3); }
 }
 .clipboard-banner code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 
+
+/* ---- inside the native app (?embedded=1): the window draws sidebar, title and theme ---- */
+html.embedded .shell, html.embedded .shell.sidebar-hidden { grid-template-columns: 1fr; }
+html.embedded .sidebar { display: none; }
+html.embedded .toolbar > .btn-icon, html.embedded .toolbar > h1 { display: none; }
+/* The window's own title bar is above: the page's toolbar is only a quiet row of its actions. */
+html.embedded .toolbar { min-height: 0; padding: var(--s2) var(--s6) 0; border-bottom: none; background: transparent; }
+/* A screen without toolbar items gets no empty toolbar strip. */
+html.embedded .toolbar:has(.toolbar-actions:empty) { display: none; }
 
 /* ---- motion: short, quiet, and only where something changed ---- */
 :root {

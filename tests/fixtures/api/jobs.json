@@ -1,0 +1,38 @@
+[
+  {
+    "id": "<id>",
+    "kind": "download",
+    "status": "done",
+    "stage": "done",
+    "title": "Local test clip",
+    "source_url": "https://example.test/local-media",
+    "mode": "mkv",
+    "progress": 0,
+    "speed": null,
+    "eta": null,
+    "item_index": null,
+    "item_count": null,
+    "output_files": [
+      "<path>"
+    ],
+    "error_code": null,
+    "error_raw": null,
+    "warnings": [],
+    "created_at": 0,
+    "started_at": 0,
+    "finished_at": 0,
+    "selection": {
+      "mode": "mkv",
+      "video_format_id": "v-vp9",
+      "audio_format_ids": [
+        "a-en-opus"
+      ],
+      "subtitle_keys": [
+        "tr",
+        "en"
+      ],
+      "audio_codec": null,
+      "url": "https://example.test/local-media"
+    }
+  }
+]

@@ -538,7 +538,7 @@
           "id": "UI.5",
           "text": "Desktop window opens with vibrancy and no errors",
           "pass": true,
-          "proof": "manual: scripts/desktop.py with isolated VD_DATA_DIR, log clean apart from a pywebview WebKit deprecation notice"
+          "proof": "manual: scripts/desktop.py with isolated VD_DATA_DIR, log clean apart from a pywebview WebKit deprecation notice (superseded by the native app in N2)"
         },
         {
           "id": "UI.6",
@@ -617,6 +617,72 @@
           "text": "The web download panel shows the same quick choices",
           "pass": true,
           "proof": "e2e 'quick choices: the video's own qualities, one click each, remembered per site', 'downloading the untouched default remembers nothing'; screenshots quick-video-light/dark, quick-audio-light"
+        }
+      ]
+    },
+    "N2": {
+      "title": "App shell in SwiftUI",
+      "status": "done",
+      "criteria": [
+        {
+          "id": "N2.1",
+          "text": "NavigationSplitView window with native sidebar and title, Settings window, Git menu (⌘1–⌘5), Turkish system menus",
+          "pass": true,
+          "proof": "ShellTests.testTheShellShowsTheSidebarAndEmbeddedScreens, .testSettingsOpenInTheirOwnWindowFromTheAppMenu; screenshots native-*-light/dark.png"
+        },
+        {
+          "id": "N2.2",
+          "text": "The app starts the backend, waits for health, stops it cleanly on quit (no SIGKILL), and the server never outlives a crashed app",
+          "pass": true,
+          "proof": "ShellTests.testClosingTheWindowQuitsAndStopsTheBackend (< 8 s); tests/test_server_lifecycle.py (both); ChildProcessTests; manual: quit 15.2 s before the fix, 0.4 s after"
+        },
+        {
+          "id": "N2.3",
+          "text": "A backend that cannot start is explained, with retry and the log",
+          "pass": true,
+          "proof": "ShellTests.testABackendThatCannotStartIsExplainedWithARetry; screenshot native-backend-failed-light.png"
+        },
+        {
+          "id": "N2.4",
+          "text": "Live jobs over SSE drive the sidebar and Dock badges and background notifications",
+          "pass": true,
+          "proof": "SSEParserTests, NotificationTests, ContractTests (event-job sample)"
+        },
+        {
+          "id": "N2.5",
+          "text": "videodownloader:// and a link opened with the app (Dock drop path) are inspected",
+          "pass": true,
+          "proof": "ShellTests.testTheURLSchemeInspectsALink, .testAWebLinkFileOpenedWithTheAppIsInspected; IncomingURLTests. Dropping onto the window itself is implemented (DroppingWebView) but not automated"
+        },
+        {
+          "id": "N2.6",
+          "text": "Every web screen reachable embedded; the pywebview launcher is gone",
+          "pass": true,
+          "proof": "e2e embedded.spec.cts; scripts/desktop.py and pywebview removed; VideoDownloader.command builds and opens the app"
+        },
+        {
+          "id": "N2.7",
+          "text": "API contract: real responses decode in Swift",
+          "pass": true,
+          "proof": "tests/test_api_samples.py + ContractTests"
+        },
+        {
+          "id": "N2.8",
+          "text": "A link or screen handed to a closed app survives the start-up (queued until the page is ready)",
+          "pass": true,
+          "proof": "ShellTests.testALinkHandedOverAtLaunchIsInspectedOnceThePageIsReady (fails with the old race), .testAScreenAskedForAtLaunchIsTheOneShown"
+        },
+        {
+          "id": "N2.9",
+          "text": "No worker survives its server: SIGTERM stops promptly with an open stream, SIGKILL leaves no worker or worker child",
+          "pass": true,
+          "proof": "tests/test_server_lifecycle.py (4 tests; the silent-worker one fails without the lifeline)"
+        },
+        {
+          "id": "N2.10",
+          "text": "A server that stops answering is reported with a retry; retry starts once; incoming links never reach loopback/LAN; a self-referencing .webloc cannot crash the app",
+          "pass": true,
+          "proof": "BackendControllerTests (5), IncomingURLSafetyTests (2)"
         }
       ]
     }

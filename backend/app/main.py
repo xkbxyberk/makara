@@ -5,7 +5,9 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import os
 import re
+import signal
 import sys
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
@@ -78,13 +80,39 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         asyncio.to_thread(library.scan, [Path(settings_store.load().download_dir).expanduser()])
     )
     scan.add_done_callback(_log_task_failure)
+    orphan_watch = _watch_parent()
     try:
         yield
     finally:
+        if orphan_watch is not None:
+            orphan_watch.cancel()
         clipboard.stop()
         await manager.stop()
         with contextlib.suppress(asyncio.CancelledError, errors.AppError):
             await asyncio.wait_for(asyncio.shield(scan), timeout=5)
+
+
+PARENT_CHECK_SECONDS = 1.0
+
+
+def _watch_parent() -> asyncio.Task[None] | None:
+    """Started by VideoDownloader.app (`VD_PARENT_PID`), the server must not outlive it: if the
+    app crashes or is killed, this process is re-parented, notices, and shuts down cleanly --
+    which stops every worker -- instead of holding the port and the queue forever."""
+    raw = os.environ.get("VD_PARENT_PID")
+    if not raw or not raw.isdigit():
+        return None
+    parent = int(raw)
+
+    async def watch() -> None:
+        while os.getppid() == parent:
+            await asyncio.sleep(PARENT_CHECK_SECONDS)
+        log.warning("parent process %s is gone; shutting down", parent)
+        os.kill(os.getpid(), signal.SIGTERM)  # uvicorn's own graceful shutdown path
+
+    task = asyncio.create_task(watch())
+    task.add_done_callback(_log_task_failure)
+    return task
 
 
 def create_app() -> FastAPI:
@@ -133,8 +161,26 @@ app = create_app()
 def main() -> None:
     import uvicorn
 
+    class _AnnouncingServer(uvicorn.Server):
+        """Tell open event streams to end the moment a stop is asked for. They otherwise end
+        only in the lifespan shutdown, which uvicorn reaches after waiting for open connections
+        -- so every quit waited out the timeout above and logged a cancelled task."""
+
+        def handle_exit(self, sig: int, frame: Any) -> None:
+            super().handle_exit(sig, frame)
+            manager = getattr(app.state, "jobs", None)
+            if manager is not None:
+                manager.announce_shutdown()
+
     print(f"VideoDownloader listening on http://{HOST}:{PORT}/", file=sys.stderr, flush=True)
-    uvicorn.run(app, host=HOST, port=PORT, log_level="warning")
+    # An open event stream (a browser tab, the app's web view) only ends when the manager
+    # shuts down -- which happens after uvicorn stops waiting for open connections. Without a
+    # limit, SIGTERM never got that far: the app waited, then had to SIGKILL, and running
+    # workers (in their own sessions) were left behind.
+    config = uvicorn.Config(
+        app, host=HOST, port=PORT, log_level="warning", timeout_graceful_shutdown=2
+    )
+    _AnnouncingServer(config).run()
 
 
 if __name__ == "__main__":

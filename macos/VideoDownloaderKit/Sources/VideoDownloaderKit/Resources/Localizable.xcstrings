@@ -1,0 +1,32 @@
+{
+  "sourceLanguage" : "tr",
+  "version" : "1.0",
+  "strings" : {
+    "app.name" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "VideoDownloader" } } } },
+    "nav.section.media" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "Medya" } } } },
+    "nav.section.app" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "Uygulama" } } } },
+    "nav.inspect" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "İncele" } } } },
+    "nav.download" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "İndirmeler" } } } },
+    "nav.library" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "Kütüphane" } } } },
+    "nav.studio" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "Stüdyo" } } } },
+    "nav.doctor" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "Sistem" } } } },
+    "menu.go" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "Git" } } } },
+    "menu.inspectClipboard" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "Panodaki Bağlantıyı İncele" } } } },
+    "settings.unavailable" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "Ayarlar, uygulama hazır olunca açılır." } } } },
+    "backend.starting" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "VideoDownloader açılıyor…" } } } },
+    "backend.syncing" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "Bileşenler denetleniyor…" } } } },
+    "backend.failed.title" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "Uygulama sunucusu başlatılamadı" } } } },
+    "backend.retry" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "Yeniden dene" } } } },
+    "backend.showLog" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "Günlüğü Finder’da göster" } } } },
+    "backend.reason.noProject" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "VideoDownloader proje klasörü bulunamadı. Uygulama, proje klasöründen derlenen sürümle çalışır." } } } },
+    "backend.reason.noPython" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "Python ortamı bulunamadı. uv kurulu olmalı; Terminal’de proje klasöründe “uv sync” çalıştırıp yeniden dene." } } } },
+    "backend.reason.syncFailed" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "Bileşenler kurulamadı (uv sync, çıkış kodu %d). Ayrıntılar aşağıda ve günlükte." } } } },
+    "backend.reason.exited" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "Sunucu beklenmedik şekilde kapandı (çıkış kodu %d). Ayrıntılar aşağıda ve günlükte." } } } },
+    "backend.reason.timedOut" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "Sunucu %d saniye içinde yanıt vermedi." } } } },
+    "backend.reason.portBusy" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "%d portunu başka bir uygulama kullanıyor. O uygulamayı kapatıp yeniden dene." } } } },
+    "backend.reason.spawnFailed" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "Sunucu başlatılamadı (sistem hatası %d). Ayrıntılar günlükte." } } } },
+    "backend.reason.lost" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "Sunucuyla bağlantı koptu; yanıt vermiyor. Yeniden dene ile yeniden başlat." } } } },
+    "notify.done" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "İndirme tamamlandı" } } } },
+    "notify.failed" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "İndirme başarısız" } } } }
+  }
+}

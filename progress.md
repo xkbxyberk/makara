@@ -227,4 +227,18 @@ no-rule default ignored the MP4 output, an unknown audio language silently becam
 original, audio re-encodes were not badged, a muxed file's size was shown as an audio size,
 the MP4 360p row preferred a muxed baseline file over video + original audio.
 
-**Next:** N2 — the SwiftUI app shell.
+**N2 — the SwiftUI app shell.** A real `VideoDownloader.app`: native sidebar (real vibrancy),
+title bar, Turkish system menus, Git menu ⌘1–⌘5, Settings window, Dock badge, notifications,
+`videodownloader://`, .webloc/Dock drops; the web UI shows embedded for every screen. The app
+owns the backend (uv sync --frozen, venv python in its own process group, VD_PARENT_PID). The
+pywebview launcher, desktop.py and pywebview are gone (pyobjc-framework-cocoa kept for the
+clipboard watcher). Measured: a quit took 15.2 s (an open event stream blocked uvicorn until
+the SIGKILL fallback, so the clean shutdown never ran), now 0.4 s. A UI-test screenshot was
+taken of the whole screen and caught Berk's other windows; deleted, and only windows are shot
+now. The adversarial review found 9 confirmed issues, all fixed with tests: a link handed to a
+closed app was lost (calls raced the page load), workers survived a SIGKILLed server, an
+attached server could die unnoticed, Retry started twice, a self-referencing .webloc crashed
+the app, the Settings window could turn into another screen, plus stale badges, an English
+error string and a 2 s wait on every quit.
+
+**Next:** N3 — the Safari extension.

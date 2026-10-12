@@ -120,7 +120,7 @@ class ClipboardWatcher:
         if sys.platform != "darwin" or paths.fixture_mode():
             return False
         try:
-            import AppKit  # noqa: F401  (pyobjc, installed with pywebview)
+            import AppKit  # noqa: F401  (pyobjc-framework-cocoa)
         except ImportError:
             return False
         return True

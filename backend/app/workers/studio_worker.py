@@ -22,6 +22,7 @@ from typing import Any, TextIO
 from app import errors
 from app.ffmpeg import mux
 from app.studio import ops, subtitles
+from app.workers import lifeline
 from app.workers.download_worker import _aac_encoder, _describe
 from app.ytdlp import naming
 
@@ -195,6 +196,7 @@ def _terminate(signum: int, frame: Any) -> None:
 
 def main() -> int:
     global OUT
+    lifeline.hold()
     signal.signal(signal.SIGTERM, _terminate)
     request = json.loads(sys.stdin.read())
     OUT = os.fdopen(os.dup(1), "w")

@@ -13,9 +13,11 @@ Local-only media workstation on yt-dlp + FFmpeg. macOS arm64, single user (Berk)
 | Frontend unit tests | `cd frontend && npx vitest run` |
 | End-to-end + screenshots | `cd frontend && npx playwright test` |
 | Dev servers | `PYTHONPATH=backend uv run python -m app.main` + `cd frontend && npm run dev` |
-| Desktop app | `open VideoDownloader.command` |
+| Desktop app (builds if needed) | `open VideoDownloader.command` |
 | Update yt-dlp | `uv lock --upgrade-package yt-dlp --upgrade-package yt-dlp-ejs && uv sync` (see gotcha 2) |
 | macOS app (build / UI tests) | `xcodebuild -project macos/VideoDownloader/VideoDownloader.xcodeproj -scheme VideoDownloader -derivedDataPath macos/build -allowProvisioningUpdates build` (or `test`) |
+| Swift package tests | `cd macos/VideoDownloaderKit && swift test` |
+| API contract samples (after an API change) | `VD_WRITE_API_SAMPLES=1 uv run pytest -q tests/test_api_samples.py` |
 | Re-record fixtures (network!) | `uv run python scripts/capture_fixtures.py [name ...]` |
 
 ## Architecture decisions
@@ -108,10 +110,18 @@ Local-only media workstation on yt-dlp + FFmpeg. macOS arm64, single user (Berk)
     `<ToolbarItems>` (`components/Toolbar.tsx`); they render into the window toolbar. Icons go
     through `<Icon name="sf.symbol.name">` (`components/Icon.tsx`) so the SF-style names stay in
     one map. An icon-only button needs an `aria-label` (the e2e tests find buttons by it).
-23. The desktop window is `transparent=True, vibrancy=True` and loads `/?shell=native`; that CSS
-    (`html.native`) only turns the sidebar see-through when the theme follows the system, since
-    the material follows the system appearance, not ours.
-
+23. **The native app** (`macos/`) owns the backend: `uv sync`, then `.venv/bin/python -m
+    app.main` (not `uv run`, so one SIGTERM reaches the server once), spawned with posix_spawn
+    in its own process group, PATH extended with Homebrew, `VD_PARENT_PID` set. The server
+    shuts itself down when that parent disappears (crash, kill). On quit the app closes its
+    web views first, then SIGTERM, SIGKILL after 15 s. uvicorn has
+    `timeout_graceful_shutdown=2`: without it an open event stream held shutdown until the
+    SIGKILL, and running workers were orphaned. If a server already answers on the port the
+    app attaches to it and never stops it, but keeps checking its health: a server that stops
+    answering (ours or attached) becomes a failure with a retry, never a silent "ready".
+    Workers (own sessions) hold a **lifeline** (`app/workers/lifeline.py`): re-parented after
+    a SIGKILL of the server, they kill their own group. The signal handler announces shutdown
+    so open event streams end at once.
 24. **Motion** lives in `theme.css` (the "motion" block) plus `components/motion.ts`, which
     slides every `.segmented` thumb by observing the DOM and cross-fades theme changes with view
     transitions. Everything stops under "Reduce motion". Screenshots pass
@@ -151,6 +161,22 @@ Local-only media workstation on yt-dlp + FFmpeg. macOS arm64, single user (Berk)
     clicked: saving the untouched default once capped a whole site at 240p (review finding).
     The audio-only defaults (`selection.DEFAULT_AUDIO_CODEC/QUALITY`) mirror the panel's
     initial `mp3`/`192`; change both together.
+33. **Embedded web UI** (`?embedded=1`, `frontend/src/lib/embedded.ts`): no sidebar, title or
+    theme (the window follows the system appearance), no notifications (the app posts them),
+    and `window.vd.navigate/inspect` for the app; the page reports `ready` and route changes
+    through `window.webkit.messageHandlers.vd`. **WebBridge queues every call until `ready`**:
+    a script run while the page loads dies with that document (a link handed to a closed app
+    was lost). `?embedded=1&route=settings` renders the settings screen alone
+    (`SettingsWindow.tsx`). Incoming links (`IncomingURL`) are inspected without a click, so
+    only public http(s) hosts qualify -- never loopback, the LAN, or a nested file. The native strings live in
+    `macos/VideoDownloaderKit/Sources/VideoDownloaderKit/Resources/Localizable.xcstrings`
+    (Turkish only; the app declares `tr`, so the system menus are Turkish too).
+34. **Native UI tests run against a fixture-mode backend on port 8789** with temporary
+    `VD_DATA_DIR`/`VD_DOWNLOAD_DIR`/`VD_LOG_FILE` and `VD_APPEARANCE=light|dark`. Web text is
+    the element's *value* in XCUITest, and a badge after a term adds a trailing space: match
+    with `BEGINSWITH`. **Screenshot windows, never `XCUIScreen.main`**: a full-screen capture
+    once recorded whatever else Berk had open. `typeKey(",", .command)` does not reach the
+    Settings item on this Mac (Turkish keyboard layout); tests click the menu item.
 
 ## Rules
 

@@ -4,6 +4,7 @@ import { tr } from './i18n/tr';
 import { Icon, type SymbolName } from './components/Icon';
 import { ToolbarSlot } from './components/Toolbar';
 import { installSegmentThumbs, withViewTransition } from './components/motion';
+import { embedded, postToNative, requestedRoute } from './lib/embedded';
 import { InspectRoute } from './routes/InspectRoute';
 import { DoctorRoute } from './routes/DoctorRoute';
 import { QueueRoute } from './routes/QueueRoute';
@@ -31,11 +32,6 @@ const THEMES: { id: Theme; icon: SymbolName }[] = [
   { id: 'system', icon: 'circle.lefthalf.filled' },
 ];
 
-// The desktop launcher opens the page with ?shell=native: the window then has real vibrancy
-// (NSVisualEffectView) behind a transparent web view, which the sidebar lets show through.
-if (new URLSearchParams(window.location.search).get('shell') === 'native') {
-  document.documentElement.classList.add('native');
-}
 
 function applyTheme(theme: Theme) {
   const root = document.documentElement;
@@ -43,13 +39,16 @@ function applyTheme(theme: Theme) {
   else root.setAttribute('data-theme', theme);
 }
 
+const ROUTES: RouteId[] = ['inspect', 'download', 'library', 'studio', 'doctor', 'settings'];
+
 function useTheme() {
-  const [theme, setThemeState] = useState<Theme>(
-    () => (localStorage.getItem('vd-theme') as Theme | null) ?? 'system',
+  // Inside the native app the window follows the system appearance, like every Mac app.
+  const [theme, setThemeState] = useState<Theme>(() =>
+    embedded ? 'system' : ((localStorage.getItem('vd-theme') as Theme | null) ?? 'system'),
   );
   useEffect(() => {
     applyTheme(theme);
-    localStorage.setItem('vd-theme', theme);
+    if (!embedded) localStorage.setItem('vd-theme', theme);
   }, [theme]);
   // The colours change inside the view transition's callback, so the window cross-fades
   // between the old and the new appearance instead of snapping.
@@ -63,7 +62,9 @@ function useTheme() {
 const narrow = () => window.matchMedia?.('(max-width: 720px)').matches ?? false;
 
 export function App() {
-  const [route, setRoute] = useState<RouteId>('inspect');
+  const [route, setRoute] = useState<RouteId>(() =>
+    ROUTES.includes(requestedRoute as RouteId) ? (requestedRoute as RouteId) : 'inspect',
+  );
   const { theme, setTheme } = useTheme();
   const [sidebar, setSidebar] = useState(() => !narrow());
   const [toolbarSlot, setToolbarSlot] = useState<HTMLElement | null>(null);
@@ -75,6 +76,27 @@ export function App() {
   const notifications = useRef(true);
 
   useEffect(() => installSegmentThumbs(document.body), []);
+
+  // The native window drives navigation (its sidebar, the URL scheme, a dropped link) and
+  // follows the page when the page moves on its own ("Stüdyo'da aç", "Kuyruğu aç").
+  useEffect(() => {
+    if (!embedded) return;
+    const bridge = {
+      navigate: (next: string) => {
+        if (ROUTES.includes(next as RouteId)) setRoute(next as RouteId);
+      },
+      inspect: (url: string) => {
+        setInspectRequest((r) => ({ url, n: (r?.n ?? 0) + 1 }));
+        setRoute('inspect');
+      },
+    };
+    (window as unknown as { vd?: typeof bridge }).vd = bridge;
+    // From here on the app may drive the page; calls made before this are queued natively.
+    postToNative({ type: 'ready' });
+  }, []);
+  useEffect(() => {
+    if (embedded) postToNative({ type: 'route', route });
+  }, [route]);
 
   // Like a Mac window, shrinking below the split-view width collapses the sidebar and widening
   // brings it back; in between the toggle decides.
@@ -96,7 +118,8 @@ export function App() {
   /** A finished or failed download deserves a system notification when the window is in the
    * background; when it is in front, the queue already shows it. */
   const onTransition = useCallback((job: Job, previous: Job | undefined) => {
-    if (!previous || !notifications.current || document.hasFocus()) return;
+    // The native app posts its own notifications; two of each would be noise.
+    if (embedded || !previous || !notifications.current || document.hasFocus()) return;
     if (job.status === 'done') void api.notify(tr.queue.notifyDone, job.title ?? '').catch(() => undefined);
     if (job.status === 'failed') void api.notify(tr.queue.notifyFailed, job.title ?? '').catch(() => undefined);
   }, []);

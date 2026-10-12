@@ -11,8 +11,8 @@ Turkish is the only UI language shipped; every string lives in `frontend/src/i18
 
 | Decision | Choice |
 |---|---|
-| Shell | pywebview desktop window + double-clickable `VideoDownloader.command`; also reachable in a browser at `http://127.0.0.1:8787` |
-| Shell (from N2) | A native `VideoDownloader.app` (SwiftUI) over the same backend; screens move from the web UI to SwiftUI one by one (N2–N7) |
+| Shell (until N2) | pywebview desktop window + double-clickable `VideoDownloader.command`; also reachable in a browser at `http://127.0.0.1:8787` |
+| Shell (from N2, built) | A native `VideoDownloader.app` (SwiftUI) over the same backend: native sidebar, title bar, menus (Git: ⌘1–⌘5), Settings window (⌘,), Dock badge, notifications, `videodownloader://`. It starts the backend itself and stops it on quit. Screens not yet ported show the web UI embedded (`?embedded=1`); they move to SwiftUI one by one (N4–N7). The pywebview window is gone |
 | Safari | A Safari web extension inside the app: detects downloadable media and downloads with one click from the qualities and audio streams that video actually offers. Never downloads on its own |
 | Quick choices | No fixed profiles. The inspect model lists the source's own video qualities (per output, MKV or MP4) and audio-only options with sizes; the last choice per site is remembered as a rule and pre-selected |
 | Distribution | Built and signed on this Mac with Berk's Apple Developer team; never the App Store (guideline 5.2.3) |

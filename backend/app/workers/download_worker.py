@@ -33,6 +33,7 @@ from app import errors, paths
 from app.doctor import listing_has
 from app.ffmpeg import binaries, mux
 from app.ffmpeg.probe import probe
+from app.workers import lifeline
 from app.workers.inspect_worker import Collector
 from app.ytdlp import naming, params
 
@@ -551,6 +552,7 @@ def _library_thumbnail(path: Path, duration: float | None, job_id: str) -> str |
 
 def main() -> int:
     global OUT
+    lifeline.hold()
     request = json.loads(sys.stdin.read())
     OUT = os.fdopen(os.dup(1), "w")
     # Point fd 1 itself at stderr: FFmpeg children started by yt-dlp inherit it, and anything
