@@ -7,5 +7,8 @@
   "notifications": true,
   "safari_login": true,
   "extension_offer": "page",
+  "accelerate": true,
+  "connections": 8,
+  "rate_limit": 0,
   "default_filename_template": "%(extractor_key)s/%(channel,uploader|Unknown)s/%(upload_date>%Y-%m-%d|0000-00-00)s - %(title)s [%(id)s].%(ext)s"
 }

@@ -228,11 +228,11 @@ Berk asks (session limits).
       video, one more site; the card, "Bu sitede sorma", and the "icon only" setting
 
 ### P2 — Download acceleration (IDM-style)
-- [ ] Fragmented formats (HLS/DASH, most sites): yt-dlp's `concurrent_fragment_downloads`
-- [ ] Single-file HTTP formats: several connections with byte ranges via **aria2c** (Berk chose
+- [x] Fragmented formats (HLS/DASH, most sites): yt-dlp's `concurrent_fragment_downloads`
+- [x] Single-file HTTP formats: several connections with byte ranges via **aria2c** (Berk chose
       it 2026-10-14 and so approved `brew install aria2`); per-download connection count,
       live per-segment progress in İndirmeler
-- [ ] Pause / resume (keep `.part` files), a global speed limit, a "faster" setting
+- [x] Pause / resume (keep `.part` files), a global speed limit, a "faster" setting
 
 ### P3 — Library by kind in the sidebar
 - [ ] Kütüphane splits by what was downloaded (Berk's choice): Videolar · Müzik · Stüdyo, under

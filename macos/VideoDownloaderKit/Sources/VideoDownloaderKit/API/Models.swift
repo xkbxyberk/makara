@@ -15,6 +15,10 @@ public struct AppSettings: Codable, Sendable, Equatable {
     public var clipboardWatch: Bool
     public var notifications: Bool
     public var safariLogin: Bool = true
+    /// Several connections per download (aria2c, parallel fragments), and a cap in bytes/s (0: none).
+    public var accelerate: Bool = true
+    public var connections: Int = 8
+    public var rateLimit: Int = 0
     /// The Safari extension: "page" (a card on the page offers the video) or "icon" (only its icon).
     public var extensionOffer: String = "page"
     /// Read-only: the app's built-in template, for "Varsayılana dön".
@@ -22,7 +26,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
 
     private enum CodingKeys: String, CodingKey {
         case downloadDir, filenameTemplate, concurrency, defaultMode, clipboardWatch, notifications, safariLogin
-        case extensionOffer
+        case extensionOffer, accelerate, connections, rateLimit
         case defaultFilenameTemplate
     }
 
@@ -37,6 +41,9 @@ public struct AppSettings: Codable, Sendable, Equatable {
         // Newer settings: an older answer without them keeps the defaults.
         safariLogin = try c.decodeIfPresent(Bool.self, forKey: .safariLogin) ?? true
         extensionOffer = try c.decodeIfPresent(String.self, forKey: .extensionOffer) ?? "page"
+        accelerate = try c.decodeIfPresent(Bool.self, forKey: .accelerate) ?? true
+        connections = try c.decodeIfPresent(Int.self, forKey: .connections) ?? 8
+        rateLimit = try c.decodeIfPresent(Int.self, forKey: .rateLimit) ?? 0
         defaultFilenameTemplate = try c.decodeIfPresent(String.self, forKey: .defaultFilenameTemplate)
     }
 
@@ -51,11 +58,14 @@ public struct AppSettings: Codable, Sendable, Equatable {
         try c.encode(notifications, forKey: .notifications)
         try c.encode(safariLogin, forKey: .safariLogin)
         try c.encode(extensionOffer, forKey: .extensionOffer)
+        try c.encode(accelerate, forKey: .accelerate)
+        try c.encode(connections, forKey: .connections)
+        try c.encode(rateLimit, forKey: .rateLimit)
     }
 }
 
 public enum JobStatus: String, Decodable, Sendable {
-    case queued, running, done, failed, cancelled
+    case queued, running, paused, done, failed, cancelled
     case unknown
 
     public init(from decoder: Decoder) throws {

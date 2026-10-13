@@ -6,10 +6,11 @@ Every check returns a stable id and status; the frontend turns those into Turkis
 from __future__ import annotations
 
 import importlib.metadata
+import re
 import subprocess
 from typing import Any
 
-from app import browser_session
+from app import accel, browser_session
 from app import settings as settings_store
 from app.ffmpeg import binaries
 from app.system import installed_ytdlp
@@ -164,8 +165,28 @@ def _safari_session_check() -> dict[str, Any]:
     return {"id": "safari_session", "status": status, "values": {"state": state}, "fix": fix}
 
 
+def _aria2c_check() -> dict[str, Any]:
+    """Optional: without it, single-file downloads use one connection (fragments still go in
+    parallel), so it is a warning, never an error."""
+    path = accel.aria2c()
+    # The first line is translated ("aria2 sürüm 1.37.0" here): take the number only.
+    version = re.search(r"\d+\.\d+(?:\.\d+)?", _run([path, "--version"])) if path else None
+    return {
+        "id": "aria2c",
+        "status": OK if path else WARN,
+        "values": {"path": path, "version": version.group(0) if version else None},
+        "fix": {"kind": "command", "command": "brew install aria2"},
+    }
+
+
 def run_doctor() -> dict[str, Any]:
-    checks = [_ytdlp_check(), _js_runtime_check(), _ffmpeg_check(), _safari_session_check()]
+    checks = [
+        _ytdlp_check(),
+        _js_runtime_check(),
+        _ffmpeg_check(),
+        _aria2c_check(),
+        _safari_session_check(),
+    ]
     worst = (
         ERROR
         if any(c["status"] == ERROR for c in checks)

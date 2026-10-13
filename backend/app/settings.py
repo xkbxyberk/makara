@@ -31,6 +31,10 @@ class Settings:
     # Retry a video that needs a signed-in account with the Safari session (Berk, 2026-10-13).
     safari_login: bool = True
     extension_offer: str = "page"
+    # Several connections per download (aria2c / parallel fragments), and a speed cap.
+    accelerate: bool = True
+    connections: int = 8
+    rate_limit: int = 0  # bytes per second; 0 = no limit
 
     def __post_init__(self) -> None:
         if not self.download_dir:
@@ -38,6 +42,8 @@ class Settings:
         self.concurrency = max(1, min(int(self.concurrency), 6))
         if self.default_mode not in MODES:
             self.default_mode = "mkv"
+        self.connections = max(1, min(int(self.connections), 16))
+        self.rate_limit = max(0, int(self.rate_limit))
         if self.extension_offer not in EXTENSION_OFFERS:
             self.extension_offer = "page"
 

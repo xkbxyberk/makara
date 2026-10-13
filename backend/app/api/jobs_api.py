@@ -67,6 +67,9 @@ class SettingsBody(BaseModel):
     safari_login: bool = True
     notifications: bool = True
     extension_offer: Literal["page", "icon"] = "page"
+    accelerate: bool = True
+    connections: int = Field(default=8, ge=1, le=16)
+    rate_limit: int = Field(default=0, ge=0, le=10_000_000_000)
 
 
 class RevealBody(BaseModel):
@@ -182,6 +185,26 @@ async def post_cancel(job_id: str, request: Request) -> Any:
 @router.post("/jobs/{job_id}/retry")
 async def post_retry(job_id: str, request: Request) -> Any:
     return _job_or_404(_manager(request).retry(job_id))
+
+
+@router.post("/jobs/{job_id}/pause")
+async def post_pause(job_id: str, request: Request) -> Any:
+    return _job_or_404(_manager(request).pause(job_id))
+
+
+@router.post("/jobs/{job_id}/resume")
+async def post_resume(job_id: str, request: Request) -> Any:
+    return _job_or_404(_manager(request).resume(job_id))
+
+
+@router.post("/jobs/pause-all")
+async def post_pause_all(request: Request) -> dict[str, int]:
+    return {"paused": _manager(request).pause_all()}
+
+
+@router.post("/jobs/resume-all")
+async def post_resume_all(request: Request) -> dict[str, int]:
+    return {"resumed": _manager(request).resume_all()}
 
 
 @router.delete("/jobs/{job_id}")

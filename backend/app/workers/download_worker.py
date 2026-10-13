@@ -33,7 +33,7 @@ from app import errors, paths
 from app.doctor import listing_has
 from app.ffmpeg import binaries, mux
 from app.ffmpeg.probe import probe
-from app.workers import lifeline, session
+from app.workers import aria2, lifeline, session
 from app.workers.inspect_worker import Collector
 from app.ytdlp import naming, params
 
@@ -172,6 +172,38 @@ def _base_params(work: Path, log: Collector) -> dict[str, Any]:
     return options
 
 
+def _network_params(req: dict[str, Any]) -> dict[str, Any]:
+    """Connections and the speed cap the manager handed over (see app/accel.py)."""
+    net = req.get("network") or {}
+    connections = max(1, min(int(net.get("connections") or 1), 16))
+    rate = int(net.get("rate_limit") or 0)
+    # yt-dlp applies `ratelimit` to each fragment download, and parallel fragments would add
+    # up past the cap: with a cap they go one at a time (a capped download needs no burst).
+    options: dict[str, Any] = {"concurrent_fragment_downloads": 1 if rate else connections}
+    if rate:
+        options["ratelimit"] = rate
+    aria2c = net.get("aria2c")
+    # Not with the Safari session: aria2c gets the cookies through a temporary file, and Berk's
+    # account cookies stay in this process's memory (CLAUDE.md gotcha 36).
+    if aria2c and connections > 1 and not req.get("cookies_from_browser"):
+        aria2.install()
+        options["external_downloader"] = {"http": aria2c}
+        n = str(connections)
+        options["external_downloader_args"] = {
+            "aria2c": [
+                "-x",
+                n,
+                "-s",
+                n,
+                "-j",
+                n,
+                "-k",
+                "1M",
+            ]
+        }
+    return options
+
+
 FORBIDDEN_RETRY_DELAY = 3.0
 
 
@@ -209,6 +241,7 @@ def _stream_pass(req: dict[str, Any], work: Path, log: Collector) -> dict[str, A
     # reports.
     options: dict[str, Any] = {
         **_base_params(work, log),
+        **_network_params(req),
         # "," downloads each format as its own file; muxing is ours, not yt-dlp's merger.
         "format": ",".join(selected),
         "outtmpl": {

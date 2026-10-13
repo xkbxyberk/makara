@@ -113,6 +113,26 @@ public struct APIClient: Sendable {
         _ = try await post(job(id) + "/retry", as: Job.self)
     }
 
+    /// Stops a download but keeps its partial files; `resume` continues them.
+    public func pause(job id: String) async throws {
+        _ = try await post(job(id) + "/pause", as: Job.self)
+    }
+
+    public func resume(job id: String) async throws {
+        _ = try await post(job(id) + "/resume", as: Job.self)
+    }
+
+    struct Paused: Decodable { let paused: Int }
+    struct Resumed: Decodable { let resumed: Int }
+
+    public func pauseAll() async throws {
+        _ = try await post("api/jobs/pause-all", as: Paused.self)
+    }
+
+    public func resumeAll() async throws {
+        _ = try await post("api/jobs/resume-all", as: Resumed.self)
+    }
+
     /// From the list only: the downloaded files stay where they are.
     public func remove(job id: String) async throws {
         _ = try await delete(job(id), as: OK.self)

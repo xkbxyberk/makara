@@ -102,6 +102,9 @@ public final class Preferences {
         if shown.notifications == sent.notifications { shown.notifications = stored.notifications }
         if shown.safariLogin == sent.safariLogin { shown.safariLogin = stored.safariLogin }
         if shown.extensionOffer == sent.extensionOffer { shown.extensionOffer = stored.extensionOffer }
+        if shown.accelerate == sent.accelerate { shown.accelerate = stored.accelerate }
+        if shown.connections == sent.connections { shown.connections = stored.connections }
+        if shown.rateLimit == sent.rateLimit { shown.rateLimit = stored.rateLimit }
         shown.defaultFilenameTemplate = stored.defaultFilenameTemplate
     }
 
@@ -114,6 +117,9 @@ public final class Preferences {
         if changed.notifications != saved.notifications { shown.notifications = saved.notifications }
         if changed.safariLogin != saved.safariLogin { shown.safariLogin = saved.safariLogin }
         if changed.extensionOffer != saved.extensionOffer { shown.extensionOffer = saved.extensionOffer }
+        if changed.accelerate != saved.accelerate { shown.accelerate = saved.accelerate }
+        if changed.connections != saved.connections { shown.connections = saved.connections }
+        if changed.rateLimit != saved.rateLimit { shown.rateLimit = saved.rateLimit }
     }
 
     /// The file name the draft's template gives for the sample video.

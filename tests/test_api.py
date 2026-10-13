@@ -30,11 +30,16 @@ def test_doctor_reports_every_dependency(client: TestClient) -> None:
         "yt_dlp",
         "js_runtime",
         "ffmpeg",
+        "aria2c",
         "safari_session",
     }
     assert report["status"] in {"ok", "warn", "error"}
     ffmpeg = next(c for c in report["checks"] if c["id"] == "ffmpeg")
     assert "subtitles_filter" in ffmpeg["values"]["capabilities"]
+    # Optional, so never an error; in tests none is used unless VD_ARIA2C names one.
+    aria2c = next(c for c in report["checks"] if c["id"] == "aria2c")
+    assert aria2c["status"] == "warn" and aria2c["values"]["path"] is None
+    assert aria2c["fix"] == {"kind": "command", "command": "brew install aria2"}
 
 
 def test_inspect_returns_the_normalised_model(client: TestClient) -> None:

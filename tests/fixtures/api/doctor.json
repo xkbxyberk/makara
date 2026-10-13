@@ -64,6 +64,18 @@
       }
     },
     {
+      "id": "aria2c",
+      "status": "warn",
+      "values": {
+        "path": null,
+        "version": null
+      },
+      "fix": {
+        "kind": "command",
+        "command": "brew install aria2"
+      }
+    },
+    {
       "id": "safari_session",
       "status": "warn",
       "values": {

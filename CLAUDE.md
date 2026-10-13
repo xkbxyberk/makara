@@ -264,6 +264,20 @@ UI and went with it (N8).
     once (a refused switch springs back via `commit(undo:)`); in UI tests every save is refused
     (the runner's download folder is under ~/Library), which the test uses to check the error.
 
+41. **Faster downloads (P2).** `app/accel.py` turns the settings (`accelerate`, `connections`,
+    `rate_limit` in bytes/s) into `request["network"]`, added by the manager *at each start*
+    (like the session switch), so a resume picks up a changed setting. Fragments (HLS/DASH) use
+    yt-dlp's `concurrent_fragment_downloads`; a single-file http(s) format goes to aria2c
+    (`external_downloader: {"http": path}`, `-x/-s/-j N -k 1M`). yt-dlp's aria2c support reports
+    **no progress** and lets aria2c write to the worker's stdout (our JSON protocol), so
+    `workers/aria2.py` replaces `Aria2cFD._call_process` in the worker: output piped, the
+    `[#id 4.0MiB/10MiB(40%) CN:16 DL:2.0MiB ETA:3s]` lines (`--summary-interval=1`) become
+    progress hooks. **Never aria2c with the Safari session**: it would get the cookies through
+    a temporary file. `ratelimit` is per fragment download, so with a cap fragments go one at a
+    time. aria2c's `--version` is translated here ("aria2 sürüm 1.37.0"). In fixture mode only
+    `VD_ARIA2C` enables it. **Pause** = cancel that ends `paused` and keeps the scratch
+    directory (the `.part` and `.aria2` files); resume requeues it. Stüdyo jobs cannot pause.
+
 ## Rules
 
 - **Never delete, skip, weaken or `xfail` a test to make the suite pass.** Fix the code.

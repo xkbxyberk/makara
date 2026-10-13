@@ -23,7 +23,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from app import paths
+from app import accel, paths
 from app.db import JobStore
 from app.settings import Settings
 
@@ -64,6 +64,8 @@ class JobManager:
         # Jobs from "picked" to "process exited" -- includes the window before a process exists.
         self.active: set[str] = set()
         self.cancelling: set[str] = set()
+        # Stopped by a pause: ends "paused" (scratch kept, resumable), not "cancelled".
+        self.pausing: set[str] = set()
         self._kill_timers: dict[str, asyncio.TimerHandle] = {}
         self.subscribers: set[asyncio.Queue[dict[str, Any]]] = set()
         self._wake = asyncio.Event()
@@ -183,6 +185,7 @@ class JobManager:
             self.active.discard(job_id)
             self.procs.pop(job_id, None)
             self.cancelling.discard(job_id)
+            self.pausing.discard(job_id)
             timer = self._kill_timers.pop(job_id, None)
             if timer is not None:
                 timer.cancel()
@@ -228,9 +231,12 @@ class JobManager:
             self._terminate(job_id, proc)
         assert proc.stdin and proc.stdout and proc.stderr
         request = dict(job["request"])
-        if not self.get_settings().safari_login:
+        settings = self.get_settings()
+        if not settings.safari_login:
             # Queued (or retried) while the session was allowed, run after it was turned off.
             request["cookies_from_browser"] = None
+        # Connections and the speed cap as they are now: a resume picks up a changed setting.
+        request["network"] = accel.network(settings)
         proc.stdin.write(json.dumps(request).encode())
         await proc.stdin.drain()
         proc.stdin.close()
@@ -293,10 +299,11 @@ class JobManager:
             )
 
     def _finish_cancelled(self, job_id: str) -> None:
+        paused = job_id in self.pausing
         self._update(
             job_id,
-            status="cancelled",
-            stage="cancelled",
+            status="paused" if paused else "cancelled",
+            stage="paused" if paused else "cancelled",
             speed=None,
             eta=None,
             finished_at=time.time(),
@@ -332,7 +339,7 @@ class JobManager:
         job = self.store.get(job_id)
         if job is None:
             return None
-        if job["status"] == "queued":
+        if job["status"] in ("queued", "paused"):
             return self._update(
                 job_id, status="cancelled", stage="cancelled", finished_at=time.time()
             )
@@ -348,6 +355,49 @@ class JobManager:
                 self._terminate(job_id, proc)
             # No process yet: _run_worker acts on the flag the moment the process exists.
         return self.store.get(job_id)
+
+    def pause(self, job_id: str) -> dict[str, Any] | None:
+        """Stop a download but keep its scratch directory, so a resume continues the `.part`
+        files (and aria2c's control files) instead of starting over."""
+        job = self.store.get(job_id)
+        if job is None:
+            return None
+        if job.get("kind") == "studio":
+            return job  # an FFmpeg run cannot continue where it stopped; cancel it instead
+        if job["status"] == "queued":
+            return self._update(job_id, status="paused", stage="paused")
+        if job["status"] == "running" and job_id not in self.cancelling:
+            if job["stage"] == "finalizing":
+                return job  # as cancel: the files are being moved into place
+            self.pausing.add(job_id)
+            self.cancel(job_id)
+            return self._update(job_id, stage="pausing")
+        return job
+
+    def resume(self, job_id: str) -> dict[str, Any] | None:
+        job = self.store.get(job_id)
+        if job is None or job["status"] != "paused":
+            return job
+        updated = self._update(job_id, status="queued", stage="queued", speed=None, eta=None)
+        self.wake()
+        return updated
+
+    def pause_all(self) -> int:
+        jobs = [
+            j
+            for j in self.store.all()
+            if j["status"] in ("queued", "running") and j.get("kind") != "studio"
+        ]
+        for job in jobs:
+            self.pause(job["id"])
+        return len(jobs)
+
+    def resume_all(self) -> int:
+        jobs = [j for j in self.store.all() if j["status"] == "paused"]
+        # Oldest first, so they go back in the order they were queued.
+        for job in sorted(jobs, key=lambda j: j.get("created_at") or 0):
+            self.resume(job["id"])
+        return len(jobs)
 
     def _terminate(self, job_id: str, proc: asyncio.subprocess.Process) -> None:
         self._signal_proc(proc, signal.SIGTERM)

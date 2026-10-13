@@ -177,6 +177,36 @@ def test_cancel_then_retry_resumes_the_partial_download(app_env: Any, media_serv
     assert resumed, f"retry started over instead of resuming: {MEDIA_REQUESTS}"
 
 
+def test_pause_then_resume_continues_the_partial_download(app_env: Any, media_server: str) -> None:
+    client = app_env(f"{media_server}/slow")
+    model = inspect(client)
+    MEDIA_REQUESTS.clear()
+    job = client.post(
+        "/api/jobs",
+        json={
+            "inspect_id": model["inspect_id"],
+            "mode": "separate",
+            "video_format_id": "v-vp9",
+            "extras": {"thumbnail": False},
+        },
+    ).json()
+    wait_for(client, job["id"], lambda j: j["stage"] == "downloading" and j["progress"] > 0.2)
+
+    client.post(f"/api/jobs/{job['id']}/pause")
+    paused = wait_for(client, job["id"], lambda j: j["status"] == "paused")
+    assert paused["stage"] == "paused" and paused["output_files"] == []
+    assert client.post("/api/jobs/resume-all").json() == {"resumed": 1}
+    done = wait_for(client, job["id"], lambda j: j["status"] == "done")
+    assert (
+        Path(done["output_files"][0]).stat().st_size
+        == (Path(__file__).parent / "fixtures" / "media" / "video_vp9.webm").stat().st_size
+    )
+    resumed = [
+        r for r in MEDIA_REQUESTS if r["path"].endswith("video_vp9.webm") and r["range_start"]
+    ]
+    assert resumed, f"resume started over: {MEDIA_REQUESTS}"
+
+
 def test_remove_deletes_the_entry_but_never_the_media(app_env: Any) -> None:
     client = app_env()
     model = inspect(client)

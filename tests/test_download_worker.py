@@ -346,3 +346,50 @@ def test_a_transient_403_is_retried_once_with_a_fresh_pass(
     )
     assert code == 0, events[-1]
     assert {"t": "stage", "stage": "retrying"} in events
+
+
+def test_a_single_file_format_downloads_through_aria2c_with_progress(
+    tmp_path: Path,
+    local_info: dict[str, Any],
+    monkeypatch: pytest.MonkeyPatch,
+    capfd: pytest.CaptureFixture[str],
+) -> None:
+    """Several connections via aria2c (P2). Its output must not reach the worker's stdout, which
+    carries the JSON protocol, and its readout must become progress events."""
+    from app.workers import aria2
+
+    calls: list[list[str]] = []
+    real = aria2._call_process
+
+    def counting(self: Any, cmd: list[str], info_dict: dict[str, Any]) -> tuple[str, str, int]:
+        calls.append(cmd)
+        return real(self, cmd, info_dict)
+
+    monkeypatch.setattr(aria2, "_call_process", counting)
+    code, events = run_job(
+        tmp_path,
+        local_info,
+        mode="compat_mp4",
+        video_format_id="v-h264",
+        audio_format_ids=["a-en-m4a"],
+        network={"connections": 4, "rate_limit": None, "aria2c": "/opt/homebrew/bin/aria2c"},
+    )
+    assert code == 0, [e for e in events if e["t"] == "error"]
+    [output] = done_files(events)
+    assert streams(output, "video") and streams(output, "audio")
+    assert len(calls) == 2  # the video and the audio, each its own aria2c run
+    assert all("-x" in cmd and cmd[cmd.index("-x") + 1] == "4" for cmd in calls)
+    assert any(e["t"] == "progress" for e in events)
+    assert "aria2" not in capfd.readouterr().out.lower()
+
+
+def test_the_safari_session_never_goes_to_aria2c() -> None:
+    options = download_worker._network_params(
+        {
+            "network": {"connections": 8, "rate_limit": 2_000_000, "aria2c": "/x/aria2c"},
+            "cookies_from_browser": ["safari", "/x/Cookies.binarycookies"],
+        }
+    )
+    assert "external_downloader" not in options
+    # A cap is exact: one fragment at a time, at the cap.
+    assert options == {"concurrent_fragment_downloads": 1, "ratelimit": 2_000_000}

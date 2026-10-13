@@ -114,6 +114,32 @@ struct PreferencesForm: View {
             }
 
             Section {
+                toggle(L("settings.accelerate"), help: L("settings.accelerateHelp"), \.accelerate, id: "accelerate")
+                Stepper(value: instant(\.connections), in: 2...16) {
+                    HStack {
+                        Term(L("settings.connections"), help: L("settings.connectionsHelp"))
+                        Spacer()
+                        Text("\(preferences.draft!.connections)").monospacedDigit()
+                    }
+                }
+                .disabled(!preferences.draft!.accelerate)
+                .accessibilityIdentifier("settings.connections")
+                Picker(selection: instant(\.rateLimit)) {
+                    Text(L("settings.rateLimit.none")).tag(0)
+                    ForEach(Self.rateLimits, id: \.self) { bytes in
+                        Text(String(format: L("settings.rateLimit.value"), Format.bytes(Double(bytes)))).tag(bytes)
+                    }
+                    // A value set elsewhere (by hand in settings.json) stays selectable.
+                    if let rate = preferences.draft?.rateLimit, rate > 0, !Self.rateLimits.contains(rate) {
+                        Text(String(format: L("settings.rateLimit.value"), Format.bytes(Double(rate)))).tag(rate)
+                    }
+                } label: {
+                    Term(L("settings.rateLimit"), help: L("settings.rateLimitHelp"))
+                }
+                .accessibilityIdentifier("settings.rateLimit")
+            }
+
+            Section {
                 toggle(L("settings.clipboard"), help: L("settings.clipboardHelp"), \.clipboardWatch, id: "clipboard")
                 toggle(L("settings.notifications"), help: L("settings.notificationsHelp"), \.notifications, id: "notifications")
                 toggle(L("settings.safariLogin"), help: L("settings.safariLoginHelp"), \.safariLogin, id: "safariLogin")
@@ -137,6 +163,9 @@ struct PreferencesForm: View {
         .formStyle(.grouped)
         .onChange(of: field) { old, _ in if old != nil { preferences.commitText() } }
     }
+
+    /// Speed caps on offer, in bytes per second (0.5 to 50 MB/s).
+    static let rateLimits = [512 << 10, 1 << 20, 2 << 20, 5 << 20, 10 << 20, 20 << 20, 50 << 20]
 
     private func toggle(_ title: String, help: String, _ keyPath: WritableKeyPath<AppSettings, Bool>, id: String) -> some View {
         Toggle(isOn: instant(keyPath)) {

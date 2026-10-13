@@ -32,6 +32,23 @@ struct QueueView: View {
                 .accessibilityIdentifier("queue.list")
             }
         }
+        .toolbar {
+            // Both always there (a toolbar item that comes and goes resizes the bar: gotcha 39).
+            ToolbarItemGroup {
+                Button { Task { try? await client.pauseAll() } } label: {
+                    Label(L("queue.pauseAll"), systemImage: "pause.circle")
+                }
+                .help(L("queue.pauseAll"))
+                .disabled(!jobs.contains { $0.status.isActive && $0.kind == "download" })
+                .accessibilityIdentifier("queue.pauseAll")
+                Button { Task { try? await client.resumeAll() } } label: {
+                    Label(L("queue.resumeAll"), systemImage: "play.circle")
+                }
+                .help(L("queue.resumeAll"))
+                .disabled(!jobs.contains { $0.status == .paused })
+                .accessibilityIdentifier("queue.resumeAll")
+            }
+        }
         .safeAreaInset(edge: .top, spacing: 0) {
             if connection == .reconnecting {
                 Label(L("queue.reconnecting"), systemImage: "wifi.exclamationmark")
@@ -72,7 +89,7 @@ struct JobRow: View {
                     .accessibilityIdentifier("job.status")
                 actions
             }
-            if job.status == .running || job.status == .queued {
+            if job.status == .running || job.status == .queued || job.status == .paused {
                 progress
             }
             if job.status == .failed {
@@ -133,7 +150,13 @@ struct JobRow: View {
 
     @ViewBuilder private var actions: some View {
         HStack(spacing: 2) {
-            if job.status.isActive {
+            if canPause {
+                iconButton(L("queue.pause"), "pause.circle") { try await client.pause(job: job.id) }
+            }
+            if job.status == .paused {
+                iconButton(L("queue.resume"), "play.circle") { try await client.resume(job: job.id) }
+            }
+            if job.status.isActive || job.status == .paused {
                 iconButton(L("queue.cancel"), "xmark.circle") { try await client.cancel(job: job.id) }
             }
             if job.status == .failed || job.status == .cancelled {
@@ -147,8 +170,19 @@ struct JobRow: View {
         }
     }
 
+    /// Downloads only: a Stüdyo run cannot continue where it stopped. Not while files are placed.
+    private var canPause: Bool {
+        job.status.isActive && job.kind == "download" && !["finalizing", "cancelling", "pausing"].contains(job.stage ?? "")
+    }
+
     @ViewBuilder private var menu: some View {
-        if job.status.isActive {
+        if canPause {
+            Button(L("queue.pause")) { run { try await client.pause(job: job.id) } }
+        }
+        if job.status == .paused {
+            Button(L("queue.resume")) { run { try await client.resume(job: job.id) } }
+        }
+        if job.status.isActive || job.status == .paused {
             Button(L("queue.cancel")) { run { try await client.cancel(job: job.id) } }
         }
         if job.status == .failed || job.status == .cancelled {
