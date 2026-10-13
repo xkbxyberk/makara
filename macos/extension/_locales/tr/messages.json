@@ -1,7 +1,263 @@
 {
-  "extension_name": { "message": "VideoDownloader" },
-  "extension_description": { "message": "Sayfadaki videoyu VideoDownloader ile tek tıkla indir." },
-  "popup_checking": { "message": "Uygulamaya bağlanılıyor…" },
-  "popup_connected": { "message": "Uygulama hazır." },
-  "popup_unreachable": { "message": "Uygulama açık değil. VideoDownloader'ı başlat." }
+  "extension_name": {
+    "message": "VideoDownloader"
+  },
+  "extension_description": {
+    "message": "Sayfadaki videoyu, videonun kendi kalite ve ses seçenekleriyle tek tıkla indir."
+  },
+  "title_ready": {
+    "message": "Bu sayfadaki videoyu indir"
+  },
+  "title_list": {
+    "message": "Bu listeyi VideoDownloader’da aç"
+  },
+  "title_none": {
+    "message": "Bu sayfada indirilebilir bir şey bulunamadı"
+  },
+  "title_offline": {
+    "message": "VideoDownloader açık değil"
+  },
+  "menu_download": {
+    "message": "VideoDownloader ile indir"
+  },
+  "menu_inspect": {
+    "message": "VideoDownloader’da incele"
+  },
+  "popup_inspecting": {
+    "message": "İnceleniyor…"
+  },
+  "popup_offline_title": {
+    "message": "VideoDownloader açık değil"
+  },
+  "popup_offline_body": {
+    "message": "İndirmek için uygulama açık olmalı."
+  },
+  "popup_open_app": {
+    "message": "VideoDownloader’ı aç"
+  },
+  "popup_starting": {
+    "message": "Uygulama açılıyor…"
+  },
+  "popup_not_a_page": {
+    "message": "Bu sekmede incelenecek bir web sayfası yok."
+  },
+  "popup_playlist_title": {
+    "message": "Bu bir liste"
+  },
+  "popup_playlist_body": {
+    "message": "Listedeki videoları uygulamada tek tek seçebilirsin."
+  },
+  "popup_open_in_app": {
+    "message": "Uygulamada incele"
+  },
+  "popup_drm": {
+    "message": "Bu videonun görüntü ve ses formatları DRM korumalı; indirilemez."
+  },
+  "popup_nothing": {
+    "message": "Bu sayfada indirilebilir bir görüntü ya da ses yok."
+  },
+  "mode_mkv": {
+    "message": "Arşiv MKV"
+  },
+  "mode_mp4": {
+    "message": "Uyumlu MP4"
+  },
+  "mode_audio": {
+    "message": "Sadece ses"
+  },
+  "label_audio": {
+    "message": "Ses"
+  },
+  "label_subtitles": {
+    "message": "Altyazı"
+  },
+  "subs_default": {
+    "message": "Varsayılan: $1"
+  },
+  "subs_default_none": {
+    "message": "Varsayılan: yok"
+  },
+  "subs_none": {
+    "message": "Altyazısız"
+  },
+  "role_original": {
+    "message": "Orijinal"
+  },
+  "role_default": {
+    "message": "Varsayılan"
+  },
+  "role_dub": {
+    "message": "Dublaj"
+  },
+  "role_description": {
+    "message": "Betimleme"
+  },
+  "step_copy": {
+    "message": "Yeniden kodlamasız"
+  },
+  "step_transcode": {
+    "message": "Dönüştürülür"
+  },
+  "step_probe": {
+    "message": "Gerekirse dönüştürülür"
+  },
+  "badge_ai": {
+    "message": "YZ ile büyütülmüş"
+  },
+  "size_later": {
+    "message": "dönüştürünce belli olur"
+  },
+  "size_unknown": {
+    "message": "boyut bilinmiyor"
+  },
+  "format_m4a": {
+    "message": "M4A (AAC)"
+  },
+  "format_opus": {
+    "message": "Opus"
+  },
+  "format_mp3": {
+    "message": "MP3"
+  },
+  "fps": {
+    "message": "$1 fps"
+  },
+  "remembered": {
+    "message": "bu sitede son seçimin"
+  },
+  "download": {
+    "message": "İndir"
+  },
+  "queued": {
+    "message": "Kuyruğa eklendi"
+  },
+  "progress": {
+    "message": "$1 · %$2"
+  },
+  "show_downloads": {
+    "message": "İndirmeler’de göster"
+  },
+  "stage_queued": {
+    "message": "Sırada bekliyor"
+  },
+  "stage_starting": {
+    "message": "Başlıyor"
+  },
+  "stage_preparing": {
+    "message": "Hazırlanıyor"
+  },
+  "stage_downloading": {
+    "message": "İndiriliyor"
+  },
+  "stage_processing": {
+    "message": "İşleniyor"
+  },
+  "stage_postprocessing": {
+    "message": "İşleniyor"
+  },
+  "stage_merging": {
+    "message": "Birleştiriliyor"
+  },
+  "stage_converting": {
+    "message": "Dönüştürülüyor"
+  },
+  "stage_finalizing": {
+    "message": "Dosyalar yerleştiriliyor"
+  },
+  "stage_retrying": {
+    "message": "Site reddetti, yeniden deneniyor"
+  },
+  "stage_done": {
+    "message": "Tamamlandı"
+  },
+  "stage_failed": {
+    "message": "İndirme başarısız"
+  },
+  "stage_cancelled": {
+    "message": "İptal edildi"
+  },
+  "error_generic": {
+    "message": "Bir sorun oldu ($1). Ayrıntılar uygulamada."
+  },
+  "error_UNSUPPORTED_SITE": {
+    "message": "Bu site desteklenmiyor."
+  },
+  "error_LOGIN_REQUIRED": {
+    "message": "Bu video için giriş gerekiyor."
+  },
+  "error_AGE_RESTRICTED": {
+    "message": "Bu videoda yaş kısıtlaması var."
+  },
+  "error_GEO_RESTRICTED": {
+    "message": "Bu video bu ülkede erişime kapalı."
+  },
+  "error_VIDEO_UNAVAILABLE": {
+    "message": "Bu video yok ya da kaldırılmış."
+  },
+  "error_DRM_PROTECTED": {
+    "message": "Kopya korumalı içerik; indirilemez."
+  },
+  "error_LIVE_NOT_STARTED": {
+    "message": "Yayın henüz başlamadı."
+  },
+  "error_NETWORK": {
+    "message": "Siteye bağlanılamadı."
+  },
+  "error_TIMEOUT": {
+    "message": "Çözümleme çok uzun sürdü."
+  },
+  "error_BOT_CHECK": {
+    "message": "YouTube bot doğrulaması istedi."
+  },
+  "error_RATE_LIMITED": {
+    "message": "Çok fazla istek; biraz sonra yeniden dene."
+  },
+  "error_FORBIDDEN": {
+    "message": "Site erişimi reddetti."
+  },
+  "error_AUDIO_LANGUAGE_UNKNOWN": {
+    "message": "Bu dilde ses yok."
+  },
+  "error_QUICK_NEEDS_VIDEO": {
+    "message": "Bu bir oynatma listesi; uygulamada incele."
+  },
+  "error_SELECTION_INVALID": {
+    "message": "Bu seçim indirilemiyor; uygulamada incele."
+  },
+  "role_unknown": {
+    "message": "Ses"
+  },
+  "stage_cancelling": {
+    "message": "İptal ediliyor"
+  },
+  "job_gone": {
+    "message": "Bu indirmenin durumu artık alınamıyor; uygulamadaki İndirmeler listesine bak."
+  },
+  "error_http": {
+    "message": "İstek işlenemedi (HTTP $1)."
+  },
+  "error_INVALID_URL": {
+    "message": "Bu bir bağlantı değil."
+  },
+  "error_INSPECT_EXPIRED": {
+    "message": "İnceleme bilgisi eskidi; pencereyi kapatıp yeniden aç."
+  },
+  "error_OFFER_UNKNOWN": {
+    "message": "Bu seçenek bu videoda yok."
+  },
+  "error_QUICK_NOTHING_OFFERED": {
+    "message": "Bu videoda indirilebilir bir kalite yok."
+  },
+  "error_WORKER_CRASHED": {
+    "message": "İndirme beklenmedik biçimde durdu."
+  },
+  "error_DOWNLOAD_INCOMPLETE": {
+    "message": "İndirme tamamlanmadı."
+  },
+  "error_DISK_FULL": {
+    "message": "Disk dolu."
+  },
+  "error_FFMPEG_FAILED": {
+    "message": "FFmpeg dosyayı oluşturamadı."
+  }
 }

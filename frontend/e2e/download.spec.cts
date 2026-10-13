@@ -136,6 +136,18 @@ test('downloading the untouched default remembers nothing', async ({ page, reque
   expect(await page.evaluate(() => localStorage.getItem('vd-quick-rules'))).toBeNull();
 });
 
+test('a remembered choice is never lowered by a video that cannot meet it', async ({ page, request }) => {
+  const rule = { kind: 'video', height: 1080, fps: 30, hdr: false, output: 'mkv' };
+  await page.addInitScript((r) => localStorage.setItem('vd-quick-rules', JSON.stringify({ 'example.test': r })), rule);
+  await inspectLocal(page);
+  // The nearest the clip has is 360p; downloading it untouched keeps the 1080p rule as it was.
+  await expect(page.getByTestId('quick-choices').locator('[data-offer-id="v360-25-sdr"]')).toHaveAttribute('aria-checked', 'true');
+  const id = await startDownload(page);
+  await waitDone(request, id);
+  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('vd-quick-rules') ?? '{}'));
+  expect(stored).toEqual({ 'example.test': rule });
+});
+
 test('track picker: 1 video + 2 audio languages + 2 subtitles into one tagged MKV', async ({
   page,
   request,

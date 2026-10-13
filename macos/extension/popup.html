@@ -2,10 +2,12 @@
 <html lang="tr">
   <head>
     <meta charset="utf-8" />
+    <meta name="color-scheme" content="light dark" />
     <link rel="stylesheet" href="popup.css" />
-    <script type="module" src="popup.js"></script>
+    <script src="shared.js"></script>
+    <script src="popup.js" defer></script>
   </head>
   <body>
-    <p id="status"></p>
+    <main id="app" aria-live="polite"></main>
   </body>
 </html>

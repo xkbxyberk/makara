@@ -36,7 +36,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             SFSafariExtensionManager.getStateOfSafariExtension(withIdentifier: extensionBundleIdentifier) { state, error in
                 let line = error.map { "error: \($0.localizedDescription)" } ?? "enabled: \(state?.isEnabled ?? false)"
                 FileHandle.standardOutput.write(Data((line + "\n").utf8))
-                DispatchQueue.main.async { NSApplication.shared.terminate(nil) }
+                // Nothing was started in this mode: leave at once (a normal terminate goes through
+                // the backend shutdown below, and waited for good when another copy was running).
+                exit(0)
             }
             return
         }

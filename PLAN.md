@@ -144,17 +144,18 @@ No fixed profiles: the choices come from the inspected video itself.
       scheme; a URL dropped on the Dock icon or window is inspected
 - [x] Every screen still reachable (embedded web view); `pywebview` launcher retired
 
-### N3 — Safari extension
-- [ ] Toolbar icon lights up on pages yt-dlp supports, and on pages with a `<video>`/`<audio>`
+### N3 — Safari extension ✅ built (live check in Safari pending: restart + website access)
+- [x] Toolbar icon lights up on pages yt-dlp supports, and on pages with a `<video>`/`<audio>`
       or a streaming manifest; nothing is sent anywhere until Berk clicks
-- [ ] Popup: opening it inspects the page (the server cache makes a re-open instant); title,
+- [x] Popup: opening it inspects the page (the server cache makes a re-open instant); title,
       duration, then the video's own choices from N1 (MKV/MP4 switch, one row per quality with
       codec and size, audio-only rows, languages/subtitles from that video); the last choice
       for that site is pre-selected; "Uygulamada incele" opens the full track picker; DRM
       pages say so and offer nothing
-- [ ] Right-click a link → "VideoDownloader ile indir" (uses the remembered choice) or
-      "Seçeneklerle…" (opens the popup choices for that link); keyboard shortcut
-- [ ] Job progress visible in the popup; the app's queue shows the same job
+- [x] Right-click a link → "VideoDownloader ile indir" (uses the remembered choice) or
+      "VideoDownloader’da incele" (the full choices, in the app: Safari cannot open the popup
+      for another page); keyboard shortcut ⌃⇧D opens the popup
+- [x] Job progress visible in the popup; the app's queue shows the same job
 
 ### N4 — İndirmeler (queue) and Sistem (doctor) in SwiftUI
 ### N5 — İncele + download panel + track picker in SwiftUI

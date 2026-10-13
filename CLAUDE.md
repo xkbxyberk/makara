@@ -157,8 +157,10 @@ Local-only media workstation on yt-dlp + FFmpeg. macOS arm64, single user (Berk)
     points at is missing.
 32. **Quick choices are computed once, in `app/ytdlp/offers.py`.** The web panel, `/api/quick`
     and (from N3) the Safari popup all read its rows and their ready-made `selection`; never
-    re-derive a choice in JavaScript or Swift. A rule is saved only when a quick row was
-    clicked: saving the untouched default once capped a whole site at 240p (review finding).
+    re-derive a choice in JavaScript or Swift. A rule is saved only when the row still chosen
+    at download time is one that was clicked: saving the untouched default, a preselected
+    nearest match, or a default after switching output each ratchets a whole site down to
+    whatever one video offered (found twice in review, in the panel and the popup).
     The audio-only defaults (`selection.DEFAULT_AUDIO_CODEC/QUALITY`) mirror the panel's
     initial `mp3`/`192`; change both together.
 33. **Embedded web UI** (`?embedded=1`, `frontend/src/lib/embedded.ts`): no sidebar, title or
@@ -177,6 +179,21 @@ Local-only media workstation on yt-dlp + FFmpeg. macOS arm64, single user (Berk)
     with `BEGINSWITH`. **Screenshot windows, never `XCUIScreen.main`**: a full-screen capture
     once recorded whatever else Berk had open. `typeKey(",", .command)` does not reach the
     Settings item on this Mac (Turkish keyboard layout); tests click the menu item.
+35. **The Safari extension** (`macos/extension/`, plain JS, no build step): `shared.js` (also
+    loaded by vitest), `background.js` (icon + link menu), `content.js` (looks for
+    `<video>`/`<audio>`/manifests, tells only the background script), `popup.*`. All app access
+    goes through `sendNativeMessage` -> `SafariWebExtensionHandler` -> `Relay.swift`, whose
+    allowlist is the security boundary: GET health/supports/jobs, POST inspect/quick, open
+    `videodownloader://inspect|show`. Nothing else (Trash, pickers, updater, settings).
+    Strings: `_locales/tr/messages.json` (the extension's catalog). The e2e suite serves the
+    folder at `/__test/extension/` (fixture mode only) and stubs `browser.*` as a transport.
+    **Safari only loads a rebuilt extension after it is restarted**, and the extension needs
+    "all websites" access, which only Berk can grant. `VD_ACCESS_LOG=1` turns on the request
+    log for debugging it; never leave it on (it records the pages he visits). The handler uses
+    an ephemeral, cache-less URLSession and every `/api/*` answer is `Cache-Control: no-store`:
+    the shared session had kept a Cache.db of visited page addresses. The relay refuses
+    inspect/quick bodies whose `url` is this Mac or the LAN (`LocalHost.swift`, shared with
+    `IncomingURL`; mirrored in `shared.js isLocal`).
 
 ## Rules
 

@@ -1,4 +1,5 @@
 import Foundation
+import VideoDownloaderRelay
 
 /// Something handed to the app from outside: `videodownloader://inspect?url=…`, a web link
 /// dropped on the Dock icon or the window, or a `.webloc` file.
@@ -38,29 +39,8 @@ public enum IncomingURL: Equatable, Sendable {
         }
     }
 
-    /// A public http(s) page, or nil.
+    /// A public http(s) page, or nil (one rule for the app and the extension: LocalHost).
     static func webPage(_ url: URL) -> URL? {
-        guard ["http", "https"].contains(url.scheme?.lowercased() ?? ""),
-              let host = url.host()?.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: "[]")),
-              !host.isEmpty, !isLocal(host) else { return nil }
-        return url
-    }
-
-    static func isLocal(_ host: String) -> Bool {
-        if host == "localhost" || host.hasSuffix(".localhost") || host.hasSuffix(".local") || !host.contains(".") && !host.contains(":") {
-            return true
-        }
-        if host.contains(":") {  // IPv6: loopback, unspecified, link-local, unique-local
-            return host == "::1" || host == "::" || host.hasPrefix("fe80:") || host.hasPrefix("fc") || host.hasPrefix("fd")
-                || host.hasPrefix("::ffff:")
-        }
-        let parts = host.split(separator: ".").compactMap { Int($0) }
-        guard parts.count == 4, parts.allSatisfy({ (0...255).contains($0) }) else { return false }
-        switch (parts[0], parts[1]) {
-        case (127, _), (10, _), (0, _), (169, 254), (192, 168): return true
-        case (172, let b) where (16...31).contains(b): return true
-        case (100, let b) where (64...127).contains(b): return true  // carrier-grade NAT
-        default: return false
-        }
+        LocalHost.publicWebPage(url)
     }
 }

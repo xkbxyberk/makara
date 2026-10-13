@@ -685,6 +685,42 @@
           "proof": "BackendControllerTests (5), IncomingURLSafetyTests (2)"
         }
       ]
+    },
+    "N3": {
+      "title": "Safari extension",
+      "status": "built; live check pending",
+      "criteria": [
+        {
+          "id": "N3.1",
+          "text": "Icon state from the offline support check and the page's own media; nothing inspected until the popup opens",
+          "pass": true,
+          "proof": "vitest extensionShared.test.ts (iconState); content.js / background.js reviewed. Live in Safari: pending Berk (restart Safari, allow all websites)"
+        },
+        {
+          "id": "N3.2",
+          "text": "Popup shows the video's own choices, preselects the remembered one, downloads with one click and follows progress to done",
+          "pass": true,
+          "proof": "e2e extension.spec.cts (11 tests: choices, preselect, language/subtitles reaching the job, untouched default and lowered match remembering nothing, output switch after a click, double click = one job); screenshots extension-popup-light/dark.png"
+        },
+        {
+          "id": "N3.3",
+          "text": "App closed: the popup offers to open it and carries on; lists, unknown sites and non-web tabs are explained",
+          "pass": true,
+          "proof": "e2e extension.spec.cts"
+        },
+        {
+          "id": "N3.4",
+          "text": "The extension can reach only inspect/queue/progress through the relay, never for this Mac or the LAN, and nothing it sends is cached",
+          "pass": true,
+          "proof": "RelayTests + RelaySafetyTests (7); test_api.py::test_api_answers_are_never_cached; ephemeral session in SafariWebExtensionHandler"
+        },
+        {
+          "id": "N3.5",
+          "text": "Link menu and keyboard shortcut work in Safari",
+          "pass": false,
+          "proof": "implemented (contextMenus, commands._execute_action); needs Berk's live check"
+        }
+      ]
     }
   }
 }

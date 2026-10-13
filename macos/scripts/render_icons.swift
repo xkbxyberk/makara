@@ -37,5 +37,7 @@ for size in [48, 96, 128, 256, 512] {
 }
 // Toolbar icons are templates: Safari tints them, so they are drawn in black on transparent.
 for size in [16, 32] {
+    // Idle: an outline. Something to download on this page: the filled symbol.
     try render("arrow.down.circle", size: size, color: .black, background: nil, name: "toolbar-\(size).png")
+    try render("arrow.down.circle.fill", size: size, color: .black, background: nil, name: "toolbar-active-\(size).png")
 }

@@ -212,3 +212,36 @@ def test_supports_says_whether_a_page_is_one_video_or_a_list(
     response = client.get("/api/supports", params={"url": url}).json()
     assert response["supported"] is True
     assert response["kind"] == kind
+
+
+def test_the_extension_is_served_only_inside_its_folder_and_only_in_fixture_mode(
+    client: TestClient,
+) -> None:
+    assert client.get("/__test/extension/popup.html").status_code == 200
+    assert client.get("/__test/extension/_locales/tr/messages.json").status_code == 200
+    # Whatever the client or the router makes of these, no file outside the folder comes back.
+    for escape in [
+        "../../backend/app/main.py",
+        "..%2F..%2Fbackend%2Fapp%2Fmain.py",
+        "%2Fetc%2Fpasswd",
+    ]:
+        body = client.get(f"/__test/extension/{escape}").text
+        assert "create_app" not in body and "root:" not in body, escape
+
+
+def test_outside_fixture_mode_there_is_no_extension_route(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("VD_FIXTURE_MODE", raising=False)
+    monkeypatch.setenv("VD_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("VD_DOWNLOAD_DIR", str(tmp_path / "downloads"))
+    from app.main import create_app
+
+    with TestClient(create_app(), base_url="http://127.0.0.1:8787") as plain:
+        response = plain.get("/__test/extension/popup.html")
+        assert b"popup.js" not in response.content  # the SPA's index at most, never the popup
+
+
+def test_api_answers_are_never_cached(client: TestClient) -> None:
+    for path in ["/api/health", "/api/supports?url=https://www.youtube.com/watch?v=x", "/api/jobs"]:
+        assert client.get(path).headers["cache-control"] == "no-store", path

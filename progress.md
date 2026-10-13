@@ -241,4 +241,19 @@ attached server could die unnoticed, Retry started twice, a self-referencing .we
 the app, the Settings window could turn into another screen, plus stale badges, an English
 error string and a 2 s wait on every quit.
 
-**Next:** N3 — the Safari extension.
+**N3 — the Safari extension (built; live check pending).** Popup with the video's own choices
+from `offers`, remembered per site, one click to the queue and live progress; icon from the
+offline support check plus the page's own media; link menu; ⌃⇧D. The native half is a relay with
+an allowlist (Relay.swift, 5 tests). The popup runs in the e2e suite against the real backend
+with `browser.*` stubbed as a transport (7 tests). Not yet seen in Safari itself: Safari keeps
+the old extension until it is restarted, and the new one needs "all websites" access from Berk;
+I did not restart Safari while he was using it. Also fixed: `--print-extension-state` hung when
+another copy of the app was running (it went through the backend shutdown path). The review
+found 12 confirmed issues, all fixed with tests; the worst: the extension handler's shared
+URLSession wrote every visited page address (tokens in query strings too) into an on-disk cache;
+a remembered choice was lowered by any video that could not meet it (in the popup *and* the web
+panel); a double click queued two downloads; the link menu could make the app fetch LAN or
+loopback addresses. Also: wrong audio role labels, endless progress polling, "+" turning into a
+space, a lost media flag when Safari unloads the background, unvalidated stored rules.
+
+**Next:** Berk's live check of N3, then N4.

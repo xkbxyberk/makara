@@ -115,12 +115,10 @@ export function DownloadPanel({
   const [queued, setQueued] = useState(false);
   // A remembered choice already decided the mode; the settings' default must not override it.
   const touchedMode = useRef(start !== null);
-  // Only a quick choice Berk actually made (or the remembered one he kept) becomes the rule for
-  // the next video. Downloading the untouched default must not: on a site whose video happens
-  // to top out at 240p, that would quietly cap every later video at 240p.
-  const [chosenId, setChosenId] = useState<string | null>(() =>
-    start ? (model.offers.preselected?.offer_id ?? null) : null,
-  );
+  // Only a quick choice Berk actually clicked becomes the rule for the next video. Neither the
+  // untouched default nor a preselected match may: the match for a 1080p rule on a video that
+  // tops out at 360p is the 360p row, and saving it would cap every later video at 360p.
+  const [chosenId, setChosenId] = useState<string | null>(null);
   const planTicket = useRef(0);
 
   // The user's preferred mode, unless they already picked one on this screen.

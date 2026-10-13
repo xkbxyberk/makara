@@ -47,7 +47,12 @@ async def reject_cross_site(
         site = request.headers.get("sec-fetch-site")
         if (origin and origin not in ALLOWED_ORIGINS) or site == "cross-site":
             return JSONResponse(status_code=403, content={"error": {"code": "FORBIDDEN_ORIGIN"}})
-    return await call_next(request)
+    response = await call_next(request)
+    # API answers can hold page addresses (the Safari extension's support check) and paths:
+    # no client keeps them in a cache on disk.
+    if request.url.path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 def _log_task_failure(task: asyncio.Task[Any]) -> None:
@@ -134,6 +139,16 @@ def create_app() -> FastAPI:
                 return JSONResponse(status_code=404, content={"error": {"code": "NOT_FOUND"}})
             return FileResponse(path)
 
+        # Test-only: the Safari extension's popup, so the e2e suite can drive it against this
+        # server with a stand-in for the extension APIs (Safari itself cannot be scripted).
+        @app.get("/__test/extension/{name:path}", response_model=None)
+        def extension_file(name: str) -> FileResponse | JSONResponse:
+            root = paths.EXTENSION_DIR.resolve()
+            path = (root / name).resolve()
+            if not path.is_file() or not path.is_relative_to(root):
+                return JSONResponse(status_code=404, content={"error": {"code": "NOT_FOUND"}})
+            return FileResponse(path)
+
         # Test-only, fixture mode only: drive the clipboard banner without the real clipboard.
         @app.post("/api/test/clipboard")
         async def fake_clipboard(request: Request) -> dict[str, bool]:
@@ -177,9 +192,10 @@ def main() -> None:
     # shuts down -- which happens after uvicorn stops waiting for open connections. Without a
     # limit, SIGTERM never got that far: the app waited, then had to SIGKILL, and running
     # workers (in their own sessions) were left behind.
-    config = uvicorn.Config(
-        app, host=HOST, port=PORT, log_level="warning", timeout_graceful_shutdown=2
-    )
+    # VD_ACCESS_LOG=1 logs every request (debugging the Safari extension, CLAUDE.md gotcha 29).
+    # Off by default: the extension's requests carry the addresses of the pages Berk visits.
+    level = "info" if os.environ.get("VD_ACCESS_LOG") == "1" else "warning"
+    config = uvicorn.Config(app, host=HOST, port=PORT, log_level=level, timeout_graceful_shutdown=2)
     _AnnouncingServer(config).run()
 
 

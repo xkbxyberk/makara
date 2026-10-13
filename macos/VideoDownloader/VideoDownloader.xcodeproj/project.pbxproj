@@ -19,6 +19,9 @@
 		C4A29F83307D51CD001BA880 /* popup.css in Resources */ = {isa = PBXBuildFile; fileRef = C4A29F7C307D51CD001BA880 /* popup.css */; };
 		C4A29F84307D51CD001BA880 /* _locales in Resources */ = {isa = PBXBuildFile; fileRef = C4A29F7D307D51CD001BA880 /* _locales */; };
 		3C9B9A6498B8BD62DA0E15D3 /* VideoDownloaderKit in Frameworks */ = {isa = PBXBuildFile; productRef = DCCFF2F0D7B6E282DDD4D891 /* VideoDownloaderKit */; };
+		6839D1BE8F6423F277430DC3 /* VideoDownloaderRelay in Frameworks */ = {isa = PBXBuildFile; productRef = 687DFAC141C84C6901A1D8D4 /* VideoDownloaderRelay */; };
+		3880CE2F21795CB8D0B919FD /* shared.js in Resources */ = {isa = PBXBuildFile; fileRef = 6938C226B5E38A91ABAD620E /* shared.js */; };
+		BCD0249050EA82630816CA26 /* content.js in Resources */ = {isa = PBXBuildFile; fileRef = 2374FA9F8DB3B97E4FCC6B81 /* content.js */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -66,6 +69,8 @@
 		C4A29F7C307D51CD001BA880 /* popup.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; name = popup.css; path = ../../extension/popup.css; sourceTree = "<group>"; };
 		C4A29F7D307D51CD001BA880 /* _locales */ = {isa = PBXFileReference; lastKnownFileType = folder; name = _locales; path = ../../extension/_locales; sourceTree = "<group>"; };
 		A79534228C5F5501B027B93F /* VideoDownloaderUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = VideoDownloaderUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		6938C226B5E38A91ABAD620E /* shared.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = shared.js; path = ../../extension/shared.js; sourceTree = "<group>"; };
+		2374FA9F8DB3B97E4FCC6B81 /* content.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = content.js; path = ../../extension/content.js; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -86,6 +91,7 @@
 		C4A29F62307D51CD001BA880 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
+				6839D1BE8F6423F277430DC3 /* VideoDownloaderRelay in Frameworks */,
 			);
 		};
 		47501AC2B3959BB64C72001C /* Frameworks */ = {
@@ -141,6 +147,8 @@
 			children = (
 				C4A29F77307D51CD001BA880 /* popup.js */,
 				C4A29F78307D51CD001BA880 /* background.js */,
+				2374FA9F8DB3B97E4FCC6B81 /* content.js */,
+				6938C226B5E38A91ABAD620E /* shared.js */,
 				C4A29F79307D51CD001BA880 /* images */,
 				C4A29F7A307D51CD001BA880 /* popup.html */,
 				C4A29F7B307D51CD001BA880 /* manifest.json */,
@@ -187,6 +195,9 @@
 			buildRules = (
 			);
 			name = "VideoDownloader Extension";
+			packageProductDependencies = (
+				687DFAC141C84C6901A1D8D4 /* VideoDownloaderRelay */,
+			);
 			productName = "VideoDownloader Extension";
 			productReference = C4A29F65307D51CD001BA880 /* VideoDownloader Extension.appex */;
 			productType = "com.apple.product-type.app-extension";
@@ -273,6 +284,8 @@
 				C4A29F83307D51CD001BA880 /* popup.css in Resources */,
 				C4A29F82307D51CD001BA880 /* manifest.json in Resources */,
 				C4A29F7F307D51CD001BA880 /* background.js in Resources */,
+				BCD0249050EA82630816CA26 /* content.js in Resources */,
+				3880CE2F21795CB8D0B919FD /* shared.js in Resources */,
 				C4A29F84307D51CD001BA880 /* _locales in Resources */,
 				C4A29F7E307D51CD001BA880 /* popup.js in Resources */,
 			);
@@ -673,6 +686,11 @@
 		DCCFF2F0D7B6E282DDD4D891 /* VideoDownloaderKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = VideoDownloaderKit;
+		};
+		687DFAC141C84C6901A1D8D4 /* VideoDownloaderRelay */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 12146016C176F9FC968C8C69 /* XCLocalSwiftPackageReference "../VideoDownloaderKit" */;
+			productName = VideoDownloaderRelay;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -8,9 +8,15 @@ let package = Package(
     name: "VideoDownloaderKit",
     defaultLocalization: "tr",
     platforms: [.macOS("27.0")],
-    products: [.library(name: "VideoDownloaderKit", targets: ["VideoDownloaderKit"])],
+    products: [
+        .library(name: "VideoDownloaderKit", targets: ["VideoDownloaderKit"]),
+        // The Safari extension's native half links only this: small, no UI, no resources.
+        .library(name: "VideoDownloaderRelay", targets: ["VideoDownloaderRelay"]),
+    ],
     targets: [
-        .target(name: "VideoDownloaderKit", resources: [.process("Resources")]),
+        .target(name: "VideoDownloaderKit", dependencies: ["VideoDownloaderRelay"], resources: [.process("Resources")]),
+        .target(name: "VideoDownloaderRelay"),
         .testTarget(name: "VideoDownloaderKitTests", dependencies: ["VideoDownloaderKit"]),
+        .testTarget(name: "VideoDownloaderRelayTests", dependencies: ["VideoDownloaderRelay"]),
     ]
 )
