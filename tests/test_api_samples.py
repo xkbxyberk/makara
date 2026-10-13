@@ -33,6 +33,7 @@ VOLATILE_KEYS = {
     "updated_at",
     "added_at",
     "checked_at",
+    "free",  # this Mac's free disk space (the plan's disk check)
 }
 
 
