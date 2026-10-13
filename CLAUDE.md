@@ -285,6 +285,18 @@ UI and went with it (N8).
     holds. Counts come from `facets.categories`; the sidebar reloads them on library events
     when another screen is shown. New Route cases go at the *end*: ⌘1… follow `allCases`.
 
+43. **Menu bar, Dock, login (P4)** live in `Shell` (Kit/App), stored with `LocalStore` under
+    `vd-shell` (so tests write their own file), not in the backend. The menu bar item is a
+    `MenuBarExtra(isInserted:)` in the app target, `.window` style (`MenuBarView`). With it on,
+    closing the window does not quit (`applicationShouldTerminateAfterLastWindowClosed`): the
+    extension needs the backend. Never both hidden: no Dock icon requires the menu bar item
+    (`.accessory` activation policy; opening the window then needs `NSApp.activate()`). Start
+    at login is `SMAppService.mainApp` (its status is the truth; `.requiresApproval` sends Berk
+    to Login Items) and registers the app *at its current path*: register again after moving
+    it to ~/Applications. A login-item launch closes the window (`Shell.launchedAsLoginItem`,
+    the open-application event's `keyAELaunchedAsLogInItem`). The one-time "start at login?"
+    question is skipped whenever `VD_DATA_DIR` is set (tests, development).
+
 ## Rules
 
 - **Never delete, skip, weaken or `xfail` a test to make the suite pass.** Fix the code.

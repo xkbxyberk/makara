@@ -241,12 +241,13 @@ Berk asks (session limits).
       not mistaken for the Stüdyo screen)
 
 ### P4 — Menu bar app, launch at login, Dock
-- [ ] A status-bar item (default on) with the app's template icon: active downloads with
-      progress, "Panodaki bağlantıyı indir/incele", open window, pause all, quit
-- [ ] Settings: "Açılışta başlat" (SMAppService), "Dock'ta göster" (activation policy),
+- [x] A status-bar item (default on) with the app's template icon: active downloads with
+      progress, "Panodaki bağlantıyı indir/incele", open window, pause all, quit (the glyph is
+      an SF symbol until P5 draws the template icon)
+- [x] Settings: "Açılışta başlat" (SMAppService), "Dock'ta göster" (activation policy),
       "Menü çubuğunda göster"; closing the window keeps the app (and the extension's server)
       running when it lives in the menu bar
-- [ ] Defaults: menu bar on, launch at login on after first run (asked once)
+- [x] Defaults: menu bar on, launch at login on after first run (asked once)
 
 ### P5 — Icon and design
 - [ ] A professional SVG app icon that says what it does (download arrow + film/waveform),

@@ -221,9 +221,15 @@ public struct SettingsView: View {
     public var body: some View {
         Group {
             if model.isReady {
-                PreferencesForm(preferences: model.preferences)
+                PreferencesForm(preferences: model.preferences, shell: model.shell)
             } else {
-                ContentUnavailableView(L("settings.unavailable"), systemImage: "gearshape")
+                Form {
+                    ShellSection(shell: model.shell)
+                    Section {
+                        Label(L("settings.unavailable"), systemImage: "gearshape").foregroundStyle(.secondary)
+                    }
+                }
+                .formStyle(.grouped)
             }
         }
         .frame(minWidth: 560, idealWidth: 620, minHeight: 480, idealHeight: 560)

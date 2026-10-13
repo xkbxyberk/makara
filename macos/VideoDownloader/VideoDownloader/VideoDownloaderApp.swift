@@ -21,6 +21,25 @@ struct VideoDownloaderApp: App {
         Settings {
             SettingsView(model: delegate.model)
         }
+
+        // On by default (Berk): the app, and with it the extension's backend, outlives its window.
+        MenuBarExtra(isInserted: Binding(get: { delegate.model.shell.menuBarIcon },
+                                         set: { delegate.model.shell.setMenuBarIcon($0) })) {
+            MenuBarView(model: delegate.model)
+        } label: {
+            MenuBarLabel(model: delegate.model)
+        }
+        .menuBarExtraStyle(.window)
+    }
+}
+
+/// The menu bar glyph, with the number of running downloads beside it.
+struct MenuBarLabel: View {
+    let model: AppModel
+
+    var body: some View {
+        Image(systemName: "arrow.down.circle")
+        if model.activeCount > 0 { Text("\(model.activeCount)") }
     }
 }
 
@@ -42,6 +61,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             return
         }
+        model.shell.applyDock()
+        // Started by the login item: stay in the menu bar, no window (when there is a menu bar
+        // item to come back through).
+        if Shell.launchedAsLoginItem, model.shell.menuBarIcon {
+            DispatchQueue.main.async {
+                for window in NSApp.windows where window.isVisible && window.styleMask.contains(.titled) { window.close() }
+            }
+        }
         // UI tests take light and dark screenshots without touching the system setting.
         switch ProcessInfo.processInfo.environment["VD_APPEARANCE"] {
         case "dark": NSApp.appearance = NSAppearance(named: .darkAqua)
@@ -54,7 +81,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
            let incoming = IncomingURL.parse(url) {
             model.handle(incoming)
         }
-        Task { await model.start() }
+        Task {
+            await model.start()
+            // Not under tests or development (a data folder is named): they would ask every time.
+            if model.isReady, ProcessInfo.processInfo.environment["VD_DATA_DIR"] == nil {
+                model.shell.askAboutLoginOnce()
+            }
+        }
     }
 
     /// `videodownloader://…`, a link dropped on the Dock icon, a .webloc opened with the app.
@@ -64,7 +97,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
+    /// With the menu bar item the app keeps running (the Safari extension needs its backend).
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        !model.shell.keepsRunningWithoutWindow
+    }
 
     /// Quit waits for the backend to stop its workers cleanly (it gets SIGTERM, then SIGKILL).
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {

@@ -4,6 +4,7 @@ import SwiftUI
 /// The settings, in the Mac's own Settings window. Changes apply at once (see `Preferences`).
 struct PreferencesForm: View {
     @Bindable var preferences: Preferences
+    let shell: Shell
     /// A text field applies when Berk presses Return or leaves it.
     @FocusState private var field: String?
 
@@ -38,6 +39,7 @@ struct PreferencesForm: View {
 
     private var form: some View {
         Form {
+            ShellSection(shell: shell)
             if let failure = preferences.failure {
                 Section {
                     Label(ErrorCopy.title(failure.code), systemImage: "xmark.octagon.fill").foregroundStyle(.red)
@@ -127,11 +129,11 @@ struct PreferencesForm: View {
                 Picker(selection: instant(\.rateLimit)) {
                     Text(L("settings.rateLimit.none")).tag(0)
                     ForEach(Self.rateLimits, id: \.self) { bytes in
-                        Text(String(format: L("settings.rateLimit.value"), Format.bytes(Double(bytes)))).tag(bytes)
+                        Text(L("settings.rateLimit.value", Format.bytes(Double(bytes)))).tag(bytes)
                     }
                     // A value set elsewhere (by hand in settings.json) stays selectable.
                     if let rate = preferences.draft?.rateLimit, rate > 0, !Self.rateLimits.contains(rate) {
-                        Text(String(format: L("settings.rateLimit.value"), Format.bytes(Double(rate)))).tag(rate)
+                        Text(L("settings.rateLimit.value", Format.bytes(Double(rate)))).tag(rate)
                     }
                 } label: {
                     Term(L("settings.rateLimit"), help: L("settings.rateLimitHelp"))
@@ -190,5 +192,49 @@ struct PreferencesForm: View {
             let folder = url.path
             preferences.apply({ $0.downloadDir = folder }, springBack: false)
         }
+    }
+}
+
+/// Ayarlar' first box: how the app lives on this Mac (P4). Native only, so it works before the
+/// backend answers too.
+struct ShellSection: View {
+    let shell: Shell
+
+    var body: some View {
+        Section(L("settings.section.app")) {
+            row(L("settings.launchAtLogin"), L("settings.launchAtLoginHelp"), id: "launchAtLogin",
+                Binding(get: { shell.launchAtLogin }, set: { shell.setLaunchAtLogin($0) }))
+            if shell.loginStatus == .requiresApproval {
+                HStack {
+                    Text(L("settings.launchAtLoginApproval")).font(.caption).foregroundStyle(.secondary)
+                    Spacer()
+                    Button(L("settings.openLoginItems")) { shell.openLoginItemsSettings() }
+                }
+            }
+            if let error = shell.loginError {
+                Text(error).font(.caption).foregroundStyle(.red)
+            }
+            row(L("settings.menuBarIcon"), L("settings.menuBarIconHelp"), id: "menuBarIcon",
+                Binding(get: { shell.menuBarIcon }, set: { shell.setMenuBarIcon($0) }))
+            row(L("settings.showInDock"), L("settings.showInDockHelp"), id: "showInDock",
+                Binding(get: { shell.showInDock }, set: { shell.setShowInDock($0) }))
+                .disabled(!shell.menuBarIcon)
+        }
+        // Approved or revoked in System Settings meanwhile.
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            shell.refreshLogin()
+        }
+    }
+
+    private func row(_ title: String, _ help: String, id: String, _ isOn: Binding<Bool>) -> some View {
+        Toggle(isOn: isOn) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                Text(help).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .accessibilityLabel(title)
+        .accessibilityHint(help)
+        .accessibilityIdentifier("settings.\(id)")
     }
 }

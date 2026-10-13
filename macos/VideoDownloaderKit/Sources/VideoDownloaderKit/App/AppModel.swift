@@ -36,6 +36,8 @@ public final class AppModel {
     public var route: Route = .inspect
 
     public let preferences: Preferences
+    /// Menu bar item, Dock icon, start at login.
+    public let shell: Shell
     @ObservationIgnored private var events: Task<Void, Never>?
     @ObservationIgnored private var pending: [IncomingURL] = []
     @ObservationIgnored private var askedForNotifications = false
@@ -49,6 +51,7 @@ public final class AppModel {
         librarian = Librarian(client: { backend.client }, store: store)
         studio = Studio(client: { backend.client })
         preferences = Preferences(client: { backend.client })
+        shell = Shell(store: store)
         backend.onLost = { [weak self] in self?.backendLost() }
     }
 
