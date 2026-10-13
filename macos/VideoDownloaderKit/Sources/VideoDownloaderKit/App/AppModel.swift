@@ -41,6 +41,7 @@ public final class AppModel {
     @ObservationIgnored private var events: Task<Void, Never>?
     @ObservationIgnored private var pending: [IncomingURL] = []
     @ObservationIgnored private var askedForNotifications = false
+    @ObservationIgnored private let notificationActions = NotificationActions()
 
     public init(config: BackendConfig = .resolve()) {
         let backend = BackendController(config: config)
@@ -53,6 +54,7 @@ public final class AppModel {
         preferences = Preferences(client: { backend.client })
         shell = Shell(store: store)
         backend.onLost = { [weak self] in self?.backendLost() }
+        notificationActions.model = self
     }
 
     public var isReady: Bool {
@@ -68,6 +70,8 @@ public final class AppModel {
         let waiting = pending
         pending = []
         fixtureMode = await backend.client.health(timeout: 10)?.fixtureMode
+        // Not for a test bundle run without an app (the center needs one).
+        if Bundle.main.bundleIdentifier != nil { notificationActions.install() }
         listen()
         waiting.forEach(handle)
     }
@@ -183,10 +187,13 @@ public final class AppModel {
         case .done(let title):
             content.title = L("notify.done")
             content.body = title
+            content.categoryIdentifier = NotificationActions.done
         case .failed(let title):
             content.title = L("notify.failed")
             content.body = title
+            content.categoryIdentifier = NotificationActions.failed
         }
+        content.userInfo = ["job": current.id]
         try? await center.add(UNNotificationRequest(identifier: current.id + current.status.rawValue, content: content, trigger: nil))
     }
 }
