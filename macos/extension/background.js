@@ -123,6 +123,26 @@ async function offerFor(tab, candidates) {
   return { url: target.url };
 }
 
+/**
+ * Show the offer where Berk expects it, in the extension's own menu under its toolbar icon
+ * (Berk, 14 Oct). Safari may refuse to open it without a click, or open nothing: only when the
+ * popup itself says it is up does that count. Otherwise the page shows its card.
+ */
+let popupOpened = null;
+async function present(tab, offer) {
+  if (typeof browser.action?.openPopup !== 'function') return offer;
+  const opened = new Promise((resolve) => {
+    popupOpened = resolve;
+    setTimeout(() => resolve(false), 900);
+  });
+  try {
+    await browser.action.openPopup({ windowId: tab.windowId });
+  } catch {
+    return offer;
+  }
+  return (await opened) ? null : offer;
+}
+
 /** One click: the remembered choice for that site (or today's default), straight to the queue. */
 async function quick(link) {
   const reply = await VD.api('api/quick', { method: 'POST', body: { url: link, rule: await VD.loadRule(link) } });
@@ -181,7 +201,14 @@ browser.runtime.onMessage.addListener((message, sender) => {
         await refresh(tab.id, tab.url);
       })();
     case 'playing':
-      return tab?.id === undefined ? undefined : offerFor(tab, message.candidates).then((offer) => ({ offer }));
+      if (tab?.id === undefined) return undefined;
+      return offerFor(tab, message.candidates)
+        .then((offer) => (offer ? present(tab, offer) : null))
+        .then((offer) => ({ offer }));
+    case 'popup-open':
+      popupOpened?.(true);
+      popupOpened = null;
+      return Promise.resolve(true);
     case 'download':
       return VD.isWebPage(url) ? quick(url) : Promise.resolve({ ok: false });
     case 'inspect':

@@ -115,6 +115,8 @@ const openInAppButton = () => h('button', { class: 'btn', type: 'button', onclic
 // ---- flow -------------------------------------------------------------------------------------
 
 async function main() {
+  // Tells the background the menu is up (it may have opened it itself, for a playing video).
+  void browser.runtime.sendMessage({ type: 'popup-open' }).catch(() => undefined);
   const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
   state.tab = tab ?? null;
   if (!tab || !VD.isWebPage(tab.url)) {

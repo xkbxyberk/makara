@@ -186,8 +186,13 @@ UI and went with it (N8).
     sound* (muted feed autoplay does not count), the background may ask content.js to show the
     card: only if `GET /api/extension` says `page` (Ayarlar, `extension_offer`), the site is not
     in `offerMuted` (storage.local; the popup's switch undoes it) and that address was not
-    offered this session. The card lives in a closed shadow root, ignores untrusted clicks and
-    draws its icon inline (a web-accessible image would let pages detect the extension).
+    offered this session. The background first tries `browser.action.openPopup()` (Berk wants the
+    extension's own menu); it counts only if popup.js reports `popup-open` within 0.9 s, else
+    content.js shows the card: top right under the toolbar with a notch, headed "VideoDownloader"
+    so it reads as the extension's. It lives in a closed shadow root, ignores untrusted clicks,
+    draws its icon inline (a web-accessible image would let pages detect the extension) and
+    takes every colour from tokens on `.card` redefined in the dark block: plain rules after a
+    `prefers-color-scheme` block override it (that left grey-on-dark text, 14 Oct).
 36. **Berk's Safari session** (`app/browser_session.py`, `app/workers/session.py`), his decision
     2026-10-13, his own account: only an AGE_RESTRICTED/LOGIN_REQUIRED answer *for a YouTube
     URL* is retried once with it; the worker gets only the `youtube.com` cookies loaded into its

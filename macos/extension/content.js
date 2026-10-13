@@ -135,26 +135,11 @@
   const card = (() => {
     let frame = null;
     let hideTimer = 0;
-    let follow = 0;
 
     function remove() {
       clearTimeout(hideTimer);
-      cancelAnimationFrame(follow);
       frame?.remove();
       frame = null;
-    }
-
-    function place(box, media) {
-      const width = 300;
-      let top = 16;
-      let left = innerWidth - width - 16;
-      const r = media?.isConnected ? media.getBoundingClientRect() : null;
-      if (r && r.bottom > 60 && r.top < innerHeight - 60) {
-        top = Math.min(Math.max(r.top + 12, 12), innerHeight - 120);
-        left = Math.min(Math.max(r.right - width - 12, 12), innerWidth - width - 12);
-      }
-      box.style.top = `${Math.round(top)}px`;
-      box.style.left = `${Math.round(left)}px`;
     }
 
     function show(media, offer) {
@@ -167,15 +152,17 @@
       box.className = 'card';
       box.setAttribute('role', 'dialog');
       box.setAttribute('aria-label', t('offer_title'));
-      const icon = glyph();
-      const text = document.createElement('div');
-      text.className = 'text';
+      // Headed like the extension's own menu, so it reads as coming from it, not from the site.
+      const header = document.createElement('div');
+      header.className = 'header';
+      const name = document.createElement('span');
+      name.className = 'name';
+      name.textContent = t('extension_name');
       const title = document.createElement('strong');
       title.textContent = t(media instanceof HTMLAudioElement || !media ? 'offer_title_audio' : 'offer_title');
       const status = document.createElement('span');
       status.className = 'status';
       status.textContent = t('offer_body');
-      text.append(title, status);
       const close = button('×', 'close', () => {
         void send({ type: 'dismiss', url: offer.url });
         remove();
@@ -214,16 +201,12 @@
         remove();
       });
       actions.append(download, choose, mute);
-      box.append(icon, text, close, actions);
+      header.append(glyph(), name, close);
+      box.append(header, title, status, actions);
       root.append(style, box);
       // Inside a full-screen player's container, or it would be hidden behind it.
       const full = document.fullscreenElement;
       (full && !(full instanceof HTMLMediaElement) ? full : document.documentElement).append(frame);
-      const track = () => {
-        place(box, media);
-        follow = requestAnimationFrame(track);
-      };
-      track();
       // Unanswered, it goes away by itself (and is not asked again for this video).
       hideTimer = setTimeout(remove, 15000);
       box.addEventListener('pointerenter', () => clearTimeout(hideTimer));
@@ -264,41 +247,51 @@
     return { show, remove };
   })();
 
+  // Every colour is a token on .card, set once per appearance: plain rules after the dark block
+  // once won over it, and left grey text on the dark card (Berk's screenshot, 14 Oct).
   const CSS = `
     :host { all: initial; }
     .card {
-      position: fixed; z-index: 2147483647; width: 300px; box-sizing: border-box;
-      display: grid; grid-template-columns: 32px 1fr auto; gap: 4px 10px; align-items: start;
-      padding: 12px 12px 10px; border-radius: 14px;
+      --text: #1d1d1f; --secondary: rgba(29, 29, 31, 0.68); --surface: rgba(246, 246, 248, 0.94);
+      --edge: rgba(0, 0, 0, 0.16); --button: rgba(0, 0, 0, 0.07); --accent: #0a7aff; --on-accent: #fff;
+      position: fixed; top: 10px; right: 14px; z-index: 2147483647; width: 320px; box-sizing: border-box;
+      display: flex; flex-direction: column; gap: 4px; padding: 10px 12px 12px; border-radius: 12px;
       font: 13px/1.35 -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
-      color: #1d1d1f; background: rgba(250, 250, 252, 0.86);
-      -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
-      box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.18), 0 10px 30px rgba(0, 0, 0, 0.22);
-      animation: in 0.18s ease-out;
+      color: var(--text); background: var(--surface);
+      -webkit-backdrop-filter: saturate(180%) blur(24px); backdrop-filter: saturate(180%) blur(24px);
+      box-shadow: 0 0 0 0.5px var(--edge), 0 12px 32px rgba(0, 0, 0, 0.28);
+      animation: in 0.2s ease-out; transform-origin: top right;
+    }
+    /* A notch towards the toolbar, as Safari's own menus have. */
+    .card::before {
+      content: ""; position: absolute; top: -6px; right: 22px; width: 12px; height: 12px;
+      background: var(--surface); transform: rotate(45deg); border-radius: 2px 0 0 0;
+      box-shadow: -0.5px -0.5px 0 var(--edge);
     }
     @media (prefers-color-scheme: dark) {
-      .card { color: #f5f5f7; background: rgba(40, 40, 44, 0.86);
-        box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.16), 0 10px 30px rgba(0, 0, 0, 0.5); }
-      button { background: rgba(255, 255, 255, 0.12); color: #f5f5f7; }
-      .status { color: rgba(245, 245, 247, 0.65); }
+      .card {
+        --text: #f5f5f7; --secondary: rgba(245, 245, 247, 0.72); --surface: rgba(44, 44, 48, 0.95);
+        --edge: rgba(255, 255, 255, 0.18); --button: rgba(255, 255, 255, 0.14); --accent: #2f8cff;
+      }
     }
     @media (prefers-reduced-motion: reduce) { .card { animation: none; } }
-    @keyframes in { from { opacity: 0; transform: translateY(-4px); } }
-    .icon { width: 32px; height: 32px; grid-row: span 2; }
-    .text { display: flex; flex-direction: column; min-width: 0; }
-    strong { font-weight: 600; }
-    .status { color: rgba(29, 29, 31, 0.62); font-size: 12px; }
-    .actions { grid-column: 2 / 4; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
+    @keyframes in { from { opacity: 0; transform: translateY(-6px) scale(0.98); } }
+    .header { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; }
+    .icon { width: 18px; height: 18px; flex: none; }
+    .name { color: var(--secondary); font-size: 11px; font-weight: 500; flex: 1; }
+    strong { font-size: 14px; font-weight: 600; }
+    .status { color: var(--secondary); font-size: 12px; }
+    .actions { display: flex; gap: 6px; align-items: center; margin-top: 8px; }
     button {
-      font: inherit; font-size: 12px; border: 0; border-radius: 7px; padding: 4px 10px; cursor: default;
-      background: rgba(0, 0, 0, 0.07); color: #1d1d1f;
+      font: inherit; font-size: 12px; border: 0; border-radius: 6px; padding: 5px 11px; cursor: default;
+      background: var(--button); color: var(--text);
     }
-    button:focus-visible { outline: 2px solid #0a84ff; outline-offset: 1px; }
+    button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
     button:disabled { opacity: 0.5; }
-    .primary { background: #0a84ff; color: #fff; font-weight: 500; }
-    .link { background: none; padding: 4px 2px; color: #0a84ff; margin-left: auto; }
-    .close { background: none; padding: 0 4px; font-size: 16px; line-height: 1; opacity: 0.55; }
-    .close:hover { opacity: 1; }
+    .primary { background: var(--accent); color: var(--on-accent); font-weight: 600; }
+    .link { background: none; padding: 5px 2px; color: var(--accent); margin-left: auto; }
+    .close { background: none; padding: 0 2px; font-size: 17px; line-height: 1; color: var(--secondary); }
+    .close:hover { color: var(--text); }
   `;
 
   report();
