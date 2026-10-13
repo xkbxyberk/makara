@@ -39,7 +39,14 @@ struct MenuBarLabel: View {
 
     var body: some View {
         Image("MenuBarIcon")  // the app icon's mark, a template (macos/design/menubar.svg)
-        if model.activeCount > 0 { Text("\(model.activeCount)") }
+        // While downloading: how far, then (several at once) how many.
+        if let fraction = model.overallProgress {
+            Text(model.activeCount > 1 ? "\(Int((fraction * 100).rounded()))% · \(model.activeCount)"
+                                       : "\(Int((fraction * 100).rounded()))%")
+                .monospacedDigit()
+        } else if model.activeCount > 0 {
+            Text("\(model.activeCount)")
+        }
     }
 }
 

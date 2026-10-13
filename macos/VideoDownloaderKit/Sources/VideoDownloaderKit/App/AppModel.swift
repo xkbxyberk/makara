@@ -42,6 +42,7 @@ public final class AppModel {
     @ObservationIgnored private var pending: [IncomingURL] = []
     @ObservationIgnored private var askedForNotifications = false
     @ObservationIgnored private let notificationActions = NotificationActions()
+    @ObservationIgnored private let dockProgress = DockProgress()
 
     public init(config: BackendConfig = .resolve()) {
         let backend = BackendController(config: config)
@@ -169,6 +170,18 @@ public final class AppModel {
             break  // the embedded page shows these
         }
         activeCount = jobs.values.filter { $0.status.isActive }.count
+        overallProgress = Self.overall(jobs.values.filter { $0.status == .running })
+        dockProgress.update(overallProgress)
+    }
+
+    /// Everything running, on one 0…1 scale (each download counts the same), or nil when
+    /// nothing runs or nothing has measurable progress yet.
+    public private(set) var overallProgress: Double?
+
+    static func overall(_ running: [Job]) -> Double? {
+        let measured = running.compactMap { $0.isIndeterminate ? nil : $0.progress }
+        guard !measured.isEmpty else { return nil }
+        return min(max(measured.reduce(0, +) / Double(measured.count), 0), 1)
     }
 
     private func notify(previous: Job?, current: Job) async {
