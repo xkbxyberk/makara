@@ -272,4 +272,7 @@ Safari cookie jar to any site whose error or address said "login"; now YouTube o
 youtube.com cookies, URLs ignored when classifying, setting honoured everywhere, info.json
 scrubbed, and jobs say when the session was used.
 
-**Next:** Berk grants Full Disk Access and tries an age-restricted video; then N4.
+**Live check** (13 Oct): Berk granted Full Disk Access and downloaded an age-restricted video
+with his session himself (M7a.5); the link menu and ⌃⇧D were already confirmed (N3.5).
+
+**Next:** N4 -- port İndirmeler and Sistem to SwiftUI.

@@ -688,7 +688,7 @@
     },
     "N3": {
       "title": "Safari extension",
-      "status": "done (link menu and shortcut not yet seen live)",
+      "status": "done",
       "criteria": [
         {
           "id": "N3.1",
@@ -717,14 +717,14 @@
         {
           "id": "N3.5",
           "text": "Link menu and keyboard shortcut work in Safari",
-          "pass": false,
-          "proof": "implemented (contextMenus, commands._execute_action); needs Berk's live check"
+          "pass": true,
+          "proof": "Berk's live check, 13 Oct: the link menu and ctrl+shift+D both work in Safari"
         }
       ]
     },
     "M7a": {
       "title": "Safari session for age-restricted YouTube videos (pulled forward from M7)",
-      "status": "built; live check needs Full Disk Access",
+      "status": "done",
       "criteria": [
         {
           "id": "M7a.1",
@@ -753,8 +753,8 @@
         {
           "id": "M7a.5",
           "text": "An age-restricted video downloads with Berk's session",
-          "pass": false,
-          "proof": "needs Full Disk Access granted by Berk and a live run"
+          "pass": true,
+          "proof": "Berk's live check, 13 Oct: Full Disk Access granted, an age-restricted video downloaded with his session"
         }
       ]
     }
