@@ -215,7 +215,16 @@ struct JobRow: View {
             .progressViewStyle(.linear)
             .accessibilityLabel(stageText)
             HStack(spacing: 12) {
-                Text(stageText)
+                if job.stage == "waiting_retry", let at = job.retryAt {
+                    // Why and when, counting down: the failure passes by itself more often than not.
+                    TimelineView(.periodic(from: .now, by: 1)) { context in
+                        let left = max(0, at - context.date.timeIntervalSince1970)
+                        Text(L("queue.retryIn", (job.attempts ?? 1) + 1, Format.duration(left),
+                               localizedIfPresent("error.\(job.errorCode ?? "").title") ?? ""))
+                    }
+                } else {
+                    Text(stageText)
+                }
                 if job.status == .running {
                     if let progress = job.progress, progress > 0 { Text("\(Int((progress * 100).rounded()))%") }
                     if let index = job.itemIndex, let count = job.itemCount, count > 1 {

@@ -265,7 +265,7 @@ Agreed list, in build order (cheap and high-value first):
 - [x] P6b Notifications with actions: "Oynat", "Finder'da göster"; a failed one offers "Tekrar dene"
 - [x] P6c Disk space: a download whose size is known and does not fit (with a margin) is
       refused before it starts, with how much is free; the panel warns early
-- [ ] P6d Network failures retried by themselves with backoff (30 s, 2 min, 10 min), said in
+- [x] P6d Network failures retried by themselves with backoff (30 s, 2 min, 10 min), said in
       the row ("2. deneme 1:40 sonra")
 - [ ] P6e yt-dlp updates itself weekly in the background when nothing is downloading; Sistem
       shows when it last did

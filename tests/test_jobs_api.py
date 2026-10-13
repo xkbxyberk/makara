@@ -227,6 +227,29 @@ def test_a_download_that_does_not_fit_on_the_disk_is_refused_before_it_starts(
     assert client.get("/api/jobs").json() == []
 
 
+def test_a_network_failure_is_tried_again_later_by_itself(app_env: Any) -> None:
+    """P6d: a stream that cannot be reached waits and goes again, keeping what it has; a
+    manual "Tekrar dene" starts at once and counts from zero."""
+    client = app_env("http://127.0.0.1:9")  # nothing listens there: connection refused
+    model = inspect(client)
+    job = client.post(
+        "/api/jobs",
+        json={"inspect_id": model["inspect_id"], "mode": "separate", "video_format_id": "v-vp9"},
+    ).json()
+    waiting = wait_for(client, job["id"], lambda j: j["stage"] == "waiting_retry")
+    assert waiting["status"] == "queued" and waiting["attempts"] == 1
+    assert waiting["error_code"] == "NETWORK"
+    assert 20 < waiting["retry_at"] - time.time() <= 30
+    # Not picked before its time.
+    time.sleep(1.5)
+    assert client.get("/api/jobs").json()[0]["stage"] == "waiting_retry"
+    client.post(f"/api/jobs/{job['id']}/cancel")
+    cancelled = wait_for(client, job["id"], lambda j: j["status"] == "cancelled")
+    restarted = client.post(f"/api/jobs/{job['id']}/retry").json()
+    assert restarted["attempts"] == 0 and restarted["retry_at"] is None
+    assert cancelled["output_files"] == []
+
+
 def test_remove_deletes_the_entry_but_never_the_media(app_env: Any) -> None:
     client = app_env()
     model = inspect(client)

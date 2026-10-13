@@ -21,6 +21,8 @@
     "created_at": 0,
     "started_at": 0,
     "finished_at": 0,
+    "attempts": 0,
+    "retry_at": null,
     "selection": {
       "mode": "mkv",
       "video_format_id": "v-vp9",

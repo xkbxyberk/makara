@@ -321,6 +321,12 @@ UI and went with it (N8).
     or trashed one is fair to fetch again), never Stüdyo outputs; rows without an id fall back
     to the same `source_url`. It informs, it never blocks a download.
 
+46. **Automatic retries (P6d).** A download failing with NETWORK/TIMEOUT/FORBIDDEN/RATE_LIMITED
+    goes back to `queued` with stage `waiting_retry`, `attempts` + 1 and `retry_at`
+    (`manager.RETRY_DELAYS`), keeping its scratch files; `next_queued` skips it until then and
+    the scheduler also wakes every `TICK_SECONDS`. A manual retry or resume clears `retry_at`
+    and (retry) `attempts`. Other codes fail at once, as before.
+
 ## Rules
 
 - **Never delete, skip, weaken or `xfail` a test to make the suite pass.** Fix the code.

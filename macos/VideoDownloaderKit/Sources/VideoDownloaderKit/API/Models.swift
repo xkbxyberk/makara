@@ -98,6 +98,9 @@ public struct Job: Decodable, Sendable, Identifiable, Equatable {
     public var createdAt: Double? = nil
     /// The download used Berk's Safari session (an age-restricted video).
     public var usedSession: Bool? = nil
+    /// Automatic retries so far, and when the waiting one starts (P6d, stage "waiting_retry").
+    public var attempts: Int? = nil
+    public var retryAt: Double? = nil
 
     /// Downloading with a percentage to show; the other running stages only say they run.
     public var isIndeterminate: Bool {

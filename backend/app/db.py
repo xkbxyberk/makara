@@ -30,14 +30,20 @@ CREATE TABLE IF NOT EXISTS jobs (
     warnings      TEXT NOT NULL DEFAULT '[]',
     created_at    REAL NOT NULL,
     started_at    REAL,
-    finished_at   REAL
+    finished_at   REAL,
+    attempts      INTEGER NOT NULL DEFAULT 0,  -- automatic retries so far (P6d)
+    retry_at      REAL                         -- a waiting retry starts then, not before
 );
 CREATE INDEX IF NOT EXISTS jobs_status ON jobs(status, created_at);
 """
 
 JSON_COLUMNS = ("request", "output_files", "warnings")
 # Columns added after the first release, applied to existing databases on start-up.
-MIGRATIONS = {"warnings": "ALTER TABLE jobs ADD COLUMN warnings TEXT NOT NULL DEFAULT '[]'"}
+MIGRATIONS = {
+    "warnings": "ALTER TABLE jobs ADD COLUMN warnings TEXT NOT NULL DEFAULT '[]'",
+    "attempts": "ALTER TABLE jobs ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0",
+    "retry_at": "ALTER TABLE jobs ADD COLUMN retry_at REAL",
+}
 
 
 def connect() -> sqlite3.Connection:
@@ -94,7 +100,9 @@ class JobStore:
 
     def next_queued(self, limit: int) -> list[dict[str, Any]]:
         rows = self.conn.execute(
-            "SELECT * FROM jobs WHERE status = 'queued' ORDER BY created_at LIMIT ?", [limit]
+            "SELECT * FROM jobs WHERE status = 'queued' AND (retry_at IS NULL OR retry_at <= ?) "
+            "ORDER BY created_at LIMIT ?",
+            [time.time(), limit],
         ).fetchall()
         return [r for r in (_row(row) for row in rows) if r is not None]
 

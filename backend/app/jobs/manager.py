@@ -29,6 +29,16 @@ from app.settings import Settings
 
 log = logging.getLogger("videodownloader.jobs")
 CANCEL_GRACE_SECONDS = 5
+# Failures that usually pass by themselves are tried again, later and later (P6d). A site that
+# says "too many requests" gets longer pauses. Anything else waits for Berk.
+RETRY_DELAYS = {
+    "NETWORK": (30, 120, 600),
+    "TIMEOUT": (30, 120, 600),
+    "FORBIDDEN": (60, 300),
+    "RATE_LIMITED": (300, 900, 1800),
+}
+# The scheduler also looks on its own this often, for retries whose time has come.
+TICK_SECONDS = 10
 WORKERS = {"download": "app.workers.download_worker", "studio": "app.workers.studio_worker"}
 PUBLIC_REQUEST_FIELDS = (
     "mode",
@@ -136,7 +146,8 @@ class JobManager:
     # ---- scheduling -----------------------------------------------------------------------
     async def _loop(self) -> None:
         while True:
-            await self._wake.wait()
+            with contextlib.suppress(TimeoutError):
+                await asyncio.wait_for(self._wake.wait(), TICK_SECONDS)
             self._wake.clear()
             # `active`, not `procs`: a worker only appears in `procs` once its process has
             # spawned, and several wake-ups can land in that window.
@@ -154,6 +165,7 @@ class JobManager:
                     started_at=time.time(),
                     error_code=None,
                     error_raw=None,
+                    retry_at=None,
                 )
                 task = asyncio.create_task(self._run(job))
                 self._tasks.add(task)
@@ -287,6 +299,8 @@ class JobManager:
         else:
             code = outcome.get("code") or "WORKER_CRASHED"
             detail = outcome.get("raw") or "\n".join(stderr_tail) or f"exit {proc.returncode}"
+            if self._retry_later(job_id, code, str(detail)):
+                return
             self._update(
                 job_id,
                 status="failed",
@@ -297,6 +311,27 @@ class JobManager:
                 error_raw=str(detail)[-8000:],
                 finished_at=time.time(),
             )
+
+    def _retry_later(self, job_id: str, code: str, detail: str) -> bool:
+        """Queue a download again after a pause, keeping its partial files, while the failure
+        is one that passes and attempts are left. The row says why and when."""
+        job = self.store.get(job_id)
+        delays = RETRY_DELAYS.get(code, ())
+        attempts = int((job or {}).get("attempts") or 0)
+        if job is None or job["kind"] != "download" or attempts >= len(delays):
+            return False
+        self._update(
+            job_id,
+            status="queued",
+            stage="waiting_retry",
+            speed=None,
+            eta=None,
+            error_code=code,
+            error_raw=detail[-8000:],
+            attempts=attempts + 1,
+            retry_at=time.time() + delays[attempts],
+        )
+        return True
 
     def _finish_cancelled(self, job_id: str) -> None:
         paused = job_id in self.pausing
@@ -378,7 +413,9 @@ class JobManager:
         job = self.store.get(job_id)
         if job is None or job["status"] != "paused":
             return job
-        updated = self._update(job_id, status="queued", stage="queued", speed=None, eta=None)
+        updated = self._update(
+            job_id, status="queued", stage="queued", speed=None, eta=None, retry_at=None
+        )
         self.wake()
         return updated
 
@@ -429,6 +466,8 @@ class JobManager:
             error_code=None,
             error_raw=None,
             finished_at=None,
+            attempts=0,
+            retry_at=None,
         )
         self.wake()
         return updated

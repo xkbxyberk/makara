@@ -34,7 +34,7 @@ struct LocalizationTests {
         var keys: [String] = []
         for status in ["queued", "running", "paused", "done", "failed", "cancelled"] { keys.append("queue.status.\(status)") }
         for stage in ["queued", "starting", "preparing", "downloading", "postprocessing", "finalizing", "retrying", "cancelling",
-                      "pausing", "paused"] {
+                      "pausing", "paused", "waiting_retry"] {
             keys.append("queue.stage.\(stage)")
         }
         for mode in ["mkv", "compat_mp4", "separate", "audio", "studio"] { keys.append("mode.\(mode)") }
