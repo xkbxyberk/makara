@@ -64,7 +64,6 @@ struct MainSplitView: View {
         .onChange(of: model.route, initial: true) {
             if let category = model.route.libraryCategory, model.librarian.query.category != category {
                 model.librarian.query.category = category
-                model.librarian.selection = nil
             }
         }
     }
@@ -73,7 +72,13 @@ struct MainSplitView: View {
     @ViewBuilder private var detail: some View {
         switch model.route {
         case .inspect:
-            InspectView(inspector: model.inspector, client: model.backend.client) { model.route = .download }
+            InspectView(inspector: model.inspector, client: model.backend.client,
+                        openQueue: { model.route = .download },
+                        openLibrary: { id in
+                            model.librarian.query = LibraryQuery()  // nothing filtered away
+                            model.librarian.selection = id
+                            model.route = .library
+                        })
         case .download:
             QueueView(jobs: model.jobList, loaded: model.jobsLoaded, connection: model.connection,
                       client: model.backend.client)

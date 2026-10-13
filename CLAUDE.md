@@ -314,6 +314,13 @@ UI and went with it (N8).
     in `MenuBarIcon.imageset`, template intent) live in `macos/design/`; run
     `scripts/render_icons.sh` after changing any of them. The page card draws the mark inline.
 
+45. **"Already downloaded" (P6a)** keys on the site and the site's own video id: the library
+    keeps `video_id` (added in place to older catalogues by `Library.__init__`), `/api/supports`
+    gets the id offline from the extractor's URL pattern (`_match_id`) and answers
+    `downloaded`, `/api/inspect` adds `in_library`. Only items still on disk count (a missing
+    or trashed one is fair to fetch again), never Stüdyo outputs; rows without an id fall back
+    to the same `source_url`. It informs, it never blocks a download.
+
 ## Rules
 
 - **Never delete, skip, weaken or `xfail` a test to make the suite pass.** Fix the code.

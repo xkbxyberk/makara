@@ -66,6 +66,7 @@ struct InspectView: View {
     @Bindable var inspector: Inspector
     let client: APIClient
     let openQueue: () -> Void
+    var openLibrary: (String) -> Void = { _ in }
     @FocusState private var fieldFocused: Bool
     @FocusState private var pageFocused: Bool
 
@@ -162,7 +163,7 @@ struct InspectView: View {
         case .ready(.video(let model), _):
             if let planner = inspector.planner {
                 VideoResult(model: model, planner: planner, client: client, rules: inspector.rules,
-                            openQueue: openQueue) { inspector.run(model.sourceUrl) }
+                            openQueue: openQueue, openLibrary: openLibrary) { inspector.run(model.sourceUrl) }
                     .id(model.inspectId)  // a new inspect starts fresh disclosure states
             }
         }
@@ -189,10 +190,29 @@ struct VideoResult: View {
     let client: APIClient
     let rules: QuickRules
     let openQueue: () -> Void
+    let openLibrary: (String) -> Void
     let reinspect: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
+            if let hit = model.inLibrary?.first {
+                // P6a: said before a second download, never in the way of one.
+                HStack(spacing: 10) {
+                    Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(L("inspect.inLibrary")).font(.body.weight(.medium))
+                        Text(L("inspect.inLibraryBody", hit.mode.flatMap { localizedIfPresent("mode.\($0)") } ?? "",
+                               hit.addedAt.map { Date(timeIntervalSince1970: $0).formatted(.relative(presentation: .named)) } ?? ""))
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Button(L("inspect.showInLibrary")) { openLibrary(hit.id) }
+                }
+                .padding(10)
+                .background(.green.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("inspect.inLibrary")
+            }
             ForEach(model.warnings, id: \.self) { code in
                 Label(localizedIfPresent("inspectWarning.\(code)") ?? code, systemImage: "exclamationmark.triangle.fill")
                     .foregroundStyle(code.hasPrefix("DRM") ? .red : .orange)

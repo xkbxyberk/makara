@@ -182,6 +182,7 @@ async function inspect() {
     message(null, drm ? t('popup_drm') : t('popup_nothing'), openInAppButton());
     return;
   }
+  state.inLibrary = model.in_library ?? [];
   const pre = offers.preselected;
   const preRow = [...offers.video, ...offers.audio].find((row) => row.id === pre?.offer_id);
   state.mode = preRow?.kind === 'audio' ? 'audio' : (pre?.output ?? 'mkv');
@@ -331,6 +332,13 @@ function renderChoices() {
         }, t(key)),
       ),
     ),
+    state.inLibrary?.length
+      ? h('p', { class: 'note' }, h('strong', {}, t('popup_in_library')), ' ', t('popup_in_library_body'),
+        ' ', h('button', {
+          class: 'link', type: 'button',
+          onclick: () => void VD.openApp('videodownloader://show?route=library').then(() => window.close()),
+        }, t('offer_show_library')))
+      : null,
     h('div', { class: 'rows', role: 'radiogroup' }, ...rowsFor(state.mode).map(rowView)),
     fields.length ? h('div', { class: 'fields' }, ...fields) : null,
     h('div', { class: 'actions' },

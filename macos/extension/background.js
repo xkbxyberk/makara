@@ -72,7 +72,7 @@ async function resolve(candidates) {
     const answer = await supportsOf(url);
     if (answer === null) return { offline: true };
     if (!answer.supported) continue;
-    if (answer.kind !== 'playlist') return { url, kind: answer.kind };
+    if (answer.kind !== 'playlist') return { url, kind: answer.kind, downloaded: answer.downloaded === true };
     list ??= { url, kind: 'playlist' };
   }
   return list;
@@ -120,7 +120,7 @@ async function offerFor(tab, candidates) {
   if ((await offerMode()) !== 'page') return null;
   if ((await mutedSites())[VD.siteOf(tab.url)]) return null;
   if (!(await firstOffer(target.url))) return null;
-  return { url: target.url };
+  return { url: target.url, downloaded: target.downloaded === true };
 }
 
 /**
@@ -214,7 +214,9 @@ browser.runtime.onMessage.addListener((message, sender) => {
     case 'inspect':
       return VD.isWebPage(url) ? VD.openApp(VD.inspectLink(url)) : Promise.resolve(false);
     case 'open':
-      return url === 'videodownloader://show?route=download' ? VD.openApp(url) : Promise.resolve(false);
+      return ['videodownloader://show?route=download', 'videodownloader://show?route=library'].includes(url)
+        ? VD.openApp(url)
+        : Promise.resolve(false);
     case 'dismiss':
       return Promise.resolve(true); // already recorded as offered
     case 'mute':

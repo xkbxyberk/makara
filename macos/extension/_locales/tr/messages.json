@@ -313,5 +313,23 @@
   },
   "popup_offer_here": {
     "message": "$1 sitesinde indirmeyi sayfada öner"
+  },
+  "offer_title_downloaded": {
+    "message": "Bu video zaten kütüphanende"
+  },
+  "offer_body_downloaded": {
+    "message": "Daha önce indirdin ve dosyası yerinde."
+  },
+  "offer_download_again": {
+    "message": "Yine de indir"
+  },
+  "offer_show_library": {
+    "message": "Kütüphanede göster"
+  },
+  "popup_in_library": {
+    "message": "Zaten kütüphanende."
+  },
+  "popup_in_library_body": {
+    "message": "Bu videoyu daha önce indirdin."
   }
 }

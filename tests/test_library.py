@@ -11,7 +11,7 @@ from typing import Any
 import pytest
 
 from app import errors
-from app.library import Library, summarize_streams
+from app.library import SCHEMA, Library, summarize_streams
 
 
 @pytest.fixture
@@ -116,6 +116,32 @@ def test_the_sidebar_shelves_videos_music_and_studio_output(
     assert [i["title"] for i in library.query(category="music")] == ["A song"]
     assert [i["title"] for i in library.query(category="studio")] == ["v (kesit)"]
     assert library.facets()["categories"] == {"videos": 1, "music": 1, "studio": 1}
+
+
+def test_a_video_already_downloaded_is_found_by_site_and_id(
+    library: Library, clip: Path, tmp_path: Path
+) -> None:
+    outcome = outcome_for(clip)
+    outcome["meta"].update(id="abc123", extractor_key="Youtube")
+    item = library.add(job={"id": "job1", "mode": "mkv", "title": None}, outcome=outcome)
+    assert item is not None and item["video_id"] == "abc123"
+    [found] = library.downloaded(site="Youtube", video_id="abc123")
+    assert found["id"] == item["id"]
+    assert library.downloaded(site="Vimeo", video_id="abc123") == []
+    # Gone from disk: downloading it again is no duplicate.
+    clip.unlink()
+    library.scan([tmp_path])
+    assert library.downloaded(site="Youtube", video_id="abc123") == []
+
+
+def test_an_older_catalogue_gains_the_id_column(tmp_path: Path) -> None:
+    conn = sqlite3.connect(":memory:", check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    # The table as it was before P6a.
+    conn.executescript(SCHEMA.split("CREATE INDEX")[0].replace(",\n    video_id      TEXT", ""))
+    assert "video_id" not in {row[1] for row in conn.execute("PRAGMA table_info(library_items)")}
+    Library(conn)
+    assert "video_id" in {row[1] for row in conn.execute("PRAGMA table_info(library_items)")}
 
 
 def test_a_deleted_file_is_marked_missing_never_forgotten(

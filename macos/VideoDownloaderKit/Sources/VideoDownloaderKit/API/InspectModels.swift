@@ -273,6 +273,15 @@ public struct VideoModel: Decodable, Sendable, Equatable {
     public let warnings: [String]
     public let sourceUrl: String
     public let commands: InspectCommands
+    /// This video's items still on disk (P6a); absent from an older backend.
+    public let inLibrary: [LibraryHit]?
+}
+
+public struct LibraryHit: Decodable, Sendable, Equatable {
+    public let id: String
+    public let title: String?
+    public let mode: String?
+    public let addedAt: Double?
 }
 
 public struct PlaylistEntry: Decodable, Sendable, Equatable {

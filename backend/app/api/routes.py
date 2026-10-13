@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
@@ -59,12 +59,16 @@ def get_health() -> dict[str, Any]:
 
 
 @router.post("/inspect")
-async def post_inspect(request: InspectRequest) -> Any:
+async def post_inspect(request: InspectRequest, http: Request) -> Any:
     try:
         model = await inspect_service.inspect(request.url, reuse=request.reuse)
     except errors.AppError as exc:
         return _error_response(exc)
-    return with_preselection(model, request.rule)
+    media = model.get("media") or {}
+    in_library = _in_library(
+        http, media.get("extractor"), media.get("id"), media.get("webpage_url")
+    )
+    return {**with_preselection(model, request.rule), "in_library": in_library}
 
 
 @router.get("/extension")
@@ -73,7 +77,24 @@ def get_extension() -> dict[str, Any]:
     return {"offer": settings_store.load().extension_offer}
 
 
+def _in_library(request: Request, site: str | None, video_id: str | None, url: str | None) -> Any:
+    library = getattr(request.app.state, "library", None)
+    if library is None:
+        return []
+    return [
+        {k: item.get(k) for k in ("id", "title", "mode", "kind", "primary_path", "added_at")}
+        for item in library.downloaded(site=site, video_id=video_id, url=url)
+    ]
+
+
 @router.get("/supports")
-def get_supports(url: str = Query(min_length=1, max_length=2048)) -> dict[str, Any]:
-    """Offline: does yt-dlp have an extractor for this page (the generic one aside)?"""
-    return support.supports(url)
+def get_supports(
+    request: Request, url: str = Query(min_length=1, max_length=2048)
+) -> dict[str, Any]:
+    """Offline: does yt-dlp have an extractor for this page (the generic one aside), and is
+    that video already in the library (the extension says so before anything is fetched)?"""
+    answer = support.supports(url)
+    downloaded = bool(answer["supported"]) and bool(
+        _in_library(request, answer["extractor"], answer["id"], url)
+    )
+    return {**answer, "downloaded": downloaded}

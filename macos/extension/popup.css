@@ -94,3 +94,8 @@ button.btn:disabled { opacity: 0.5; }
   font-size: 12px;
   opacity: 0.8;
 }
+
+.note { margin: 0; padding: 7px 10px; border-radius: 8px; font-size: 12px; color: var(--label-2);
+  background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.note strong { color: var(--label); }
+.note .link { margin: 0; font-size: 12px; }

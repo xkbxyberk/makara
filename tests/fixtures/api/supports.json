@@ -1,6 +1,8 @@
 {
   "supported": true,
   "extractor": "fixture",
+  "id": null,
   "working": true,
-  "kind": "unknown"
+  "kind": "unknown",
+  "downloaded": false
 }

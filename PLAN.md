@@ -260,7 +260,7 @@ Berk asks (session limits).
 
 ### P6 — More conveniences (Berk 2026-10-14: "gayet iyi", evaluate more)
 Agreed list, in build order (cheap and high-value first):
-- [ ] P6a Duplicates: before a download, "Bu video zaten kütüphanende" (same site + video id)
+- [x] P6a Duplicates: before a download, "Bu video zaten kütüphanende" (same site + video id)
       in İncele, the popup and the page offer, with "Göster" / "Yine de indir"
 - [ ] P6b Notifications with actions: "Oynat", "Finder'da göster"; a failed one offers "Tekrar dene"
 - [ ] P6c Disk space: a download whose size is known and does not fit (with a margin) is

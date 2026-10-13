@@ -159,10 +159,12 @@
       name.className = 'name';
       name.textContent = t('extension_name');
       const title = document.createElement('strong');
-      title.textContent = t(media instanceof HTMLAudioElement || !media ? 'offer_title_audio' : 'offer_title');
+      title.textContent = offer.downloaded
+        ? t('offer_title_downloaded')
+        : t(media instanceof HTMLAudioElement || !media ? 'offer_title_audio' : 'offer_title');
       const status = document.createElement('span');
       status.className = 'status';
-      status.textContent = t('offer_body');
+      status.textContent = t(offer.downloaded ? 'offer_body_downloaded' : 'offer_body');
       const close = button('×', 'close', () => {
         void send({ type: 'dismiss', url: offer.url });
         remove();
@@ -170,7 +172,7 @@
       close.setAttribute('aria-label', t('offer_close'));
       const actions = document.createElement('div');
       actions.className = 'actions';
-      const download = button(t('offer_download'), 'primary', async () => {
+      const download = button(t(offer.downloaded ? 'offer_download_again' : 'offer_download'), offer.downloaded ? '' : 'primary', async () => {
         clearTimeout(hideTimer);
         for (const b of actions.querySelectorAll('button')) b.disabled = true;
         status.textContent = t('offer_adding');
@@ -192,15 +194,20 @@
           }));
         }
       });
-      const choose = button(t('offer_choose'), '', () => {
-        void send({ type: 'inspect', url: offer.url });
-        remove();
-      });
+      const choose = offer.downloaded
+        ? button(t('offer_show_library'), 'primary', () => {
+          void send({ type: 'open', url: 'videodownloader://show?route=library' });
+          remove();
+        })
+        : button(t('offer_choose'), '', () => {
+          void send({ type: 'inspect', url: offer.url });
+          remove();
+        });
       const mute = button(t('offer_mute'), 'link', () => {
         void send({ type: 'mute', url: location.href });
         remove();
       });
-      actions.append(download, choose, mute);
+      actions.append(...(offer.downloaded ? [choose, download] : [download, choose]), mute);
       header.append(glyph(), name, close);
       box.append(header, title, status, actions);
       root.append(style, box);

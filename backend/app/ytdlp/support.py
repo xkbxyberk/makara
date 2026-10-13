@@ -27,7 +27,13 @@ def _extractors() -> tuple[Any, ...]:
 
 # yt-dlp's own hint per extractor: "video", "playlist", or "any"/None when it can be either.
 _KINDS = {"video": "video", "playlist": "playlist"}
-NOT_SUPPORTED = {"supported": False, "extractor": None, "working": None, "kind": None}
+NOT_SUPPORTED = {
+    "supported": False,
+    "extractor": None,
+    "id": None,
+    "working": None,
+    "kind": None,
+}
 
 
 def supports(url: str) -> dict[str, Any]:
@@ -39,14 +45,25 @@ def supports(url: str) -> dict[str, Any]:
     # Scheme and host are case-insensitive; yt-dlp's patterns expect them in lower case.
     url = urlunsplit(parts._replace(scheme=parts.scheme.lower(), netloc=parts.netloc.lower()))
     if paths.fixture_mode() and inspect_service.has_fixture(url):
-        return {"supported": True, "extractor": "fixture", "working": True, "kind": "unknown"}
+        return {
+            **NOT_SUPPORTED,
+            "supported": True,
+            "extractor": "fixture",
+            "working": True,
+            "kind": "unknown",
+        }
     # yt-dlp compiles each pattern lazily into a class attribute; keep that single-threaded.
     with _LOCK:
         for extractor in _extractors():
             if extractor.suitable(url):
+                try:
+                    video_id = str(extractor._match_id(url))  # from the URL pattern, offline
+                except Exception:
+                    video_id = None
                 return {
                     "supported": True,
                     "extractor": extractor.ie_key(),
+                    "id": video_id,
                     "working": bool(extractor.working()),
                     "kind": _KINDS.get(getattr(extractor, "_RETURN_TYPE", None) or "", "unknown"),
                 }

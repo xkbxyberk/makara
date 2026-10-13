@@ -46,7 +46,8 @@ CREATE TABLE IF NOT EXISTS library_items (
     tracks        TEXT NOT NULL,           -- {video: [...], audio: [...], subtitle: [...]}
     thumbnail     TEXT,                    -- a small JPEG in the app's data dir, for the grid
     added_at      REAL NOT NULL,
-    checked_at    REAL
+    checked_at    REAL,
+    video_id      TEXT                     -- the site's own id, for "already downloaded"
 );
 CREATE INDEX IF NOT EXISTS library_added ON library_items(added_at);
 """
@@ -116,6 +117,14 @@ class Library:
         self._scan_lock = threading.Lock()
         with self._lock:
             conn.executescript(SCHEMA)
+            # Catalogues made before P6a lack the column (SQLite adds it in place, as NULL).
+            columns = {row[1] for row in conn.execute("PRAGMA table_info(library_items)")}
+            if "video_id" not in columns:
+                conn.execute("ALTER TABLE library_items ADD COLUMN video_id TEXT")
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS library_video ON library_items(site, video_id)"
+            )
+            conn.commit()
 
     def _fetch(self, sql: str, args: list[Any] | tuple[Any, ...] = ()) -> list[sqlite3.Row]:
         with self._lock:
@@ -169,6 +178,7 @@ class Library:
             "thumbnail": primary.get("thumbnail"),
             "added_at": time.time(),
             "checked_at": time.time(),
+            "video_id": None if meta.get("extractor_key") == "Studio" else meta.get("id"),
         }
         columns = list(item)
         self._write(
@@ -226,6 +236,27 @@ class Library:
         clause = f"WHERE {' AND '.join(where)}" if where else ""
         order = SORTS.get(sort, SORTS["added"])
         rows = self._fetch(f"SELECT * FROM library_items {clause} ORDER BY {order}", args)
+        return [r for r in (_row(row) for row in rows) if r is not None]
+
+    def downloaded(
+        self, *, site: str | None, video_id: str | None, url: str | None = None
+    ) -> list[dict[str, Any]]:
+        """Items of this video that are still on disk (P6a): the same site and id, or, for rows
+        catalogued before ids were kept, the same page address. Stüdyo outputs never count."""
+        clauses, args = [], []
+        if site and video_id:
+            clauses.append("(site = ? AND video_id = ?)")
+            args += [site, str(video_id)]
+        if url:
+            clauses.append("(video_id IS NULL AND source_url = ?)")
+            args.append(url)
+        if not clauses:
+            return []
+        rows = self._fetch(
+            f"SELECT * FROM library_items WHERE status = 'ok' AND NOT {STUDIO} "
+            f"AND ({' OR '.join(clauses)}) ORDER BY added_at DESC LIMIT 5",
+            args,
+        )
         return [r for r in (_row(row) for row in rows) if r is not None]
 
     def facets(self) -> dict[str, Any]:

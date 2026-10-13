@@ -139,5 +139,6 @@
   "commands": {
     "inspect": "yt-dlp -J --no-download --write-subs --write-auto-subs https://www.youtube.com/@TED/videos",
     "suggested": "yt-dlp --merge-output-format mkv --embed-chapters --embed-metadata https://www.youtube.com/@TED/videos"
-  }
+  },
+  "in_library": []
 }
