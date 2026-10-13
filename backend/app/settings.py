@@ -35,6 +35,7 @@ class Settings:
     accelerate: bool = True
     connections: int = 8
     rate_limit: int = 0  # bytes per second; 0 = no limit
+    auto_update_ytdlp: bool = True  # weekly, in the background (P6e)
 
     def __post_init__(self) -> None:
         if not self.download_dir:

@@ -74,6 +74,8 @@ class JobManager:
         # Jobs from "picked" to "process exited" -- includes the window before a process exists.
         self.active: set[str] = set()
         self.cancelling: set[str] = set()
+        # True while yt-dlp is being updated: nothing new starts (app/autoupdate.py).
+        self.hold = False
         # Stopped by a pause: ends "paused" (scratch kept, resumable), not "cancelled".
         self.pausing: set[str] = set()
         self._kill_timers: dict[str, asyncio.TimerHandle] = {}
@@ -149,6 +151,8 @@ class JobManager:
             with contextlib.suppress(TimeoutError):
                 await asyncio.wait_for(self._wake.wait(), TICK_SECONDS)
             self._wake.clear()
+            if self.hold:
+                continue
             # `active`, not `procs`: a worker only appears in `procs` once its process has
             # spawned, and several wake-ups can land in that window.
             free = self.get_settings().concurrency - len(self.active)

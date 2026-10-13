@@ -18,7 +18,7 @@ from fastapi import FastAPI, Request, Response
 from fastapi.responses import FileResponse, JSONResponse
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from app import db, errors, paths
+from app import autoupdate, db, errors, paths
 from app import settings as settings_store
 from app.api import jobs_api, library_api, studio_api
 from app.api.routes import router
@@ -87,9 +87,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     )
     scan.add_done_callback(_log_task_failure)
     orphan_watch = _watch_parent()
+    updater = autoupdate.start(manager)
+    updater.add_done_callback(_log_task_failure)
     try:
         yield
     finally:
+        updater.cancel()
         if orphan_watch is not None:
             orphan_watch.cancel()
         clipboard.stop()

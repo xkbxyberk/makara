@@ -105,6 +105,7 @@ public final class Preferences {
         if shown.accelerate == sent.accelerate { shown.accelerate = stored.accelerate }
         if shown.connections == sent.connections { shown.connections = stored.connections }
         if shown.rateLimit == sent.rateLimit { shown.rateLimit = stored.rateLimit }
+        if shown.autoUpdateYtdlp == sent.autoUpdateYtdlp { shown.autoUpdateYtdlp = stored.autoUpdateYtdlp }
         shown.defaultFilenameTemplate = stored.defaultFilenameTemplate
     }
 
@@ -120,6 +121,7 @@ public final class Preferences {
         if changed.accelerate != saved.accelerate { shown.accelerate = saved.accelerate }
         if changed.connections != saved.connections { shown.connections = saved.connections }
         if changed.rateLimit != saved.rateLimit { shown.rateLimit = saved.rateLimit }
+        if changed.autoUpdateYtdlp != saved.autoUpdateYtdlp { shown.autoUpdateYtdlp = saved.autoUpdateYtdlp }
     }
 
     /// The file name the draft's template gives for the sample video.

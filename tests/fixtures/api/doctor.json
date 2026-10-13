@@ -8,7 +8,8 @@
         "version": "<value>",
         "channel": "<value>",
         "origin": "<value>",
-        "ejs_version": "<value>"
+        "ejs_version": "<value>",
+        "auto_update": null
       },
       "fix": {
         "kind": "command",

@@ -10,7 +10,7 @@ import re
 import subprocess
 from typing import Any
 
-from app import accel, browser_session
+from app import accel, autoupdate, browser_session
 from app import settings as settings_store
 from app.ffmpeg import binaries
 from app.system import installed_ytdlp
@@ -79,6 +79,8 @@ def _ytdlp_check() -> dict[str, Any]:
             "channel": installed["channel"],
             "origin": ytv.ORIGIN,
             "ejs_version": ejs,
+            # The weekly background update (P6e): when, and whether it worked.
+            "auto_update": autoupdate.last() or None,
         },
         # `yt-dlp -U` refuses pip/uv installs, and `uv pip install -U` would be reverted by the
         # next `uv run` (it syncs to uv.lock). Upgrading the lock is what sticks.

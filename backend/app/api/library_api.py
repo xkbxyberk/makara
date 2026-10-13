@@ -136,13 +136,18 @@ async def post_open_full_disk_access() -> Any:
 @router.post("/system/update-ytdlp")
 async def post_update_ytdlp(request: Request) -> Any:
     # `uv sync` swaps yt-dlp's files; a running worker importing an extractor lazily would break.
-    if request.app.state.jobs.active:
+    manager = request.app.state.jobs
+    if manager.active:
         return _error(errors.AppError(code="JOBS_RUNNING"), 409)
+    manager.hold = True  # nothing may start while its files are swapped
     try:
         return await asyncio.to_thread(system.update_ytdlp)
     except errors.AppError as exc:
         status = {"UPDATE_UNAVAILABLE": 501, "UPDATE_RUNNING": 409}.get(exc.code, 500)
         return _error(exc, status)
+    finally:
+        manager.hold = False
+        manager.wake()
 
 
 @router.post("/settings/preview-template")

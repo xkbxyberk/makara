@@ -327,6 +327,12 @@ UI and went with it (N8).
     the scheduler also wakes every `TICK_SECONDS`. A manual retry or resume clears `retry_at`
     and (retry) `attempts`. Other codes fail at once, as before.
 
+47. **Weekly yt-dlp update (P6e)**, `app/autoupdate.py`: checked hourly (first after 2 min),
+    runs `system.update_ytdlp` when the last run is a week old, the setting
+    `auto_update_ytdlp` is on and no job is active; never in fixture mode. `manager.hold`
+    keeps new jobs from starting meanwhile (the Doctor button sets it too). The outcome is in
+    `<data>/ytdlp-update.json` and in the doctor's `yt_dlp.values.auto_update`.
+
 ## Rules
 
 - **Never delete, skip, weaken or `xfail` a test to make the suite pass.** Fix the code.

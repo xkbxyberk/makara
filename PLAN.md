@@ -267,7 +267,7 @@ Agreed list, in build order (cheap and high-value first):
       refused before it starts, with how much is free; the panel warns early
 - [x] P6d Network failures retried by themselves with backoff (30 s, 2 min, 10 min), said in
       the row ("2. deneme 1:40 sonra")
-- [ ] P6e yt-dlp updates itself weekly in the background when nothing is downloading; Sistem
+- [x] P6e yt-dlp updates itself weekly in the background when nothing is downloading; Sistem
       shows when it last did
 - [ ] P6f Downloaded files carry their source in Finder ("Nereden": kMDItemWhereFroms) and the
       video's title/channel as Spotlight comments; old scratch folders (.vd-work) are cleaned

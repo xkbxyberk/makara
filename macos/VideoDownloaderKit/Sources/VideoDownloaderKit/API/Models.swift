@@ -19,6 +19,8 @@ public struct AppSettings: Codable, Sendable, Equatable {
     public var accelerate: Bool = true
     public var connections: Int = 8
     public var rateLimit: Int = 0
+    /// yt-dlp updates itself weekly in the background (P6e).
+    public var autoUpdateYtdlp: Bool = true
     /// The Safari extension: "page" (a card on the page offers the video) or "icon" (only its icon).
     public var extensionOffer: String = "page"
     /// Read-only: the app's built-in template, for "Varsayılana dön".
@@ -26,7 +28,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
 
     private enum CodingKeys: String, CodingKey {
         case downloadDir, filenameTemplate, concurrency, defaultMode, clipboardWatch, notifications, safariLogin
-        case extensionOffer, accelerate, connections, rateLimit
+        case extensionOffer, accelerate, connections, rateLimit, autoUpdateYtdlp
         case defaultFilenameTemplate
     }
 
@@ -44,6 +46,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         accelerate = try c.decodeIfPresent(Bool.self, forKey: .accelerate) ?? true
         connections = try c.decodeIfPresent(Int.self, forKey: .connections) ?? 8
         rateLimit = try c.decodeIfPresent(Int.self, forKey: .rateLimit) ?? 0
+        autoUpdateYtdlp = try c.decodeIfPresent(Bool.self, forKey: .autoUpdateYtdlp) ?? true
         defaultFilenameTemplate = try c.decodeIfPresent(String.self, forKey: .defaultFilenameTemplate)
     }
 
@@ -61,6 +64,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         try c.encode(accelerate, forKey: .accelerate)
         try c.encode(connections, forKey: .connections)
         try c.encode(rateLimit, forKey: .rateLimit)
+        try c.encode(autoUpdateYtdlp, forKey: .autoUpdateYtdlp)
     }
 }
 

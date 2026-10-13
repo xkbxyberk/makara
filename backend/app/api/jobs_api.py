@@ -70,6 +70,7 @@ class SettingsBody(BaseModel):
     accelerate: bool = True
     connections: int = Field(default=8, ge=1, le=16)
     rate_limit: int = Field(default=0, ge=0, le=10_000_000_000)
+    auto_update_ytdlp: bool = True
 
 
 class RevealBody(BaseModel):

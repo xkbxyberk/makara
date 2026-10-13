@@ -145,6 +145,7 @@ struct PreferencesForm: View {
                 toggle(L("settings.clipboard"), help: L("settings.clipboardHelp"), \.clipboardWatch, id: "clipboard")
                 toggle(L("settings.notifications"), help: L("settings.notificationsHelp"), \.notifications, id: "notifications")
                 toggle(L("settings.safariLogin"), help: L("settings.safariLoginHelp"), \.safariLogin, id: "safariLogin")
+                toggle(L("settings.autoUpdate"), help: L("settings.autoUpdateHelp"), \.autoUpdateYtdlp, id: "autoUpdate")
             }
 
             Section {

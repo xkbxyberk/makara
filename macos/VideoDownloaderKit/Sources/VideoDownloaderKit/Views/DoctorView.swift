@@ -94,7 +94,7 @@ struct CheckSection: View {
         "ffmpeg": ["version", "ffmpeg_path", "ffprobe_path"],
         "aria2c": ["version", "path"],
     ]
-    nonisolated static let structured: Set<String> = ["capabilities", "found", "missing_optional", "state"]
+    nonisolated static let structured: Set<String> = ["capabilities", "found", "missing_optional", "state", "auto_update"]
 
     var body: some View {
         Section {
@@ -122,7 +122,10 @@ struct CheckSection: View {
                     .foregroundStyle(.orange)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            if check.id == "yt_dlp" { UpdateYtdlp(client: client, done: reload) }
+            if check.id == "yt_dlp" {
+                LabeledContent(L("doctor.label.auto_update")) { Text(autoUpdate).foregroundStyle(.secondary) }
+                UpdateYtdlp(client: client, done: reload)
+            }
             if check.id == "safari_session" { SafariSession(state: check.values["state"]?.string ?? "", fix: check.fix.kind, client: client) }
             if check.status != .ok, check.fix.kind == "command" {
                 VStack(alignment: .leading, spacing: 6) {
@@ -159,6 +162,16 @@ struct CheckSection: View {
             guard let value = check.values[key] else { return nil }
             return (key, value.display.isEmpty ? "–" : value.display)
         }
+    }
+
+    /// The weekly background update (P6e): when it last ran and what it did.
+    private var autoUpdate: String {
+        guard case .object(let last)? = check.values["auto_update"], case .number(let at)? = last["at"] else {
+            return L("doctor.autoUpdate.never")
+        }
+        let when = Date(timeIntervalSince1970: at).formatted(.relative(presentation: .named))
+        if last["ok"] == .bool(true) { return L("doctor.autoUpdate.ok", when, last["version"]?.string ?? "") }
+        return L("doctor.autoUpdate.failed", when, ErrorCopy.title(last["code"]?.string ?? "UNKNOWN"))
     }
 
     private var runtimes: [(name: String, version: String, path: String)] {
