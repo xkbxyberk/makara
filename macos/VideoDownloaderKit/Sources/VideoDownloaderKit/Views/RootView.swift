@@ -38,8 +38,21 @@ struct MainSplitView: View {
             }
             .navigationSplitViewColumnWidth(min: 180, ideal: 210, max: 280)
         } detail: {
-            WebScreen(bridge: model.web)
+            detail
                 .navigationTitle(model.route.title)
+        }
+    }
+
+    /// Screens ported to SwiftUI are native; the rest are still the embedded web page.
+    @ViewBuilder private var detail: some View {
+        switch model.route {
+        case .download:
+            QueueView(jobs: model.jobList, loaded: model.jobsLoaded, connection: model.connection,
+                      client: model.backend.client)
+        case .doctor:
+            DoctorView(client: model.backend.client)
+        case .inspect, .library, .studio:
+            WebScreen(bridge: model.web)
         }
     }
 

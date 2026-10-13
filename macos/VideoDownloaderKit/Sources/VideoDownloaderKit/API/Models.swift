@@ -39,6 +39,96 @@ public struct Job: Decodable, Sendable, Identifiable, Equatable {
     public let progress: Double?
     public let outputFiles: [String]
     public let errorCode: String?
+    public var errorRaw: String? = nil
+    /// Bytes per second and seconds left, while downloading.
+    public var speed: Double? = nil
+    public var eta: Double? = nil
+    /// "3/12" in a playlist.
+    public var itemIndex: Int? = nil
+    public var itemCount: Int? = nil
+    public var warnings: [JobWarning]? = nil
+    public var createdAt: Double? = nil
+    /// The download used Berk's Safari session (an age-restricted video).
+    public var usedSession: Bool? = nil
+
+    /// Downloading with a percentage to show; the other running stages only say they run.
+    public var isIndeterminate: Bool {
+        status == .running && (Self.indeterminateStages.contains(stage ?? "") || (progress ?? 0) <= 0)
+    }
+
+    static let indeterminateStages: Set<String> = ["starting", "preparing", "postprocessing", "cancelling"]
+}
+
+public struct JobWarning: Decodable, Sendable, Equatable, Hashable {
+    public let code: String
+    public var key: String? = nil
+}
+
+/// `/api/doctor`. Decoded with `JSON.plain`: the values are dictionaries whose keys
+/// (`ffmpeg_path`, `videotoolbox_h264`) must stay as the backend wrote them.
+public struct DoctorReport: Decodable, Sendable, Equatable {
+    public let status: CheckStatus
+    public let checks: [DoctorCheck]
+}
+
+public enum CheckStatus: String, Decodable, Sendable {
+    case ok, warn, error
+}
+
+public struct DoctorCheck: Decodable, Sendable, Equatable, Identifiable {
+    public struct Fix: Decodable, Sendable, Equatable {
+        public let kind: String
+        public let command: String
+    }
+
+    public let id: String
+    public let status: CheckStatus
+    public let values: [String: JSONValue]
+    public let fix: Fix
+}
+
+public struct UpdateResult: Decodable, Sendable, Equatable {
+    public struct Version: Decodable, Sendable, Equatable { public let version: String }
+    public let before: Version
+    public let after: Version
+    public let changed: Bool
+}
+
+/// Any JSON value, for the doctor's free-form `values`.
+public enum JSONValue: Decodable, Sendable, Equatable {
+    case string(String)
+    case number(Double)
+    case bool(Bool)
+    case array([JSONValue])
+    case object([String: JSONValue])
+    case null
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if container.decodeNil() { self = .null }
+        else if let value = try? container.decode(Bool.self) { self = .bool(value) }
+        else if let value = try? container.decode(Double.self) { self = .number(value) }
+        else if let value = try? container.decode(String.self) { self = .string(value) }
+        else if let value = try? container.decode([JSONValue].self) { self = .array(value) }
+        else { self = .object(try container.decode([String: JSONValue].self)) }
+    }
+
+    public var string: String? {
+        if case .string(let value) = self { return value }
+        return nil
+    }
+
+    /// How the web page prints a value: text as is, nothing as "–".
+    public var display: String {
+        switch self {
+        case .string(let value): value.isEmpty ? "" : value
+        case .number(let value): value == value.rounded() && abs(value) < 1e15 ? String(Int(value)) : String(value)
+        case .bool(let value): String(value)
+        case .null: "–"
+        case .array(let items): items.map(\.display).joined(separator: ", ")
+        case .object: ""
+        }
+    }
 }
 
 public struct Supports: Decodable, Sendable, Equatable {
@@ -64,4 +154,7 @@ public enum JSON {
         decoder.keyDecodingStrategy = .convertFromSnakeCase
         return decoder
     }()
+
+    /// Keys exactly as sent: `convertFromSnakeCase` rewrites dictionary keys too.
+    public static let plain = JSONDecoder()
 }

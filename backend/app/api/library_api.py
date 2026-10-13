@@ -134,7 +134,8 @@ async def post_update_ytdlp(request: Request) -> Any:
     try:
         return await asyncio.to_thread(system.update_ytdlp)
     except errors.AppError as exc:
-        return _error(exc, 501 if exc.code == "UPDATE_UNAVAILABLE" else 500)
+        status = {"UPDATE_UNAVAILABLE": 501, "UPDATE_RUNNING": 409}.get(exc.code, 500)
+        return _error(exc, status)
 
 
 @router.post("/settings/preview-template")

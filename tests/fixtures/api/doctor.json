@@ -1,0 +1,78 @@
+{
+  "status": "warn",
+  "checks": [
+    {
+      "id": "yt_dlp",
+      "status": "ok",
+      "values": {
+        "version": "<value>",
+        "channel": "<value>",
+        "origin": "<value>",
+        "ejs_version": "<value>"
+      },
+      "fix": {
+        "kind": "command",
+        "command": "uv lock --upgrade-package yt-dlp --upgrade-package yt-dlp-ejs && uv sync"
+      }
+    },
+    {
+      "id": "js_runtime",
+      "status": "ok",
+      "values": {
+        "found": [
+          {
+            "name": "<value>",
+            "path": "<value>",
+            "version": "<value>"
+          }
+        ],
+        "active": "<value>"
+      },
+      "fix": {
+        "kind": "command",
+        "command": "brew install deno"
+      }
+    },
+    {
+      "id": "ffmpeg",
+      "status": "ok",
+      "values": {
+        "ffmpeg_path": "<value>",
+        "ffprobe_path": "<value>",
+        "version": "<value>",
+        "capabilities": {
+          "libx264": true,
+          "libx265": true,
+          "libsvtav1": true,
+          "videotoolbox_h264": true,
+          "videotoolbox_hevc": true,
+          "aac": true,
+          "libopus": true,
+          "libmp3lame": true,
+          "flac": true,
+          "webp": true,
+          "gif": true,
+          "loudnorm": true,
+          "palettegen": true,
+          "subtitles_filter": true
+        },
+        "missing_optional": []
+      },
+      "fix": {
+        "kind": "none",
+        "command": ""
+      }
+    },
+    {
+      "id": "safari_session",
+      "status": "warn",
+      "values": {
+        "state": "unavailable"
+      },
+      "fix": {
+        "kind": "none",
+        "command": ""
+      }
+    }
+  ]
+}

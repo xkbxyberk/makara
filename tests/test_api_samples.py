@@ -39,9 +39,34 @@ def scrub(value: Any, key: str = "") -> Any:
     return value
 
 
-def check(name: str, data: Any) -> None:
+def scrub_doctor(report: dict[str, Any]) -> dict[str, Any]:
+    """Versions, paths and this build's capabilities change with every update: keep the ids, the
+    keys and the value types (what the app decodes), and the Safari session state (fixed in
+    tests). Statuses stay real; one runtime stands for however many this Mac has."""
+
+    def leaf(value: Any) -> Any:
+        if isinstance(value, dict):
+            return {k: leaf(v) for k, v in value.items()}
+        if isinstance(value, list):
+            return [leaf(v) for v in value]
+        if isinstance(value, bool):
+            return True
+        if isinstance(value, (int, float)):
+            return 0
+        return value if value is None else "<value>"
+
+    checks = []
+    for check in report["checks"]:
+        values = {k: v if k == "state" else leaf(v) for k, v in check["values"].items()}
+        if "found" in values:
+            values["found"] = values["found"][:1]
+        checks.append({**check, "values": values})
+    return {"status": report["status"], "checks": checks}
+
+
+def check(name: str, data: Any, scrubbed_already: bool = False) -> None:
     path = SAMPLES / f"{name}.json"
-    scrubbed = scrub(data)
+    scrubbed = data if scrubbed_already else scrub(data)
     if os.environ.get("VD_WRITE_API_SAMPLES") == "1":
         SAMPLES.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(scrubbed, indent=2, ensure_ascii=False) + "\n", "utf-8")
@@ -71,6 +96,7 @@ def test_samples_for_the_native_app(client: TestClient) -> None:
     check("settings", client.get("/api/settings").json())
     check("error", client.post("/api/quick", json={}).json())
     check("supports", client.get("/api/supports", params={"url": LOCAL_URL}).json())
+    check("doctor", scrub_doctor(client.get("/api/doctor").json()), scrubbed_already=True)
 
     quick = client.post("/api/quick", json={"url": LOCAL_URL, "rule": {"kind": "video"}}).json()
     job_id = quick["job"]["id"]

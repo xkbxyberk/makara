@@ -9,8 +9,17 @@ public enum ServerEvent: Sendable, Equatable {
     case library
     case clipboard(String)
     case other(String)
+    /// Not from the server: the stream broke and is reconnecting (the next snapshot ends it).
+    case disconnected
 
     struct JobPayload: Decodable { let job: Job }
+
+    /// One job this app cannot read must not cost the whole list (the queue would stay on
+    /// "loading" for good): it is left out, the rest is shown.
+    struct Lenient: Decodable {
+        let job: Job?
+        init(from decoder: Decoder) throws { job = try? Job(from: decoder) }
+    }
     struct RemovedPayload: Decodable { let id: String }
     struct ClipboardPayload: Decodable { let url: String }
 
@@ -18,7 +27,7 @@ public enum ServerEvent: Sendable, Equatable {
         let bytes = Data(data.utf8)
         let d = JSON.decoder
         switch name {
-        case "snapshot": return (try? d.decode([Job].self, from: bytes)).map(ServerEvent.snapshot)
+        case "snapshot": return (try? d.decode([Lenient].self, from: bytes)).map { .snapshot($0.compactMap(\.job)) }
         case "job": return (try? d.decode(JobPayload.self, from: bytes)).map { .job($0.job) }
         case "removed": return (try? d.decode(RemovedPayload.self, from: bytes)).map { .removed($0.id) }
         case "library", "library_error": return .library
@@ -95,6 +104,8 @@ public struct EventStream: Sendable {
                     } catch {
                         // The server restarted or is starting: try again, backing off a little.
                     }
+                    if Task.isCancelled { break }
+                    continuation.yield(.disconnected)
                     try? await Task.sleep(for: delay)
                     delay = min(delay * 2, .seconds(5))
                 }

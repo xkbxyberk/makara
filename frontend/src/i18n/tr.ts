@@ -691,7 +691,7 @@ export const tr = {
     },
     LOGIN_REQUIRED: {
       title: 'Giriş gerekiyor',
-      body: 'Bu içerik hesap açmadan görünmüyor. Tarayıcı çerezleriyle giriş desteği sonraki aşamada geliyor.',
+      body: 'Bu içerik giriş yapmış bir hesap istiyor. YouTube videoları gerektiğinde Safari’deki oturumunla denenir (Ayarlar); başka siteler için giriş desteği henüz yok.',
     },
     AGE_RESTRICTED: {
       title: 'Yaş kısıtlaması var',
@@ -727,7 +727,7 @@ export const tr = {
     },
     BOT_CHECK: {
       title: 'YouTube bot doğrulaması istedi',
-      body: 'Video herkese açık, ama YouTube bu bağlantıyı şüpheli buldu. Biraz bekleyip tekrar dene; sürerse tarayıcı çerezleriyle giriş (sonraki aşama) çözer.',
+      body: 'Video herkese açık, ama YouTube bu bağlantıyı şüpheli buldu. Bu genelde geçicidir: biraz bekleyip tekrar dene.',
     },
     RATE_LIMITED: {
       title: 'Çok fazla istek',
@@ -858,6 +858,10 @@ export const tr = {
     },
     TRASH_FAILED: { title: 'Çöp Kutusu’na taşınamadı', body: 'Dosya kilitli ya da erişim izni yok.' },
     SCAN_BUSY: { title: 'Denetim zaten sürüyor', body: 'Bitmesini bekle.' },
+    UPDATE_RUNNING: {
+      title: 'Güncelleme zaten sürüyor',
+      body: 'yt-dlp şu anda güncelleniyor; bitince Sistem ekranı sonucu gösterir.',
+    },
     JOBS_RUNNING: {
       title: 'Önce indirmelerin bitmesini bekle',
       body: 'yt-dlp, çalışan bir indirmenin altından değiştirilemez.',

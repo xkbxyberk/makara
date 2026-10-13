@@ -29,6 +29,45 @@ struct LocalizationTests {
         for key in used { #expect(!L(key).hasPrefix("⟦"), "\(key)") }
     }
 
+    /// Keys built at run time (`queue.status.\(status)`) that the scan above cannot see.
+    @Test func everyStateTheScreensNameIsTranslated() {
+        var keys: [String] = []
+        for status in ["queued", "running", "done", "failed", "cancelled"] { keys.append("queue.status.\(status)") }
+        for stage in ["queued", "starting", "preparing", "downloading", "postprocessing", "finalizing", "retrying", "cancelling"] {
+            keys.append("queue.stage.\(stage)")
+        }
+        for mode in ["mkv", "compat_mp4", "separate", "audio", "studio"] { keys.append("mode.\(mode)") }
+        for status in ["ok", "warn", "error"] { keys += ["doctor.status.\(status)", "doctor.checkStatus.\(status)"] }
+        for check in ["yt_dlp", "js_runtime", "ffmpeg", "safari_session"] {
+            keys += ["doctor.check.\(check)", "doctor.checkHelp.\(check)"]
+        }
+        for state in ["off", "unavailable", "no_access", "signed_out", "signed_in", "unknown"] { keys.append("doctor.session.\(state)") }
+        for key in Capabilities.order { keys.append("doctor.capability.\(key)") }
+        for key in CheckSection.order.values.joined() { keys.append("doctor.label.\(key)") }
+        for key in ["subtitles_filter", "webp"] { keys.append("doctor.missing.\(key)") }
+        for code in ["UNKNOWN", "NETWORK", "JOB_NOT_REMOVABLE", "JOBS_RUNNING", "AGE_RESTRICTED", "SESSION_NOT_ENOUGH"] {
+            keys += ["error.\(code).title", "error.\(code).body"]
+        }
+        keys.append("queue.warning.SUBTITLE_SKIPPED")
+        for key in keys { #expect(localizedIfPresent(key) != nil, "\(key)") }
+    }
+
+    @Test func anUnknownErrorCodeFallsBackToTheGenericOne() {
+        #expect(ErrorCopy.title("NOT_A_CODE_YET") == L("error.UNKNOWN.title"))
+        #expect(ErrorCopy.title("JOBS_RUNNING") != L("error.UNKNOWN.title"))
+    }
+
+    @Test func numbersReadAsOnTheWebPage() {
+        #expect(Format.bytes(512) == "512 B")
+        #expect(Format.bytes(1536) == "1.5 KB")
+        #expect(Format.bytes(250 * 1024 * 1024) == "250 MB")
+        #expect(Format.bytes(nil) == "–")
+        #expect(Format.duration(75) == "1:15")
+        #expect(Format.duration(3725) == "1:02:05")
+        #expect(L("queue.item", 3, 12) == "3/12")
+        #expect(L("queue.eta", "1:15") == "1:15 kaldı")
+    }
+
     @Test func portsAndCodesAreNeverDigitGrouped() {
         #expect(L("backend.reason.portBusy", 8787).hasPrefix("8787 portunu"))
         #expect(L("backend.reason.exited", 1).contains("çıkış kodu 1"))

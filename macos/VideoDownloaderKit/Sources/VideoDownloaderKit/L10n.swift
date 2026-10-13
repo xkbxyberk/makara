@@ -11,3 +11,10 @@ public func L(_ key: String) -> String {
 public func L(_ key: String, _ arguments: CVarArg...) -> String {
     String(format: L(key), arguments: arguments)
 }
+
+/// The translation of `key`, or nil when the catalog has none (a code from a newer backend).
+public func localizedIfPresent(_ key: String) -> String? {
+    let missing = "\u{0}missing"
+    let value = Bundle.module.localizedString(forKey: key, value: missing, table: nil)
+    return value == missing ? nil : value
+}

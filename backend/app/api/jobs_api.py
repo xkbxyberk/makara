@@ -257,7 +257,9 @@ async def post_reveal(job_id: str, body: RevealBody, request: Request) -> Any:
     files = (job or {}).get("output_files") or []
     if job is None or body.index >= len(files):
         return _error(errors.AppError(code="JOB_NOT_FOUND"), 404)
-    root = Path(job["request"]["download_dir"])
+    # A download's root is its download folder; a Studio job writes next to its source.
+    req = job["request"]
+    root = Path(req.get("output_dir") or req["download_dir"])
     try:
         return {"shown": notify.reveal(files[body.index], root)}
     except errors.AppError as exc:

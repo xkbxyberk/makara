@@ -5,9 +5,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+import pytest
 from fastapi.testclient import TestClient
 
-from app import system
+from app import errors, system
 from tests.test_jobs_api import app_env, inspect, wait_for
 
 __all__ = ["app_env"]  # re-exported fixture
@@ -97,6 +98,20 @@ def test_system_actions_never_run_in_fixture_mode(app_env: Any) -> None:
     updated = client.post("/api/system/update-ytdlp")
     assert updated.status_code == 501
     assert updated.json()["error"]["code"] == "UPDATE_UNAVAILABLE"
+
+
+def test_a_second_update_while_one_runs_is_refused(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("VD_FIXTURE_MODE", raising=False)
+    ran: list[list[str]] = []
+    monkeypatch.setattr(system.subprocess, "run", lambda argv, **_: ran.append(argv))
+    assert system._UPDATING.acquire(blocking=False)
+    try:
+        with pytest.raises(errors.AppError) as refused:
+            system.update_ytdlp()
+    finally:
+        system._UPDATING.release()
+    assert refused.value.code == "UPDATE_RUNNING"
+    assert ran == []  # nothing touched the venv
 
 
 def test_the_updater_upgrades_the_lock_file_not_just_the_venv() -> None:

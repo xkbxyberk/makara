@@ -1,5 +1,5 @@
 {
-  "updated": "2026-09-23",
+  "updated": "2026-10-13",
   "gate": "./scripts/check.sh",
   "milestones": {
     "M0": {
@@ -719,6 +719,42 @@
           "text": "Link menu and keyboard shortcut work in Safari",
           "pass": true,
           "proof": "Berk's live check, 13 Oct: the link menu and ctrl+shift+D both work in Safari"
+        }
+      ]
+    },
+    "N4": {
+      "title": "İndirmeler and Sistem in SwiftUI",
+      "status": "done",
+      "criteria": [
+        {
+          "id": "N4.1",
+          "text": "İndirmeler is native: loading, empty and reconnecting states; a download appears live, finishes, offers its file in Finder, says when that file is gone, and can be removed",
+          "pass": true,
+          "proof": "ShellTests.testTheQueueIsNativeAndFollowsADownload (screenshots native-queue-empty-light/dark, native-queue-done-light)"
+        },
+        {
+          "id": "N4.2",
+          "text": "Job rows match the web queue: indeterminate vs percentage progress, stage/speed/ETA/item, mode and session badges, error with raw details, warnings",
+          "pass": true,
+          "proof": "ContractTests (jobs sample, aRunningJobSaysWhetherItHasAPercentage); QueueView.swift mirrors QueueRoute.tsx"
+        },
+        {
+          "id": "N4.3",
+          "text": "Sistem is native: every check with its values, runtimes, capabilities, the update button, the Safari session state (no Full Disk Access button without a need; a way to the setting when it is off), and a refresh that really asks again",
+          "pass": true,
+          "proof": "ShellTests.testTheDoctorIsNativeAndSaysWhatEachToolNeeds (native-doctor-light/dark); ContractTests.doctor against tests/fixtures/api/doctor.json"
+        },
+        {
+          "id": "N4.4",
+          "text": "Native wording equals the web's for every error code, job state, stage, mode and doctor text",
+          "pass": true,
+          "proof": "frontend/src/nativeStrings.test.ts; LocalizationTests (runtime-built keys, number formats)"
+        },
+        {
+          "id": "N4.5",
+          "text": "Review fixes: Studio jobs reveal in Finder; the hidden page never fetches for a native screen; one update at a time; one unreadable job does not empty the queue",
+          "pass": true,
+          "proof": "test_a_studio_job_writes_next_to_the_source_and_joins_the_library, test_a_second_update_while_one_runs_is_refused, IncomingURLTests.nativeScreensLeaveTheEmbeddedPageAlone"
         }
       ]
     },

@@ -144,7 +144,7 @@ No fixed profiles: the choices come from the inspected video itself.
       scheme; a URL dropped on the Dock icon or window is inspected
 - [x] Every screen still reachable (embedded web view); `pywebview` launcher retired
 
-### N3 — Safari extension ✅ built (live check in Safari pending: restart + website access)
+### N3 — Safari extension ✅ done (live-checked by Berk, 13 Oct)
 - [x] Toolbar icon lights up on pages yt-dlp supports, and on pages with a `<video>`/`<audio>`
       or a streaming manifest; nothing is sent anywhere until Berk clicks
 - [x] Popup: opening it inspects the page (the server cache makes a re-open instant); title,
@@ -157,7 +157,17 @@ No fixed profiles: the choices come from the inspected video itself.
       for another page); keyboard shortcut ⌃⇧D opens the popup
 - [x] Job progress visible in the popup; the app's queue shows the same job
 
-### N4 — İndirmeler (queue) and Sistem (doctor) in SwiftUI
+### N4 — İndirmeler (queue) and Sistem (doctor) in SwiftUI ✅ done
+- [x] İndirmeler: the live list from the app's own event stream (newest first), loading /
+      empty / reconnecting states, per-job progress (determinate or not, as the web rules),
+      stage, %, item i/n, speed, ETA, mode and "Safari oturumuyla" badges, errors with their
+      raw details, output files with "Finder’da göster", warnings; cancel / retry / remove
+      buttons and the same in a context menu (plus "Bağlantıyı kopyala")
+- [x] Sistem: a grouped form per check (values, runtimes, FFmpeg capabilities, missing
+      features explained, the copyable fix command), yt-dlp update, the Safari session state
+      with its Full Disk Access / Settings shortcut, refresh in the toolbar, loading and error
+- [x] Error and state wording copied into the native catalog; a vitest keeps it equal to `tr.ts`
+- [x] Both screens no longer use the embedded web page in the app (the browser UI keeps them)
 ### N5 — İncele + download panel + track picker in SwiftUI
 ### N6 — Kütüphane in SwiftUI (grid/list, inspector, Quick Look, Trash with confirmation)
 ### N7 — Stüdyo and Ayarlar in SwiftUI

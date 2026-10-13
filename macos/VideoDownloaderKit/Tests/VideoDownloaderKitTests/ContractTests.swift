@@ -31,6 +31,33 @@ struct ContractTests {
         #expect(job.status == .done)
         #expect(job.title == "Local test clip")
         #expect(job.outputFiles.count == 1)
+        #expect(job.usedSession == false)
+        #expect(job.warnings == [])
+        #expect(job.errorRaw == nil)
+        #expect(!job.isIndeterminate)
+    }
+
+    @Test func doctor() throws {
+        let report = try JSON.plain.decode(DoctorReport.self, from: sample("doctor"))
+        #expect(report.checks.map(\.id) == ["yt_dlp", "js_runtime", "ffmpeg", "safari_session"])
+        let ffmpeg = try #require(report.checks.first { $0.id == "ffmpeg" })
+        // Keys exactly as sent: the snake-case decoder would have made these "ffmpegPath", "videotoolboxH264".
+        #expect(ffmpeg.values["ffmpeg_path"] != nil)
+        guard case .object(let capabilities)? = ffmpeg.values["capabilities"] else {
+            Issue.record("no capabilities")
+            return
+        }
+        #expect(capabilities["videotoolbox_h264"] == .bool(true))
+        #expect(Set(capabilities.keys).isSubset(of: Set(Capabilities.order)), "a capability the native screen has no place for")
+        let runtime = try #require(report.checks.first { $0.id == "js_runtime" })
+        guard case .array(let found)? = runtime.values["found"], case .object(let first)? = found.first else {
+            Issue.record("no runtimes")
+            return
+        }
+        #expect(first["version"]?.string != nil)
+        let session = try #require(report.checks.first { $0.id == "safari_session" })
+        #expect(session.values["state"] == .string("unavailable"))  // tests never see Berk's session
+        #expect(session.fix.kind == "none")
     }
 
     @Test func jobEventDecodesThroughTheSSEPath() throws {
@@ -55,7 +82,21 @@ struct ContractTests {
     @Test func everySampleIsCoveredByATest() throws {
         let names = try FileManager.default.contentsOfDirectory(atPath: Self.samples.path)
             .filter { $0.hasSuffix(".json") }.sorted()
-        #expect(names == ["error.json", "event-job.json", "health.json", "jobs.json", "settings.json", "supports.json"])
+        #expect(names == ["doctor.json", "error.json", "event-job.json", "health.json", "jobs.json", "settings.json", "supports.json"])
+    }
+
+    @Test func aRunningJobSaysWhetherItHasAPercentage() throws {
+        func job(_ stage: String, _ progress: Double) throws -> Job {
+            let json = #"{"id":"x","kind":"download","status":"running","stage":"\#(stage)","progress":\#(progress),"output_files":[],"speed":1048576,"eta":75,"item_index":2,"item_count":5,"used_session":true,"warnings":[{"code":"SUBTITLE_SKIPPED","key":"tr"}]}"#
+            return try JSON.decoder.decode(Job.self, from: Data(json.utf8))
+        }
+        let downloading = try job("downloading", 0.4)
+        #expect(!downloading.isIndeterminate)
+        #expect(downloading.itemIndex == 2 && downloading.itemCount == 5)
+        #expect(downloading.usedSession == true)
+        #expect(downloading.warnings == [JobWarning(code: "SUBTITLE_SKIPPED", key: "tr")])
+        #expect(try job("downloading", 0).isIndeterminate)
+        #expect(try job("postprocessing", 0.9).isIndeterminate)
     }
 
     @Test func anUnknownJobStatusDoesNotBreakDecoding() throws {

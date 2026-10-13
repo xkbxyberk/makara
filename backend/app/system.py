@@ -12,6 +12,7 @@ import re
 import shutil
 import subprocess
 import sys
+import threading
 from collections.abc import Callable
 from typing import Any
 
@@ -19,6 +20,8 @@ from app import errors, paths
 
 URL_RE = re.compile(r"^https?://\S+$", re.IGNORECASE)
 CLIPBOARD_POLL_SECONDS = 1.0
+# One update at a time: two `uv lock`/`uv sync` runs over the same venv would race.
+_UPDATING = threading.Lock()
 
 _PICK_FOLDER = [
     "-e",
@@ -82,6 +85,15 @@ def update_ytdlp_argv() -> list[list[str]]:
 def update_ytdlp() -> dict[str, Any]:
     if paths.fixture_mode():
         raise errors.AppError(code="UPDATE_UNAVAILABLE", raw="fixture mode never touches the venv")
+    if not _UPDATING.acquire(blocking=False):
+        raise errors.AppError(code="UPDATE_RUNNING")
+    try:
+        return _update_ytdlp()
+    finally:
+        _UPDATING.release()
+
+
+def _update_ytdlp() -> dict[str, Any]:
     before = installed_ytdlp()
     log: list[str] = []
     for argv in update_ytdlp_argv():

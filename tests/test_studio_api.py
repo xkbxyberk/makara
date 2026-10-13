@@ -81,6 +81,9 @@ def test_a_studio_job_writes_next_to_the_source_and_joins_the_library(
     # Frame-accurate: within one frame (0.04 s at 25 fps; the container counts the last frame).
     assert abs(float(probe(output)["format"]["duration"]) - 1.5) <= 0.041
     assert not (clip.parent / ".vd-work").exists()  # no scratch left next to Berk's file
+    # The queue's "Finder'da göster" works for it (it once read a download-only key: HTTP 500).
+    reveal = client.post(f"/api/jobs/{job['id']}/reveal", json={"index": 0})
+    assert reveal.status_code == 200, reveal.text
     items = []
     for _ in range(50):
         items = client.get("/api/library").json()["items"]

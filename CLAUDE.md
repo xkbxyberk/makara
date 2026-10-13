@@ -2,7 +2,7 @@
 
 Local-only media workstation on yt-dlp + FFmpeg. macOS arm64, single user (Berk).
 **Talk to Berk in Turkish. Code, comments, commits and docs in English.**
-**Every user-facing string lives in `frontend/src/i18n/tr.ts` and nowhere else.**
+**Every user-facing web string lives in `frontend/src/i18n/tr.ts`; native ones in the Kit's `Localizable.xcstrings` (gotcha 37).**
 
 ## Commands
 
@@ -178,7 +178,10 @@ Local-only media workstation on yt-dlp + FFmpeg. macOS arm64, single user (Berk)
     the element's *value* in XCUITest, and a badge after a term adds a trailing space: match
     with `BEGINSWITH`. **Screenshot windows, never `XCUIScreen.main`**: a full-screen capture
     once recorded whatever else Berk had open. `typeKey(",", .command)` does not reach the
-    Settings item on this Mac (Turkish keyboard layout); tests click the menu item.
+    Settings item on this Mac (Turkish keyboard layout); tests click the menu item. The runner is
+    sandboxed: its scratch is under `~/Library/Containers` (it cannot write `/tmp`), so the
+    backend refuses that download folder and `PUT /api/settings` fails from a UI test; change a
+    setting by writing the test's own `data/settings.json` (read on every request).
 35. **The Safari extension** (`macos/extension/`, plain JS, no build step): `shared.js` (also
     loaded by vitest), `background.js` (icon + link menu), `content.js` (looks for
     `<video>`/`<audio>`/manifests, tells only the background script), `popup.*`. All app access
@@ -205,6 +208,15 @@ Local-only media workstation on yt-dlp + FFmpeg. macOS arm64, single user (Berk)
     address containing "login" once turned an unsupported page into LOGIN_REQUIRED, which
     would have sent the session to that site. Tests set VD_SAFARI_COOKIES (conftest), so no
     test ever reads the real store.
+37. **Native screens** (from N4: İndirmeler, Sistem) live in `VideoDownloaderKit/Views/`;
+    `RootView.detail` picks native or the embedded page per route. They call the same endpoints
+    as the web screen, through `APIClient`. Backend codes and states are worded from the native
+    catalog (`error.<CODE>.title/body`, `queue.status.*`, `doctor.*`), a copy of `tr.ts` that
+    `frontend/src/nativeStrings.test.ts` keeps equal: change both together. Decode `/api/doctor`
+    with `JSON.plain`: `convertFromSnakeCase` also rewrites *dictionary keys*
+    (`ffmpeg_path` -> `ffmpegPath`). Keys built at run time are not seen by the catalog scan;
+    list new families in `LocalizationTests.everyStateTheScreensNameIsTranslated`. On macOS a
+    grouped `Form` puts a bare button row under the box (as System Settings does).
 
 ## Rules
 

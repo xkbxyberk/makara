@@ -1,0 +1,252 @@
+import SwiftUI
+
+/// İndirmeler: the live job list from the app's event stream (the same one that drives the
+/// sidebar and Dock badges), with cancel, retry, remove and "show in Finder".
+struct QueueView: View {
+    let jobs: [Job]
+    let loaded: Bool
+    let connection: AppModel.Connection
+    let client: APIClient
+
+    var body: some View {
+        Group {
+            if !loaded {
+                ProgressView(L("queue.loading"))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if jobs.isEmpty {
+                ContentUnavailableView {
+                    Label(L("queue.emptyTitle"), systemImage: "arrow.down.circle")
+                } description: {
+                    Text(L("queue.emptyBody"))
+                }
+                .accessibilityIdentifier("queue.empty")
+            } else {
+                List(jobs) { job in
+                    JobRow(job: job, client: client)
+                        .listRowSeparator(.visible)
+                }
+                .listStyle(.inset)
+                .alternatingRowBackgrounds(.disabled)
+                .accessibilityIdentifier("queue.list")
+            }
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if connection == .reconnecting {
+                Label(L("queue.reconnecting"), systemImage: "wifi.exclamationmark")
+                    .font(.callout)
+                    .foregroundStyle(.orange)
+                    .frame(maxWidth: .infinity)
+                    .padding(8)
+                    .background(.bar)
+                    .accessibilityIdentifier("queue.reconnecting")
+            }
+        }
+    }
+}
+
+struct JobRow: View {
+    let job: Job
+    let client: APIClient
+    @State private var failure: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.title3)
+                    .foregroundStyle(iconColor)
+                    .frame(width: 22)
+                Text(job.title ?? job.sourceUrl ?? "")
+                    .font(.body.weight(.medium))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .help(job.sourceUrl ?? "")
+                Spacer(minLength: 8)
+                if let mode = job.mode { Badge(text: localizedIfPresent("mode.\(mode)") ?? mode) }
+                if job.usedSession == true {
+                    Badge(text: L("queue.usedSession"), tone: .warn).help(L("queue.usedSessionHelp"))
+                }
+                Badge(text: localizedIfPresent("queue.status.\(job.status.rawValue)") ?? job.status.rawValue, tone: tone)
+                    .accessibilityIdentifier("job.status")
+                actions
+            }
+            if job.status == .running || job.status == .queued {
+                progress
+            }
+            if job.status == .failed {
+                failed
+            }
+            if job.status == .done {
+                files
+                ForEach(job.warnings ?? [], id: \.self) { warning in
+                    Label(warningText(warning), systemImage: "exclamationmark.triangle.fill")
+                        .font(.callout)
+                        .foregroundStyle(.orange)
+                }
+            }
+            if let failure {
+                // As the web row: a code this app does not know yet is shown as it is.
+                Label(localizedIfPresent("error.\(failure).title") ?? failure, systemImage: "xmark.octagon.fill")
+                    .font(.callout)
+                    .foregroundStyle(.red)
+            }
+        }
+        .padding(.vertical, 6)
+        .contextMenu { menu }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("job")
+    }
+
+    // ---- parts ------------------------------------------------------------------------------
+
+    private var icon: String {
+        switch job.status {
+        case .done: "checkmark.circle.fill"
+        case .failed: "xmark.octagon.fill"
+        default: job.mode == "studio" ? "scissors" : "arrow.down.circle"
+        }
+    }
+
+    private var iconColor: Color {
+        switch job.status {
+        case .done: .green
+        case .failed: .red
+        default: .secondary
+        }
+    }
+
+    private var tone: Badge.Tone {
+        switch job.status {
+        case .done: .ok
+        case .failed: .danger
+        case .running: .accent
+        default: .neutral
+        }
+    }
+
+    private var stageText: String {
+        let stage = job.stage ?? job.status.rawValue
+        return localizedIfPresent("queue.stage.\(stage)") ?? stage
+    }
+
+    @ViewBuilder private var actions: some View {
+        HStack(spacing: 2) {
+            if job.status.isActive {
+                iconButton(L("queue.cancel"), "xmark.circle") { try await client.cancel(job: job.id) }
+            }
+            if job.status == .failed || job.status == .cancelled {
+                iconButton(L("queue.retry"), "arrow.clockwise") { try await client.retry(job: job.id) }
+            }
+            if job.status != .running {
+                iconButton(L("queue.remove"), "minus.circle", help: L("queue.removeHelp")) {
+                    try await client.remove(job: job.id)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder private var menu: some View {
+        if job.status.isActive {
+            Button(L("queue.cancel")) { run { try await client.cancel(job: job.id) } }
+        }
+        if job.status == .failed || job.status == .cancelled {
+            Button(L("queue.retry")) { run { try await client.retry(job: job.id) } }
+        }
+        if job.status == .done, !job.outputFiles.isEmpty {
+            Button(L("queue.reveal")) { run { try await client.reveal(job: job.id, file: 0) } }
+        }
+        if let source = job.sourceUrl {
+            Button(L("queue.copyLink")) {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(source, forType: .string)
+            }
+        }
+        if job.status != .running {
+            Divider()
+            Button(L("queue.remove")) { run { try await client.remove(job: job.id) } }
+        }
+    }
+
+    private var progress: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Group {
+                if job.isIndeterminate {
+                    ProgressView()
+                } else {
+                    ProgressView(value: min(max(job.progress ?? 0, 0), 1))
+                }
+            }
+            .progressViewStyle(.linear)
+            .accessibilityLabel(stageText)
+            HStack(spacing: 12) {
+                Text(stageText)
+                if job.status == .running {
+                    if let progress = job.progress, progress > 0 { Text("\(Int((progress * 100).rounded()))%") }
+                    if let index = job.itemIndex, let count = job.itemCount, count > 1 {
+                        Text(L("queue.item", index, count))
+                    }
+                    if let speed = job.speed, speed > 0 { Text(L("queue.speed", Format.bytes(speed))) }
+                    if let eta = job.eta, eta > 0 { Text(L("queue.eta", Format.duration(eta))) }
+                }
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .monospacedDigit()
+        }
+        .padding(.leading, 30)
+    }
+
+    private var failed: some View {
+        let code = job.errorCode ?? "UNKNOWN"
+        return VStack(alignment: .leading, spacing: 4) {
+            Text(ErrorCopy.title(code)).font(.callout.weight(.semibold))
+            Text(ErrorCopy.body(code)).font(.callout).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            if let raw = job.errorRaw, !raw.isEmpty { RawDetails(raw: raw) }
+        }
+        .padding(.leading, 30)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("job.error")
+    }
+
+    private var files: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            ForEach(Array(job.outputFiles.enumerated()), id: \.offset) { index, file in
+                HStack(spacing: 6) {
+                    Text(file.split(separator: "/").suffix(2).joined(separator: "/"))
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .textSelection(.enabled)
+                    iconButton(L("queue.reveal"), "folder") { try await client.reveal(job: job.id, file: index) }
+                }
+            }
+        }
+        .padding(.leading, 30)
+    }
+
+    private func warningText(_ warning: JobWarning) -> String {
+        guard let format = localizedIfPresent("queue.warning.\(warning.code)") else { return warning.code }
+        return String(format: format, warning.key ?? "")
+    }
+
+    // ---- actions ----------------------------------------------------------------------------
+
+    private func iconButton(_ title: String, _ symbol: String, help: String? = nil,
+                            _ action: @escaping @Sendable () async throws -> Void) -> some View {
+        Button { run(action) } label: {
+            Image(systemName: symbol).imageScale(.large)
+        }
+        .buttonStyle(.borderless)
+        .help(help ?? title)
+        .accessibilityLabel(title)
+    }
+
+    private func run(_ action: @escaping @Sendable () async throws -> Void) {
+        failure = nil
+        Task {
+            do { try await action() } catch { failure = APIError.from(error).code }
+        }
+    }
+}

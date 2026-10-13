@@ -60,4 +60,14 @@ struct IncomingURLSafetyTests {
         let local = try PropertyListSerialization.data(fromPropertyList: ["URL": "http://127.0.0.1:8787/"], format: .xml, options: 0)
         #expect(IncomingURL.parse(file, readFile: { _ in local }) == nil)
     }
+
+    /// The hidden page stays on its last web screen while a native one shows: moving it to its
+    /// own Sistem screen made every visit run the whole doctor twice (review finding).
+    @Test func nativeScreensLeaveTheEmbeddedPageAlone() {
+        #expect(Route.allCases.filter(\.isNative) == [.download, .doctor])
+        #expect(Route.download.pageRoute == nil)
+        #expect(Route.doctor.pageRoute == nil)
+        #expect(Route.inspect.pageRoute == "inspect")
+        #expect(Route.library.pageRoute == "library")
+    }
 }

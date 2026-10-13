@@ -275,4 +275,15 @@ scrubbed, and jobs say when the session was used.
 **Live check** (13 Oct): Berk granted Full Disk Access and downloaded an age-restricted video
 with his session himself (M7a.5); the link menu and ⌃⇧D were already confirmed (N3.5).
 
-**Next:** N4 -- port İndirmeler and Sistem to SwiftUI.
+## N4 -- İndirmeler and Sistem in SwiftUI (13 Oct)
+
+Both screens are native in the app (`QueueView`, `DoctorView`); İncele, Kütüphane and Stüdyo are
+still the embedded page. The queue reads the app's own event stream (it already fed the Dock
+badge), now with a loaded flag and a reconnecting state. Error and state wording (63 error
+codes, stages, doctor texts) was copied into the native catalog, kept equal to `tr.ts` by a
+vitest. A doctor sample joined the API contract samples (versions and paths scrubbed). Two
+stale texts in tr.ts fixed: LOGIN_REQUIRED and BOT_CHECK still promised cookie login "in a later
+phase". UI tests: the queue follows a real offline download to done, Finder reveal of a moved
+file, removal; the doctor shows every check and the test server's (never Berk's) session state.
+
+**Next:** N5 -- İncele, the download panel and track picker in SwiftUI.

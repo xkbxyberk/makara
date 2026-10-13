@@ -7,15 +7,22 @@ import UserNotifications
 @MainActor
 @Observable
 public final class AppModel {
+    public enum Connection: Sendable { case connecting, open, reconnecting }
+
     public let backend: BackendController
     public private(set) var jobs: [String: Job] = [:]
+    /// False until the first snapshot: "loading", not "no downloads yet".
+    public private(set) var jobsLoaded = false
+    public private(set) var connection: Connection = .connecting
     public private(set) var activeCount = 0 {
         didSet { NSApp?.dockTile.badgeLabel = activeCount > 0 ? String(activeCount) : nil }
     }
 
     /// The screen on show. Setting it moves the web page too, unless the page itself moved.
     public var route: Route = .inspect {
-        didSet { if route != oldValue, !followingPage { web.navigate(route.rawValue) } }
+        didSet {
+            if route != oldValue, !followingPage, let page = route.pageRoute { web.navigate(page) }
+        }
     }
 
     @ObservationIgnored public let web: WebBridge
@@ -48,7 +55,7 @@ public final class AppModel {
         let waiting = pending
         pending = []
         for case .show(let target?) in waiting { route = target }
-        web.load(route: route.rawValue)
+        web.load(route: route.pageRoute ?? Route.inspect.rawValue)
         listen()
         waiting.forEach(handle)
     }
@@ -81,7 +88,14 @@ public final class AppModel {
     private func backendLost() {
         events?.cancel()
         jobs = [:]
+        jobsLoaded = false
+        connection = .connecting
         activeCount = 0
+    }
+
+    /// Newest first, as the web queue lists them.
+    public var jobList: [Job] {
+        jobs.values.sorted { ($0.createdAt ?? 0, $0.id) > ($1.createdAt ?? 0, $1.id) }
     }
 
     public func handle(_ incoming: IncomingURL) {
@@ -106,7 +120,9 @@ public final class AppModel {
     }
 
     private func pageMoved(to raw: String) {
-        guard let next = Route(rawValue: raw), next != route else { return }
+        // On a native screen the page is hidden and nobody uses it: what it reports is only its
+        // own loading, which must not pull the window away from İndirmeler or Sistem.
+        guard !route.isNative, let next = Route(rawValue: raw), next != route else { return }
         followingPage = true
         route = next
         followingPage = false
@@ -129,6 +145,10 @@ public final class AppModel {
         switch event {
         case .snapshot(let all):
             jobs = Dictionary(all.map { ($0.id, $0) }, uniquingKeysWith: { $1 })
+            jobsLoaded = true
+            connection = .open
+        case .disconnected:
+            connection = .reconnecting
         case .job(let job):
             let previous = jobs[job.id]
             jobs[job.id] = job
