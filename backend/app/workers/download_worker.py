@@ -29,7 +29,7 @@ import time
 from pathlib import Path
 from typing import Any, TextIO
 
-from app import errors, paths
+from app import errors, finder, paths
 from app.doctor import listing_has
 from app.ffmpeg import binaries, mux
 from app.ffmpeg.probe import probe
@@ -453,6 +453,10 @@ def _finalize(
             outputs.append((source, suffix))
 
     emit({"t": "stage", "stage": "finalizing"})
+    # Finder's "Nereden": the page, as Safari's own downloads say it (survives the rename).
+    source_page = info.get("webpage_url") or req.get("url")
+    for source, _ in outputs:
+        finder.set_where_from(source, [source_page] if source_page else [])
     targets = naming.claim(root, stem, [suffix for _, suffix in outputs])
     try:
         for (source, _), target in zip(outputs, targets, strict=True):

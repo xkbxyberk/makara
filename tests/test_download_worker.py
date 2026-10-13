@@ -393,3 +393,18 @@ def test_the_safari_session_never_goes_to_aria2c() -> None:
     assert "external_downloader" not in options
     # A cap is exact: one fragment at a time, at the cap.
     assert options == {"concurrent_fragment_downloads": 1, "ratelimit": 2_000_000}
+
+
+def test_finder_says_where_the_file_came_from(tmp_path: Path, local_info: dict[str, Any]) -> None:
+    from app import finder
+
+    code, events = run_job(
+        tmp_path,
+        local_info,
+        mode="compat_mp4",
+        video_format_id="v-h264",
+        audio_format_ids=["a-en-m4a"],
+    )
+    assert code == 0
+    [output] = done_files(events)
+    assert finder.where_from(output) == [local_info["webpage_url"]]

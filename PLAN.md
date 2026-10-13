@@ -269,8 +269,9 @@ Agreed list, in build order (cheap and high-value first):
       the row ("2. deneme 1:40 sonra")
 - [x] P6e yt-dlp updates itself weekly in the background when nothing is downloading; Sistem
       shows when it last did
-- [ ] P6f Downloaded files carry their source in Finder ("Nereden": kMDItemWhereFroms) and the
+- [x] P6f Downloaded files carry their source in Finder ("Nereden": kMDItemWhereFroms) and the
       video's title/channel as Spotlight comments; old scratch folders (.vd-work) are cleaned
+      (built: "Nereden" and the cleanup; Spotlight comments are Finder's own store, left out)
 - [ ] P6g Progress on the Dock icon and the menu bar glyph (a thin bar/ring while downloading)
 Added by Claude for later, each worth its own step:
 - [ ] Queue: drag to reorder, "en başa al"; "bitince Mac'i uyut"

@@ -333,6 +333,13 @@ UI and went with it (N8).
     keeps new jobs from starting meanwhile (the Doctor button sets it too). The outcome is in
     `<data>/ytdlp-update.json` and in the doctor's `yt_dlp.values.auto_update`.
 
+48. **Finder metadata and scratch cleanup (P6f).** `app/finder.py` writes
+    `com.apple.metadata:kMDItemWhereFroms` (a binary plist list) with libc's `setxattr` via
+    ctypes -- Python has no `os.setxattr` on macOS -- on each output in the scratch folder
+    before the rename. At start the manager's `clean_scratch` removes `<download>/.vd-work`
+    folders named like a job id (12 hex) whose job is gone, or whose job is done, failed or
+    cancelled and that were untouched for 14 days; nothing else there is touched.
+
 ## Rules
 
 - **Never delete, skip, weaken or `xfail` a test to make the suite pass.** Fix the code.

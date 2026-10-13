@@ -81,6 +81,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.previews = PreviewManager()
     await manager.start()
     clipboard.start()
+    # Scratch folders left by removed or long-stopped jobs (P6f).
+    with contextlib.suppress(OSError):
+        manager.clean_scratch(Path(settings_store.load().download_dir))
     # Files may have been moved or deleted in Finder while the app was closed.
     scan = asyncio.create_task(
         asyncio.to_thread(library.scan, [Path(settings_store.load().download_dir).expanduser()])

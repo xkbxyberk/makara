@@ -250,6 +250,39 @@ def test_a_network_failure_is_tried_again_later_by_itself(app_env: Any) -> None:
     assert cancelled["output_files"] == []
 
 
+def test_leftover_scratch_folders_are_cleaned_and_nothing_else(
+    app_env: Any, tmp_path: Path
+) -> None:
+    import os
+
+    client = app_env()
+    manager = client.app.state.jobs  # type: ignore[attr-defined]
+    work = tmp_path / "downloads" / ".vd-work"
+    orphan, kept_name = work / "0123456789ab", work / "notes"
+    for folder in (orphan, kept_name):
+        folder.mkdir(parents=True)
+        (folder / "stream.part").write_bytes(b"x")
+    model = inspect(client)
+    job = client.post(
+        "/api/jobs",
+        json={
+            "inspect_id": model["inspect_id"],
+            "mode": "audio",
+            "audio_format_ids": ["a-en-m4a"],
+            "audio_codec": "m4a",
+        },
+    ).json()
+    wait_for(client, job["id"], lambda j: j["status"] == "done")
+    mine = work / job["id"]
+    mine.mkdir(parents=True, exist_ok=True)  # a done job's folder, recent: kept for now
+    assert manager.clean_scratch(tmp_path / "downloads") == 1
+    assert not orphan.exists() and kept_name.exists() and mine.exists()
+    old = time.time() - manager.SCRATCH_MAX_AGE - 60
+    os.utime(mine, (old, old))
+    assert manager.clean_scratch(tmp_path / "downloads") == 1
+    assert not mine.exists() and kept_name.exists()
+
+
 def test_remove_deletes_the_entry_but_never_the_media(app_env: Any) -> None:
     client = app_env()
     model = inspect(client)

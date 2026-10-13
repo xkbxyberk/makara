@@ -13,6 +13,7 @@ import contextlib
 import json
 import logging
 import os
+import re
 import shutil
 import signal
 import sys
@@ -494,6 +495,32 @@ class JobManager:
         )
         if work.name == job["id"] and work.resolve().parent == root.resolve() and work.exists():
             shutil.rmtree(work, ignore_errors=True)
+
+    SCRATCH_NAME = re.compile(r"^[0-9a-f]{12}$")
+    SCRATCH_MAX_AGE = 14 * 24 * 3600
+
+    def clean_scratch(self, root: Path) -> int:
+        """Remove leftover scratch folders under `<root>/.vd-work` (P6f): a job id folder whose
+        job is gone, or a stopped job's (failed, cancelled) untouched for two weeks. Queued,
+        running and paused jobs keep theirs; nothing but a job-id-named folder is touched."""
+        work = root.expanduser() / ".vd-work"
+        if not work.is_dir():
+            return 0
+        jobs = {j["id"]: j for j in self.store.all()}
+        removed = 0
+        for folder in work.iterdir():
+            if (
+                not folder.is_dir()
+                or folder.is_symlink()
+                or not self.SCRATCH_NAME.match(folder.name)
+            ):
+                continue
+            job = jobs.get(folder.name)
+            stale = time.time() - folder.stat().st_mtime > self.SCRATCH_MAX_AGE
+            if job is None or (job["status"] in ("failed", "cancelled", "done") and stale):
+                shutil.rmtree(folder, ignore_errors=True)
+                removed += 1
+        return removed
 
     def _signal(self, job_id: str, sig: signal.Signals) -> None:
         proc = self.procs.get(job_id)
