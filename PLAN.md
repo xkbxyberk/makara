@@ -258,15 +258,43 @@ Berk asks (session limits).
       `scripts/render_icons.sh` makes the extension's PNGs; the menu bar glyph is a template
       SVG. The UI/UX pass is still open
 
-### P6 — Ideas added by Claude (to discuss)
-- [ ] Extension: "zaten indirildi" when the page's video is in the library; one-click with the
-      remembered choice from the in-page offer
-- [ ] Notifications with actions (Finder'da göster, Oynat); a Dock/menu-bar progress ring
-- [ ] Drop a link on the menu-bar icon; ⌥-click a link in Safari to download it at once
-- [ ] Queue: drag to reorder, retry with backoff, "bitince Mac'i uyut"
-- [ ] yt-dlp updated automatically (weekly, in the background, when nothing is downloading)
-- [ ] Disk-space check before a big download; duplicate detection before downloading again
-- [ ] Earlier milestones still open: M5 (chapters/SponsorBlock), M6 (playlists/channels)
+### P6 — More conveniences (Berk 2026-10-14: "gayet iyi", evaluate more)
+Agreed list, in build order (cheap and high-value first):
+- [ ] P6a Duplicates: before a download, "Bu video zaten kütüphanende" (same site + video id)
+      in İncele, the popup and the page offer, with "Göster" / "Yine de indir"
+- [ ] P6b Notifications with actions: "Oynat", "Finder'da göster"; a failed one offers "Tekrar dene"
+- [ ] P6c Disk space: a download whose size is known and does not fit (with a margin) is
+      refused before it starts, with how much is free; the panel warns early
+- [ ] P6d Network failures retried by themselves with backoff (30 s, 2 min, 10 min), said in
+      the row ("2. deneme 1:40 sonra")
+- [ ] P6e yt-dlp updates itself weekly in the background when nothing is downloading; Sistem
+      shows when it last did
+- [ ] P6f Downloaded files carry their source in Finder ("Nereden": kMDItemWhereFroms) and the
+      video's title/channel as Spotlight comments; old scratch folders (.vd-work) are cleaned
+- [ ] P6g Progress on the Dock icon and the menu bar glyph (a thin bar/ring while downloading)
+Added by Claude for later, each worth its own step:
+- [ ] Queue: drag to reorder, "en başa al"; "bitince Mac'i uyut"
+- [ ] A Share extension ("Paylaş > VideoDownloader" from any app) and Shortcuts actions
+- [ ] Music: artist/title split from the video title, square cover crop, album tags
+- [ ] Drop a link on the menu bar icon (needs an AppKit status item instead of MenuBarExtra)
+- [ ] Earlier milestones still open: M5 (chapters/SponsorBlock), M6 (playlists/channels),
+      then subscriptions (new videos of a channel downloaded by themselves)
+
+### P7 — UI/UX ideas (Claude's brainstorm, Berk 2026-10-14: "beyin fırtınası yap")
+- [ ] First run: a short welcome that checks, live, the Safari extension (enabled, all sites),
+      start at login, optional Full Disk Access, and the download folder
+- [ ] İncele: the result opens on a hero card (cover, title, channel, length) with the quick
+      choices first; the full track picker under "Gelişmiş"; recent inspections on the empty page
+- [ ] İndirmeler: sections (Etkin · Sırada · Duraklatıldı · Bitenler), covers in rows, total
+      speed in the toolbar, "Oynat"/"Finder'da göster" on finished rows, "Bitenleri temizle",
+      undo after removing a row
+- [ ] Kütüphane: length badge on covers, hover-scrub preview frames, double click plays,
+      "Yeni" until first opened
+- [ ] Stüdyo: a waveform under the filmstrip, a shortcut sheet (?), one-click presets
+      ("iPhone için", "WhatsApp için 16 MB", "GIF")
+- [ ] ⌘K command palette: paste a link, go to a screen, run an action
+- [ ] One feedback language: a HUD/toast for every confirmed action ("Kuyruğa eklendi"),
+      empty states that always offer the next step, consistent icons and wording
 
 ## M5 — Sections and SponsorBlock · M6 — Playlists and channels
 ## M7 — Presets and browser cookies (Safari session for YouTube pulled forward, 2026-10-13) · M8 — Transcode and target size
