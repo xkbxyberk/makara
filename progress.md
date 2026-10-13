@@ -313,4 +313,23 @@ layout-loop crashes (a width-chosen filter bar, then a self-sized notice line in
 column); UI tests read Berk's saved window state (after a crash: no window) and shared his web
 storage; an icon-only segment was named after its symbol.
 
-**Next:** N7 -- Stüdyo and Ayarlar in SwiftUI.
+## N7 -- Stüdyo redesigned, Ayarlar, missing records (13-14 Oct)
+
+Berk asked for two things: a way to remove library records whose file he deleted in Finder,
+and a professional Stüdyo -- a player preview, an iPhone-style range picker with two handles
+matching the video's frames, seconds and milliseconds shown, and a cut that is exactly the
+range chosen. Built: record removal (one or all, confirmed, refused while the file is back);
+Stüdyo around a frame grid (filmstrip, yellow handles, playhead, keyframe ticks, time and frame
+fields, I/O and arrow keys, pieces, chapters); the backend cuts on frames, proven pixel by pixel
+on the first and last frame; preview copies for what macOS cannot play (measured: MKV/WebM,
+VP9, AV1); Ayarlar native and instant. No web page is left in the app.
+
+Measured on the way: half a frame of seek lead shifted a frame-accurate cut by a frame (now one
+millisecond); AVFoundation opens no MKV and cannot step VP9/AV1 even in MP4.
+
+The review then measured what the clean test clip had hidden: frame numbers were off on a
+video whose picture starts after its sound and on MPEG-TS, and meaningless on a variable frame
+rate. Fixed (frames counted from the video's first frame, a coarse then exact seek, time-based
+cuts for VFR) with tests that generate those sources and compare pixels.
+
+**Next:** N8 -- wrap-up (the browser UI's fate, Developer ID, ~/Applications).

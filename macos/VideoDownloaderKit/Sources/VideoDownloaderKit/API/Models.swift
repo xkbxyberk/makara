@@ -7,13 +7,46 @@ public struct Health: Decodable, Sendable, Equatable {
     public let fixtureMode: Bool
 }
 
-public struct AppSettings: Decodable, Sendable, Equatable {
-    public let downloadDir: String
-    public let filenameTemplate: String
-    public let concurrency: Int
-    public let defaultMode: String
-    public let clipboardWatch: Bool
-    public let notifications: Bool
+public struct AppSettings: Codable, Sendable, Equatable {
+    public var downloadDir: String
+    public var filenameTemplate: String
+    public var concurrency: Int
+    public var defaultMode: String
+    public var clipboardWatch: Bool
+    public var notifications: Bool
+    public var safariLogin: Bool = true
+    /// Read-only: the app's built-in template, for "Varsayılana dön".
+    public var defaultFilenameTemplate: String? = nil
+
+    private enum CodingKeys: String, CodingKey {
+        case downloadDir, filenameTemplate, concurrency, defaultMode, clipboardWatch, notifications, safariLogin
+        case defaultFilenameTemplate
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        downloadDir = try c.decode(String.self, forKey: .downloadDir)
+        filenameTemplate = try c.decode(String.self, forKey: .filenameTemplate)
+        concurrency = try c.decode(Int.self, forKey: .concurrency)
+        defaultMode = try c.decode(String.self, forKey: .defaultMode)
+        clipboardWatch = try c.decode(Bool.self, forKey: .clipboardWatch)
+        notifications = try c.decode(Bool.self, forKey: .notifications)
+        // Newer settings: an older answer without them keeps the defaults.
+        safariLogin = try c.decodeIfPresent(Bool.self, forKey: .safariLogin) ?? true
+        defaultFilenameTemplate = try c.decodeIfPresent(String.self, forKey: .defaultFilenameTemplate)
+    }
+
+    /// What `PUT /api/settings` takes (everything but the read-only template).
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(downloadDir, forKey: .downloadDir)
+        try c.encode(filenameTemplate, forKey: .filenameTemplate)
+        try c.encode(concurrency, forKey: .concurrency)
+        try c.encode(defaultMode, forKey: .defaultMode)
+        try c.encode(clipboardWatch, forKey: .clipboardWatch)
+        try c.encode(notifications, forKey: .notifications)
+        try c.encode(safariLogin, forKey: .safariLogin)
+    }
 }
 
 public enum JobStatus: String, Decodable, Sendable {

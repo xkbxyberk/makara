@@ -22,6 +22,8 @@ public final class AppModel {
     public var clipboardOffer: String?
     public let inspector: Inspector
     public let librarian: Librarian
+    public let studio: Studio
+    public let preview = PreviewPlayer()
     /// A finished download could not be added to the library (its file is on disk).
     public var catalogueFailed = false
     /// Per-user conveniences; a file in the data folder under tests (never Berk's preferences).
@@ -30,16 +32,10 @@ public final class AppModel {
         didSet { NSApp?.dockTile.badgeLabel = activeCount > 0 ? String(activeCount) : nil }
     }
 
-    /// The screen on show. Setting it moves the web page too, unless the page itself moved.
-    public var route: Route = .inspect {
-        didSet {
-            if route != oldValue, !followingPage, let page = route.pageRoute { web.navigate(page) }
-        }
-    }
+    /// The screen on show (every one of them is SwiftUI since N7).
+    public var route: Route = .inspect
 
-    @ObservationIgnored public let web: WebBridge
-    @ObservationIgnored public let settingsWeb: WebBridge
-    @ObservationIgnored private var followingPage = false
+    public let preferences: Preferences
     @ObservationIgnored private var events: Task<Void, Never>?
     @ObservationIgnored private var pending: [IncomingURL] = []
     @ObservationIgnored private var askedForNotifications = false
@@ -51,14 +47,9 @@ public final class AppModel {
         self.store = store
         inspector = Inspector(client: { backend.client }, rules: QuickRules(store: store))
         librarian = Librarian(client: { backend.client }, store: store)
-        // Tests: never Berk's web storage (the same rule as LocalStore.forEnvironment).
-        let ephemeral = !(config.environment["VD_DATA_DIR"] ?? "").isEmpty
-        web = WebBridge(port: config.port, ephemeral: ephemeral)
-        settingsWeb = WebBridge(port: config.port, ephemeral: ephemeral)
-        web.onRoute = { [weak self] raw in self?.pageMoved(to: raw) }
+        studio = Studio(client: { backend.client })
+        preferences = Preferences(client: { backend.client })
         backend.onLost = { [weak self] in self?.backendLost() }
-        web.onDrop = { [weak self] url in self?.handle(.inspect(url)) }
-        settingsWeb.onDrop = { [weak self] url in self?.handle(.inspect(url)) }
     }
 
     public var isReady: Bool {
@@ -69,13 +60,10 @@ public final class AppModel {
     public func start() async {
         await backend.start()
         guard isReady else { return }
-        // A screen asked for before the page existed becomes the page's first screen; links
-        // wait in the bridge until the page says it is ready.
+        // What arrived while the backend was starting (a link from Safari, a screen) is handled
+        // now that it answers.
         let waiting = pending
         pending = []
-        for case .show(let target?) in waiting { route = target }
-        // The page is only seen on the screens not ported yet; it waits on an idle one.
-        web.load(route: route.pageRoute ?? Route.inspect.rawValue)
         fixtureMode = await backend.client.health(timeout: 10)?.fixtureMode
         listen()
         waiting.forEach(handle)
@@ -84,25 +72,14 @@ public final class AppModel {
     /// One fresh attempt, never two: the controller is reset, then started once.
     public func retry() async {
         events?.cancel()
-        web.unload()
         await backend.reset()
         await start()
     }
 
     public func shutdown() async {
         events?.cancel()
-        // The pages' own event streams close with them, so the server can stop at once.
-        web.unload()
-        settingsWeb.unload()
+        preview.pause()
         await backend.stop()
-    }
-
-    public func showSettings() {
-        settingsWeb.reload(route: "settings")
-    }
-
-    public func hideSettings() {
-        settingsWeb.unload()
     }
 
     /// The backend went away after being ready: nothing it reported can be trusted any more.
@@ -134,25 +111,16 @@ public final class AppModel {
         }
     }
 
-    /// "Stüdyo'da aç" from Kütüphane: Stüdyo is still the embedded page, so it is handed the item.
+    /// "Stüdyo'da aç" from Kütüphane.
     public func openInStudio(item id: String) {
         route = .studio
-        web.openInStudio(id)
+        studio.open(item: id)
     }
 
     public func inspectClipboard() {
         guard let text = NSPasteboard.general.string(forType: .string)?.trimmingCharacters(in: .whitespacesAndNewlines),
               let url = URL(string: text), let incoming = IncomingURL.parse(url) else { return }
         handle(incoming)
-    }
-
-    private func pageMoved(to raw: String) {
-        // On a native screen the page is hidden and nobody uses it: what it reports is only its
-        // own loading, which must not pull the window away from İndirmeler or Sistem.
-        guard !route.isNative, let next = Route(rawValue: raw), next != route else { return }
-        followingPage = true
-        route = next
-        followingPage = false
     }
 
     // ---- live jobs --------------------------------------------------------------------------

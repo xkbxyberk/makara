@@ -127,16 +127,31 @@ final class ShellTests: XCTestCase {
         screenshot("native-queue-empty-dark")
     }
 
-    func testSettingsOpenInTheirOwnWindowFromTheAppMenu() {
+    func testSettingsOpenInTheirOwnWindowFromTheAppMenu() throws {
         app.launch()
         native("Henüz bir şey incelemedin")
         // VideoDownloader > Ayarlar… (the system's own item, which carries ⌘,).
         let item = app.menuBars.menuItems["Ayarlar…"]
         XCTAssertTrue(item.waitForExistence(timeout: 10))
         item.click()
-        page("İndirme klasörü")
         let settings = app.windows["VideoDownloader Ayarları"]
         XCTAssertTrue(settings.waitForExistence(timeout: 10), "no Settings window")
+        XCTAssertTrue(settings.staticTexts["İndirme klasörü"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.webViews.firstMatch.exists, "Ayarlar is native now: no web page is left")
+        // The template's sample file name comes from the server.
+        XCTAssertTrue(settings.staticTexts.matching(NSPredicate(format: "value BEGINSWITH %@", "Örnek: ")).firstMatch
+            .waitForExistence(timeout: 10), "no template preview")
+        // A switch applies at once. This runner's download folder sits under ~/Library, which the
+        // server refuses (rightly), so here the change is refused -- and must say why.
+        settings.descendants(matching: .any)["settings.clipboard"].firstMatch.click()
+        XCTAssertTrue(settings.descendants(matching: .any)["settings.failure"].waitForExistence(timeout: 10),
+                      "a refused setting said nothing")
+        let stored = try api("GET", "api/settings")
+        XCTAssertEqual(stored["clipboard_watch"] as? Bool, false, "a refused change was applied anyway")
+        // ...and the switch shows what is really in effect again.
+        let off = NSPredicate(format: "value == 0 OR value == '0'")
+        expectation(for: off, evaluatedWith: settings.descendants(matching: .any)["settings.clipboard"].firstMatch)
+        waitForExpectations(timeout: 10)
         // The window only -- never the whole screen, which shows whatever else Berk has open.
         let shot = XCTAttachment(screenshot: settings.screenshot())
         shot.name = "native-settings-light"
@@ -369,7 +384,9 @@ final class ShellTests: XCTestCase {
         native("1 kayıt kütüphaneden kaldırıldı.")
     }
 
-    func testALibraryItemOpensInTheStudio() throws {
+    /// Stüdyo'da aç → the native Stüdyo: a preview (the MKV/VP9 download is turned into a
+    /// playable copy), a cut chosen frame by frame with the keyboard, then run.
+    func testALibraryItemIsCutFrameByFrameInTheStudio() throws {
         app.launch()
         sidebar("Kütüphane").click()
         _ = try startDownload()
@@ -377,11 +394,42 @@ final class ShellTests: XCTestCase {
         XCTAssertTrue(card.waitForExistence(timeout: 60))
         card.click()
         app.buttons["Stüdyo’da aç"].firstMatch.click()
-        XCTAssertTrue(app.windows["Stüdyo"].waitForExistence(timeout: 10))
-        let source = app.webViews.staticTexts.matching(NSPredicate(format: "value CONTAINS %@ OR label CONTAINS %@",
-                                                                       "Local test clip [localclip01]", "Local test clip [localclip01]")).firstMatch
-        XCTAssertTrue(source.waitForExistence(timeout: 30), "Stüdyo did not open the item")
-        screenshot("native-studio-from-library-light")
+        XCTAssertTrue(app.windows.firstMatch.title.hasPrefix("Stüdyo") || app.windows["Stüdyo"].waitForExistence(timeout: 10))
+        XCTAssertTrue(element("studio.timeline").waitForExistence(timeout: 30), "no timeline")
+        XCTAssertFalse(app.webViews.firstMatch.exists, "Stüdyo is a native screen now")
+        // The playable copy is ready when the play button is.
+        let play = app.buttons["Oynat (boşluk)"]
+        expectation(for: NSPredicate(format: "isEnabled == true"), evaluatedWith: play)
+        waitForExpectations(timeout: 60)
+        native("25 fps")
+
+        // Ten frames on, start here; twenty-five more, end after it.
+        element("studio.preview").click()
+        for _ in 0..<10 { app.typeKey(.rightArrow, modifierFlags: []) }
+        native("kare 10")
+        app.typeKey("i", modifierFlags: [])
+        for _ in 0..<24 { app.typeKey(.rightArrow, modifierFlags: []) }
+        native("kare 34")
+        app.typeKey("o", modifierFlags: [])
+        native("0:01.000 · 25 kare")
+        screenshot("native-studio-trim-light")
+
+        // Lossless: the start moves to a keyframe (here the one at 0 or 1 s) and says so.
+        app.radioButtons["Kayıpsız"].firstMatch.click()
+        native("Kayıpsız kesimde başlangıç")
+        screenshot("native-studio-lossless-light")
+        app.radioButtons["Kare hassas"].firstMatch.click()
+        element("studio.preview").click()
+        app.typeKey(.leftArrow, modifierFlags: [.shift])  // a second back: frame 9
+        app.typeKey("i", modifierFlags: [])
+
+        let run = app.buttons["studio.run"]
+        expectation(for: NSPredicate(format: "isEnabled == true"), evaluatedWith: run)
+        waitForExpectations(timeout: 30)
+        run.click()
+        XCTAssertTrue(element("studio.queued").waitForExistence(timeout: 15), "not queued")
+        app.buttons["İndirmeleri aç"].firstMatch.click()
+        XCTAssertTrue(app.windows.firstMatch.staticTexts["Tamamlandı"].waitForExistence(timeout: 60))
     }
 
     /// The opt-in clipboard watcher's offer is native and shows on any screen.

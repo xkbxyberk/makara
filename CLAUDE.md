@@ -163,7 +163,8 @@ Local-only media workstation on yt-dlp + FFmpeg. macOS arm64, single user (Berk)
     whatever one video offered (found twice in review, in the panel and the popup).
     The audio-only defaults (`selection.DEFAULT_AUDIO_CODEC/QUALITY`) mirror the panel's
     initial `mp3`/`192`; change both together.
-33. **Embedded web UI** (`?embedded=1`, `frontend/src/lib/embedded.ts`): no sidebar, title or
+33. **Embedded web UI** -- *no longer used by the app since N7* (WebBridge is gone; the
+    browser UI remains until N8). It was `?embedded=1`, `frontend/src/lib/embedded.ts`: no sidebar, title or
     theme (the window follows the system appearance), no notifications (the app posts them),
     and `window.vd.navigate/inspect` for the app; the page reports `ready` and route changes
     through `window.webkit.messageHandlers.vd`. **WebBridge queues every call until `ready`**:
@@ -208,8 +209,7 @@ Local-only media workstation on yt-dlp + FFmpeg. macOS arm64, single user (Berk)
     address containing "login" once turned an unsupported page into LOGIN_REQUIRED, which
     would have sent the session to that site. Tests set VD_SAFARI_COOKIES (conftest), so no
     test ever reads the real store.
-37. **Native screens** (from N4: İndirmeler, Sistem) live in `VideoDownloaderKit/Views/`;
-    `RootView.detail` picks native or the embedded page per route. They call the same endpoints
+37. **Native screens** (every screen since N7) live in `VideoDownloaderKit/Views/`. They call the same endpoints
     as the web screen, through `APIClient`. Backend codes and states are worded from the native
     catalog (`error.<CODE>.title/body`, `queue.status.*`, `doctor.*`), a copy of `tr.ts` that
     `frontend/src/nativeStrings.test.ts` keeps equal: change both together. Decode `/api/doctor`
@@ -248,6 +248,32 @@ Local-only media workstation on yt-dlp + FFmpeg. macOS arm64, single user (Berk)
     Berk's: after a crash it brought the app up with no window) and use an ephemeral web data
     store. A failing UI test's hierarchy dump includes the Apple menu's recent items: never copy
     those dumps anywhere.
+
+40. **Stüdyo cuts on frames** (Berk's request, 2026-10-13). The native timeline works on a
+    `TimeGrid`: the source's own frames (`frame_rate` from the probe), milliseconds for sound.
+    Pieces go to the backend as `start_frame`/`end_frame` ([first kept, first dropped)); the
+    backend converts with the *source's* rate, **counted from the video's own first frame**
+    (`video_start`: an MKV's picture can start after its sound, an MPEG-TS far from 0), and the
+    player's clock puts frame 0 there too (`TimeGrid.origin`). A **variable frame rate** source
+    has no frame grid (`frame_rate` null): it is cut by time, to the millisecond -- frame numbers
+    of a nominal rate were measured to cost a joined cut a third of its picture. Frame-accurate:
+    a coarse input `-ss` 10 s early (an MPEG-TS lands only roughly), then an exact output `-ss`
+    one millisecond (at most a quarter frame) before the first frame, `-frames:v N`, `-t N/fps`
+    -- half a frame early was measured to shift the output by a frame, lose the last one and
+    put the sound 20 ms ahead.
+    Joined pieces use `trim=start_frame:end_frame`. Lossless: `-ss` half a frame *after* the
+    chosen keyframe (a copy starts at the keyframe at or before -ss), and the UI snaps the
+    start to keyframes (`/api/studio/keyframes`), so it shows where the cut really starts.
+    `tests/test_studio_frames.py` proves first/last frames by comparing pixels with the
+    neighbours. **AVFoundation** plays neither MKV/WebM nor VP9 (and AV1 only "playable" without
+    frames): `/api/studio/preview` makes a copy (H.264/HEVC copied, else VideoToolbox H.264;
+    AAC/ALAC copied, else AAC -- an .m4a refuses MP3; `-fps_mode passthrough`) in
+    `<data>/preview-cache`, 3 GB cap (an evicted copy is made again); frame N of the copy is
+    frame N of the source. Its status is `POST /api/studio/preview/status`: no GET names a
+    local file (GETs skip the cross-site check), and an unknown `/api/*` GET is a 404, not the
+    page. Seeks aim at the middle of a frame with zero tolerance. **Ayarlar** applies at
+    once (a refused switch springs back via `commit(undo:)`); in UI tests every save is refused
+    (the runner's download folder is under ~/Library), which the test uses to check the error.
 
 ## Rules
 

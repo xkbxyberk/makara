@@ -9,13 +9,6 @@ public enum Route: String, CaseIterable, Identifiable, Sendable {
 
     public static let media: [Route] = [.inspect, .download, .library, .studio]
 
-    /// Screens drawn in SwiftUI. The embedded page never shows these: moving it there would
-    /// only make it fetch for nothing (its Sistem screen runs the whole doctor again).
-    public var isNative: Bool { self != .studio }
-
-    /// Where the embedded page should be while this screen is on show: the screen itself, or
-    /// nil to leave it where it was (on a native screen).
-    public var pageRoute: String? { isNative ? nil : rawValue }
     public static let app: [Route] = [.doctor]
 
     public var title: String {

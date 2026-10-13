@@ -25,6 +25,7 @@ from app.api import jobs_api, library_api, studio_api
 from app.api.routes import router
 from app.jobs.manager import JobManager
 from app.library import Library
+from app.studio.preview import PreviewManager
 from app.system import ClipboardWatcher
 
 _MEDIA_NAME = re.compile(r"^[A-Za-z0-9_.-]+$")
@@ -78,6 +79,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     clipboard = ClipboardWatcher(lambda: settings_store.load().clipboard_watch, manager.publish)
     app.state.jobs = manager
     app.state.library = library
+    app.state.previews = PreviewManager()
     await manager.start()
     clipboard.start()
     # Files may have been moved or deleted in Finder while the app was closed.
@@ -92,6 +94,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         if orphan_watch is not None:
             orphan_watch.cancel()
         clipboard.stop()
+        await app.state.previews.stop()
         await manager.stop()
         with contextlib.suppress(asyncio.CancelledError, errors.AppError):
             await asyncio.wait_for(asyncio.shield(scan), timeout=5)
@@ -162,6 +165,9 @@ def create_app() -> FastAPI:
 
         @app.get("/{full_path:path}", response_model=None)
         def spa(full_path: str) -> FileResponse | JSONResponse:
+            # An unknown API path is an error, not the page (an old client must not get HTML).
+            if full_path == "api" or full_path.startswith("api/"):
+                return JSONResponse(status_code=404, content={"error": {"code": "NOT_FOUND"}})
             index = dist / "index.html"
             if not index.exists():
                 return JSONResponse(status_code=404, content={"error": {"code": "NO_FRONTEND"}})

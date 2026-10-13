@@ -61,14 +61,4 @@ struct IncomingURLSafetyTests {
         #expect(IncomingURL.parse(file, readFile: { _ in local }) == nil)
     }
 
-    /// The hidden page stays on its last web screen while a native one shows: moving it to its
-    /// own Sistem screen made every visit run the whole doctor twice (review finding).
-    @Test func nativeScreensLeaveTheEmbeddedPageAlone() {
-        #expect(Route.allCases.filter(\.isNative) == [.inspect, .download, .library, .doctor])
-        #expect(Route.inspect.pageRoute == nil)
-        #expect(Route.download.pageRoute == nil)
-        #expect(Route.library.pageRoute == nil)
-        #expect(Route.doctor.pageRoute == nil)
-        #expect(Route.studio.pageRoute == "studio")
-    }
 }

@@ -188,8 +188,20 @@ No fixed profiles: the choices come from the inspected video itself.
       Finder'da göster, Stüdyo'da aç (handed to the embedded Stüdyo page), Çöp Kutusu'na taşı
       after a confirmation; the same in a context menu
 - [x] "Dosyaları denetle" and its result; the catalogue-failed banner is native, on every screen
-### N7 — Stüdyo and Ayarlar in SwiftUI
-Each: feature parity with the web screen (same backend calls, same states: empty, loading,
+### N7 — Stüdyo (redesigned) and Ayarlar in SwiftUI ✅ done
+- [x] Berk's request: Kütüphane removes the records of missing items (one, or all at once)
+- [x] Stüdyo redesigned around the cut (Berk's request): macOS's own player, stepped frame by
+      frame; a Photos-style filmstrip with two yellow handles snapped to the source's frames
+      (to its keyframes for a lossless cut); start/end as time and frame, a frame either way,
+      I/O from the playhead, keyboard; several pieces, chapters, joining. The backend cuts on
+      exactly the chosen frames (`start_frame`/`end_frame`; tested frame by frame)
+- [x] Preview copies for what AVFoundation cannot step through (MKV/WebM, VP9/AV1): H.264/HEVC
+      copied, the rest VideoToolbox H.264, timestamps passed through, cached in the data folder
+- [x] Ses, Remux ve izler, Altyazı as before, in the inspector; the exact plan and its commands
+- [x] Ayarlar in the Mac's own Settings window, applied at once (a refused switch springs back)
+- [x] No web page is left in the app (WebBridge removed)
+
+Each of N4–N7: feature parity with the web screen (same backend calls, same states: empty, loading,
 error), its XCUITest scenarios and screenshots, then the embedded web view for it is removed.
 
 ### N8 — Wrap-up

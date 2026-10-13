@@ -73,6 +73,13 @@ extension Format {
         return date.formatted(Date.FormatStyle(date: .abbreviated, time: .omitted).locale(turkish))
     }
 
+    /// "25", "29.97", "59.94": a frame rate as people say it.
+    public static func fps(_ rate: FrameRate) -> String {
+        let value = rate.perSecond
+        if abs(value - value.rounded()) < 0.005 { return String(Int(value.rounded())) }
+        return String(format: "%.2f", locale: posix, value)
+    }
+
     /// A number as JavaScript prints it: 30, not 30.0; 29.97 as is.
     public static func plain(_ value: Double) -> String {
         value == value.rounded() && abs(value) < 1e15 ? String(Int(value)) : String(value)

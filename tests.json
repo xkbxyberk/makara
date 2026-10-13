@@ -850,13 +850,43 @@
     },
     "N7": {
       "title": "Stüdyo (redesigned) and Ayarlar in SwiftUI; missing records can be removed",
-      "status": "in progress",
+      "status": "done",
       "criteria": [
         {
           "id": "N7.1",
           "text": "A missing library record (its file deleted in Finder) can be removed, one or all at once, after a confirmation; refused while its file is back; no file is ever touched",
           "pass": true,
           "proof": "test_a_missing_record_can_be_removed_and_nothing_on_disk_is_touched, test_a_record_whose_file_is_back_is_not_removed, test_removing_every_missing_record_keeps_the_ones_that_came_back, test_a_missing_record_is_removed_through_the_api_and_only_then; ShellTests.testMissingRecordsCanBeRemovedFromTheLibrary"
+        },
+        {
+          "id": "N7.2",
+          "text": "Frame-accurate cuts keep exactly the chosen frames (first and last frame match the source's), joined pieces too; a lossless cut from a keyframe starts on it; frames use the source's own rate",
+          "pass": true,
+          "proof": "tests/test_studio_frames.py (5 cut tests)"
+        },
+        {
+          "id": "N7.3",
+          "text": "A preview copy plays what AVFoundation cannot (VP9 WebM re-encoded, H.264 copied), frame N of the copy is frame N of the source, cached in the data folder; non-media refused",
+          "pass": true,
+          "proof": "test_a_preview_keeps_every_frame_where_it_was, test_keyframes_and_previews_refuse_what_is_not_a_media_file"
+        },
+        {
+          "id": "N7.4",
+          "text": "Stüdyo is native: library item → preview ready → a cut chosen frame by frame with the keyboard (I/O, arrows, ⇧) shows 25 frames, lossless snaps to keyframes, run → queued → done",
+          "pass": true,
+          "proof": "ShellTests.testALibraryItemIsCutFrameByFrameInTheStudio (native-studio-trim-light, native-studio-lossless-light); StudioTests (TimeGrid, rules)"
+        },
+        {
+          "id": "N7.5",
+          "text": "Ayarlar is native in the Settings window: template preview, a refused change says why, is not applied and the switch springs back; no web page left in the app",
+          "pass": true,
+          "proof": "ShellTests.testSettingsOpenInTheirOwnWindowFromTheAppMenu (native-settings-light); nativeStrings 'says what Ayarlar says'"
+        },
+        {
+          "id": "N7.6",
+          "text": "Review fixes: frames count from the video's first frame (late picture, MPEG-TS) and a variable-rate source is cut by time; a coarse+exact seek; preview races, evicted copies, MP3 sound, POST-only status; the time field shows the applied value; a click on a handle moves nothing; playback stops on leaving; settings changes are sent one by one",
+          "pass": true,
+          "proof": "test_frames_count_from_the_videos_own_first_frame, test_an_mpeg_ts_source_is_cut_on_the_chosen_frames, test_a_variable_frame_rate_source_is_cut_by_time_not_by_frame_numbers, test_a_preview_removed_from_the_cache_is_made_again, test_mp3_sound_is_previewed_as_aac, test_asking_about_a_path_needs_a_post; TimeGridTests.frameZeroIsTheVideosFirstFrame; PreferencesTests (3)"
         }
       ]
     },

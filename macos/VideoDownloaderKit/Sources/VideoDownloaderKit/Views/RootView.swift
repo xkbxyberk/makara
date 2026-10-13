@@ -50,7 +50,7 @@ struct MainSplitView: View {
         }
     }
 
-    /// Screens ported to SwiftUI are native; the rest are still the embedded web page.
+    /// Every screen is SwiftUI.
     @ViewBuilder private var detail: some View {
         switch model.route {
         case .inspect:
@@ -63,7 +63,9 @@ struct MainSplitView: View {
         case .library:
             LibraryView(librarian: model.librarian, client: model.backend.client) { model.openInStudio(item: $0) }
         case .studio:
-            WebScreen(bridge: model.web)
+            StudioView(studio: model.studio, preview: model.preview, client: model.backend.client,
+                       library: model.librarian.page?.items.filter { !$0.isMissing } ?? []) { model.route = .download }
+                .task { if model.librarian.page == nil { await model.librarian.load() } }  // for "Kütüphaneden seç"
         }
     }
 
@@ -114,16 +116,6 @@ struct MainSplitView: View {
             .tag(route)
             .accessibilityIdentifier("sidebar.\(route.rawValue)")
     }
-}
-
-/// The embedded web page for screens not yet ported to SwiftUI.
-public struct WebScreen: NSViewRepresentable {
-    let bridge: WebBridge
-
-    public init(bridge: WebBridge) { self.bridge = bridge }
-
-    public func makeNSView(context: Context) -> DroppingWebView { bridge.webView }
-    public func updateNSView(_ view: DroppingWebView, context: Context) {}
 }
 
 struct StartingView: View {
@@ -190,7 +182,7 @@ struct BackendFailureView: View {
     }
 }
 
-/// ⌘, -- the settings screen, shown in the Mac's own Settings window.
+/// ⌘, -- the Mac's own Settings window.
 public struct SettingsView: View {
     let model: AppModel
 
@@ -199,14 +191,12 @@ public struct SettingsView: View {
     public var body: some View {
         Group {
             if model.isReady {
-                WebScreen(bridge: model.settingsWeb)
-                    .onAppear { model.showSettings() }
-                    .onDisappear { model.hideSettings() }  // no event stream for a closed window
+                PreferencesForm(preferences: model.preferences)
             } else {
                 ContentUnavailableView(L("settings.unavailable"), systemImage: "gearshape")
             }
         }
-        .frame(minWidth: 620, idealWidth: 680, minHeight: 520, idealHeight: 620)
+        .frame(minWidth: 560, idealWidth: 620, minHeight: 480, idealHeight: 560)
     }
 }
 

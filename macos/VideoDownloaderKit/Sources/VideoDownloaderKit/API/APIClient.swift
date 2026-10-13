@@ -80,6 +80,22 @@ public struct APIClient: Sendable {
         try await get("api/settings")
     }
 
+    /// Validated by the backend (an unsafe folder, a template that escapes it): a code if not.
+    public func save(_ settings: AppSettings) async throws -> AppSettings {
+        var request = request("api/settings", method: "PUT", timeout: 10)
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSON.encoder.encode(settings)
+        return try await send(request, decoder: JSON.decoder)
+    }
+
+    struct TemplatePreview: Decodable { let filename: String }
+
+    /// The file name a template gives for the sample video (the words come from the catalog).
+    public func previewTemplate(_ template: String, sample: [String: String]) async throws -> String {
+        try await post("api/settings/preview-template", body: ["template": template, "sample": sample, "ext": "mkv"],
+                       as: TemplatePreview.self).filename
+    }
+
     // ---- jobs -------------------------------------------------------------------------------
 
     struct OK: Decodable { let ok: Bool }
@@ -184,6 +200,41 @@ public struct APIClient: Sendable {
     public func thumbnailURL(item id: String) -> URL { base.appending(path: item(id) + "/thumbnail") }
 
     struct Opened: Decodable { let opened: Bool }
+
+    // ---- studio -----------------------------------------------------------------------------
+
+    /// A file on this Mac, or a library item's file.
+    public func studioProbe(path: String? = nil, item: String? = nil) async throws -> StudioSource {
+        var body: [String: any Sendable] = [:]
+        if let path { body["path"] = path }
+        if let item { body["item_id"] = item }
+        return try await post("api/studio/probe", body: body, timeout: 60)
+    }
+
+    /// The exact FFmpeg plan for a request (`StudioRequest.body`).
+    public func studioPlan(_ body: [String: any Sendable]) async throws -> StudioPlan {
+        var request = request("api/studio/plan", method: "POST", timeout: 60)
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        return try await send(request, decoder: JSON.plain)
+    }
+
+    public func studioJob(_ body: [String: any Sendable]) async throws -> Job {
+        try await post("api/studio/jobs", body: body, timeout: 60)
+    }
+
+    /// Every keyframe of the source's video (where a lossless cut can start), in seconds.
+    public func keyframes(path: String) async throws -> [Double] {
+        try await post("api/studio/keyframes", body: ["path": path], as: Keyframes.self, timeout: 200).times
+    }
+
+    public func startPreview(path: String) async throws -> PreviewStatus {
+        try await post("api/studio/preview", body: ["path": path], timeout: 60)
+    }
+
+    public func preview(path: String) async throws -> PreviewStatus {
+        try await post("api/studio/preview/status", body: ["path": path])
+    }
 
     // ---- system -----------------------------------------------------------------------------
 

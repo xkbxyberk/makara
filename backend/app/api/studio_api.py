@@ -74,7 +74,7 @@ def _prepare(body: StudioBody) -> tuple[dict[str, Any], Path, ops.Plan, list[str
     keyframes: dict[float, float | None] = {}
     if body.op == "trim" and (body.options.get("mode") or "lossless") == "lossless":
         for seg in body.options.get("segments") or []:
-            start = ops._number(seg, "start", 0.0) or 0.0
+            start = ops.segment_times(source, seg)[0]
             keyframes[start] = ops.keyframe_at_or_before(source_path, start)
     count = ops.separate_outputs(body.op, body.options)
     suffixes = [f".{n + 1}.{ext}" for n in range(count)] if count > 1 else [f".{ext}"]
@@ -103,6 +103,46 @@ async def post_probe(body: ProbeBody, request: Request) -> Any:
         return await asyncio.to_thread(ops.probe_source, path)
     except errors.AppError as exc:
         return _error(exc, 404 if exc.code in ("SOURCE_NOT_FOUND", "ITEM_NOT_FOUND") else 400)
+
+
+class PathBody(BaseModel):
+    path: str = Field(min_length=1, max_length=4096)
+
+
+def _media_path(text: str) -> Path:
+    path = Path(text).expanduser()
+    if not path.is_absolute() or not path.is_file():
+        raise errors.AppError(code="SOURCE_NOT_FOUND", raw=text)
+    return path
+
+
+@router.post("/studio/keyframes")
+async def post_keyframes(body: PathBody) -> Any:
+    """Where a lossless cut can start: every video keyframe, in seconds from the first frame."""
+    try:
+        path = _media_path(body.path)
+        return {"times": await asyncio.to_thread(ops.keyframes, path)}
+    except errors.AppError as exc:
+        return _error(exc, 404)
+
+
+@router.post("/studio/preview")
+async def post_preview(body: PathBody, request: Request) -> Any:
+    """Start (or join) the playable preview of a source; answers with its status at once."""
+    try:
+        return await request.app.state.previews.start(_media_path(body.path))
+    except errors.AppError as exc:
+        return _error(exc, 404 if exc.code == "SOURCE_NOT_FOUND" else 400)
+
+
+@router.post("/studio/preview/status")
+async def post_preview_status(body: PathBody, request: Request) -> Any:
+    """A POST, like every call that names a local file: the cross-site check covers it, so no
+    other web page can learn whether a path exists."""
+    try:
+        return request.app.state.previews.status(_media_path(body.path))
+    except errors.AppError as exc:
+        return _error(exc, 404)
 
 
 @router.post("/studio/plan")

@@ -7,6 +7,7 @@ except `probe_source` / `keyframes_near`, which only read.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import math
 import subprocess
@@ -105,6 +106,15 @@ def probe_source(path: Path) -> dict[str, Any]:
     if not streams:
         raise errors.AppError(code="SOURCE_NOT_MEDIA", raw=proc.stderr[-2000:])
     duration = data.get("format", {}).get("duration")
+    video = next(
+        (
+            st
+            for st in streams
+            if st.get("codec_type") == "video"
+            and not (st.get("disposition") or {}).get("attached_pic")
+        ),
+        None,
+    )
     youtube_auto = False
     if path.suffix.lower() == ".vtt" and path.stat().st_size < 5_000_000:
         from app.studio.subtitles import looks_like_youtube_auto_captions
@@ -131,9 +141,20 @@ def probe_source(path: Path) -> dict[str, Any]:
                 "height": st.get("height"),
                 "channels": st.get("channels"),
                 "sample_rate": st.get("sample_rate"),
+                "frame_rate": st.get("r_frame_rate") if st.get("codec_type") == "video" else None,
             }
             for st in streams
         ],
+        # The video's frame grid (Stüdyo snaps cuts to it). None with a variable frame rate:
+        # "frame N" of a nominal rate is then no real frame, and cuts go by time (measured: a
+        # joined cut by such frames lost a third of its picture against its sound).
+        "frame_rate": (
+            _rate(video.get("r_frame_rate")) if video is not None and not _variable(video) else None
+        ),
+        "variable_frame_rate": video is not None and _variable(video),
+        # Where frame 0 is: the first video frame, in seconds from the start of the file (an
+        # MKV's picture can start after its sound; an MPEG-TS starts nowhere near 0).
+        "video_start": _video_start(video, data.get("format") or {}),
         "chapters": [
             {
                 "start": float(c["start_time"]),
@@ -145,9 +166,72 @@ def probe_source(path: Path) -> dict[str, Any]:
     }
 
 
-def _ffprobe_json(argv: list[str]) -> dict[str, Any]:
+def _video_start(video: dict[str, Any] | None, fmt: dict[str, Any]) -> float:
+    if video is None:
+        return 0.0
     try:
-        out = subprocess.run(argv, capture_output=True, text=True, timeout=30, check=False).stdout
+        offset = float(video.get("start_time") or 0) - float(fmt.get("start_time") or 0)
+    except ValueError:
+        return 0.0
+    return round(max(0.0, offset), 6)
+
+
+def _rate(text: Any) -> dict[str, int] | None:
+    """ "30000/1001" -> {"num": 30000, "den": 1001}; nothing for "0/0" or junk."""
+    try:
+        num, den = (int(part) for part in str(text).split("/", 1))
+    except (TypeError, ValueError):
+        return None
+    if num <= 0 or den <= 0 or num / den > 1000:
+        return None
+    return {"num": num, "den": den}
+
+
+def _variable(stream: dict[str, Any]) -> bool:
+    nominal, average = _rate(stream.get("r_frame_rate")), _rate(stream.get("avg_frame_rate"))
+    if nominal is None or average is None:
+        return False
+    a, b = nominal["num"] / nominal["den"], average["num"] / average["den"]
+    return abs(a - b) / a > 0.01
+
+
+def keyframes(path: Path, limit: int = 50_000) -> list[float]:
+    """Every video keyframe's time (seconds from the first frame): where a lossless cut can
+    start. Only keyframes are read (`-skip_frame nokey`), so even a long file takes seconds."""
+    data = _ffprobe_json(
+        [
+            binaries.ffprobe(),
+            "-v",
+            "error",
+            "-select_streams",
+            "V:0",
+            "-skip_frame",
+            "nokey",
+            "-show_entries",
+            "frame=pts_time:stream=start_time",
+            "-of",
+            "json",
+            str(path),
+        ],
+        timeout=180,
+    )
+    # Seconds from the video's own first frame: the origin Stüdyo's frame numbers count from.
+    try:
+        origin = float((data.get("streams") or [{}])[0].get("start_time") or 0)
+    except ValueError:
+        origin = 0.0
+    times: list[float] = []
+    for frame in data.get("frames") or []:
+        with contextlib.suppress(KeyError, ValueError):
+            times.append(round(max(0.0, float(frame["pts_time"]) - origin), 6))
+    return sorted(set(times))[:limit]
+
+
+def _ffprobe_json(argv: list[str], timeout: int = 30) -> dict[str, Any]:
+    try:
+        out = subprocess.run(
+            argv, capture_output=True, text=True, timeout=timeout, check=False
+        ).stdout
         data: dict[str, Any] = json.loads(out or "{}")
         return data
     except (OSError, subprocess.SubprocessError, ValueError):
@@ -350,22 +434,50 @@ def plan_audio(
 
 
 # ---- trim / cut / join --------------------------------------------------------------------
+def segment_frames(source: dict[str, Any], seg: dict[str, Any]) -> tuple[int, int] | None:
+    """A segment given as frames ([start_frame, end_frame): the first frame kept and the first
+    frame dropped), as the native Stüdyo sends it; None for one given in seconds."""
+    rate = source.get("frame_rate")
+    first, stop = seg.get("start_frame"), seg.get("end_frame")
+    if rate is None or not isinstance(first, int) or not isinstance(stop, int):
+        return None
+    return first, stop
+
+
+def segment_times(source: dict[str, Any], seg: dict[str, Any]) -> tuple[float, float]:
+    """Seconds from the start of the file. Frames go through the source's own frame rate (never
+    one the client claims), counted from the video's first frame: frame k starts at
+    video_start + k * den / num."""
+    frames = segment_frames(source, seg)
+    if frames is not None:
+        rate = source["frame_rate"]
+        origin = source.get("video_start") or 0.0
+        step = rate["den"] / rate["num"]
+        return origin + frames[0] * step, origin + frames[1] * step
+    return _number(seg, "start", 0.0) or 0.0, _number(seg, "end", 0.0) or 0.0
+
+
 def _validate_segments(
     source: dict[str, Any], segments: list[dict[str, Any]], plan: Plan
 ) -> list[tuple[float, float]]:
     duration = source.get("duration") or 0
     clean: list[tuple[float, float]] = []
     for seg in segments:
-        start = _number(seg, "start", 0.0) or 0.0
-        end = _number(seg, "end", 0.0) or 0.0
-        if start < 0 or end <= start or (duration and start >= duration):
-            plan.note("INVALID_SEGMENT", ERROR, start=start, end=end)
+        start, end = segment_times(source, seg)
+        frames = segment_frames(source, seg)
+        if (frames is not None and (frames[0] < 0 or frames[1] <= frames[0])) or (
+            start < 0 or end <= start or (duration and start >= duration)
+        ):
+            plan.note("INVALID_SEGMENT", ERROR, start=round(start, 3), end=round(end, 3))
             continue
         clean.append((start, min(end, duration) if duration else end))
     if not clean and not any(n["code"] == "INVALID_SEGMENT" for n in plan.notices):
         plan.note("NO_SEGMENTS", ERROR)
     return clean
 
+
+# How far before an accurate cut the input seek lands (the exact seek decodes the rest).
+COARSE_SEEK_MARGIN = 10.0
 
 # Frame-accurate cuts of audio-only files keep the family of the source.
 AUDIO_ONLY_ACCURATE = {
@@ -397,9 +509,19 @@ def plan_trim(
     join = bool(options.get("join"))
     ext = trim_output_ext(source, mode)
     plan = Plan(steps=[], ext=ext)
-    segments = _validate_segments(source, options.get("segments") or [], plan)
+    raw_segments = options.get("segments") or []
+    segments = _validate_segments(source, raw_segments, plan)
     if not segments:
         return plan
+    # Segments chosen frame by frame (the native Stüdyo): cut on exactly those frames. Only
+    # when every segment is valid -- an invalid one blocks the plan anyway.
+    exact: list[tuple[int, int] | None] = (
+        [segment_frames(source, seg) for seg in raw_segments]
+        if len(segments) == len(raw_segments)
+        else [None] * len(segments)
+    )
+    rate = source.get("frame_rate")
+    half = 0.5 * rate["den"] / rate["num"] if rate else 0.0
     if len(segments) > 1 and not join:
         plan.note("SEGMENTS_SEPARATE", INFO, count=len(segments))
     has_video = bool(_video_streams(source))
@@ -426,15 +548,18 @@ def plan_trim(
         pieces = []
         for n, (start, end) in enumerate(segments):
             pieces.append(target(n))
+            # A stream copy starts on the keyframe at or before -ss: half a frame past the
+            # chosen frame keeps rounding from ever landing on the keyframe before it.
+            seek = f"{start + half:.6f}" if exact[n] else f"{start:.3f}"
             plan.steps.append(
                 Step(
                     "ffmpeg",
                     [
                         *_ffmpeg(),
                         "-ss",
-                        f"{start:.3f}",
+                        seek,
                         "-to",
-                        f"{end:.3f}",
+                        f"{end:.6f}" if exact[n] else f"{end:.3f}",
                         "-i",
                         source["path"],
                         *maps,
@@ -488,15 +613,22 @@ def plan_trim(
         plan.note("JOIN_FIRST_TRACKS_ONLY", INFO)
         parts, labels = [], []
         for n, (start, end) in enumerate(segments):
+            frames = exact[n]
             if has_video:
-                parts.append(
-                    f"[0:V:0]trim=start={start:.3f}:end={end:.3f},setpts=PTS-STARTPTS[v{n}]"
+                cut = (
+                    f"trim=start_frame={frames[0]}:end_frame={frames[1]}"
+                    if frames
+                    else f"trim=start={start:.3f}:end={end:.3f}"
                 )
+                parts.append(f"[0:V:0]{cut},setpts=PTS-STARTPTS[v{n}]")
                 labels.append(f"[v{n}]")
             if has_audio:
-                parts.append(
-                    f"[0:a:0]atrim=start={start:.3f}:end={end:.3f},asetpts=PTS-STARTPTS[a{n}]"
+                span = (
+                    f"start={start:.6f}:end={end:.6f}"
+                    if frames
+                    else f"start={start:.3f}:end={end:.3f}"
                 )
+                parts.append(f"[0:a:0]atrim={span},asetpts=PTS-STARTPTS[a{n}]")
                 labels.append(f"[a{n}]")
         concat = f"{''.join(labels)}concat=n={len(segments)}:v={int(has_video)}:a={int(has_audio)}"
         outs = (["[v]"] if has_video else []) + (["[a]"] if has_audio else [])
@@ -522,17 +654,32 @@ def plan_trim(
         return plan
     for n, (start, end) in enumerate(segments):
         subs = ["-map", "0:s?", "-c:s", "mov_text" if ext == "mp4" else "copy"] if has_video else []
+        frames = exact[n]
+        # Frame by frame: seek a hair (1 ms, at most a quarter frame) before the first frame
+        # kept -- an accurate seek keeps the first frame at or after it, so rounding can never
+        # drop it -- then exactly that many frames. Half a frame was measured to shift the
+        # output's first frame by a whole frame and lose the last one, and to put the sound
+        # 20 ms ahead of the picture; a millisecond rounds away.
+        lead = min(0.001, half / 2) if rate else 0.0
+        # Two seeks: a coarse one on the input, well before the cut (fast; an MPEG-TS lands
+        # only roughly where asked, and so not after the cut), then an exact one on the decoded
+        # frames, by their timestamps -- which the coarse seek keeps relative to where it asked.
+        coarse = max(0.0, math.floor((start - COARSE_SEEK_MARGIN) * 1000) / 1000)
+        fine = max(0.0, start - lead - coarse)
+        count = ["-frames:v", str(frames[1] - frames[0])] if frames and has_video else []
         plan.steps.append(
             Step(
                 "ffmpeg",
                 [
                     *_ffmpeg(),
-                    "-ss",
-                    f"{start:.3f}",
+                    *(["-ss", f"{coarse:.3f}"] if coarse > 0 else []),
                     "-i",
                     source["path"],
+                    "-ss",
+                    f"{fine:.6f}" if frames else f"{fine:.3f}",
                     "-t",
-                    f"{end - start:.3f}",
+                    f"{end - start:.6f}" if frames else f"{end - start:.3f}",
+                    *count,
                     *(["-map", "0:V:0"] if has_video else []),
                     "-map",
                     "0:a?",

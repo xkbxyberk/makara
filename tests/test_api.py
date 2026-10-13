@@ -285,3 +285,5 @@ def test_the_page_itself_is_asked_for_again_every_time(
             response = own.get(path)
             assert response.status_code == 200, path
             assert response.headers["cache-control"] == "no-cache", path
+        # An unknown API path is a 404, never the page.
+        assert own.get("/api/no-such-thing").status_code == 404

@@ -108,6 +108,53 @@ describe('the native catalog', () => {
     expect((native['libraryNative.trashBodyMany'] ?? '').replace('%d', '3')).toBe(tr.library.trashBody(3));
   });
 
+  it('says what Stüdyo says', () => {
+    const strings = (table: Record<string, unknown>) =>
+      Object.fromEntries(Object.entries(table).filter(([, value]) => typeof value === 'string'));
+    const top = (prefix: string) => Object.fromEntries(Object.entries(family(prefix)).filter(([key]) => !key.includes('.')));
+    const st = tr.studio;
+    expect(top('studio.')).toEqual(strings(st));
+    expect(family('studio.streamKinds.')).toEqual(st.streamKinds);
+    expect(family('studio.tabs.')).toEqual(st.tabs);
+    expect(family('studio.outputSuffix.')).toEqual(st.outputSuffix);
+    expect(family('studio.steps.')).toEqual(st.steps);
+    expect(top('studio.audio.')).toEqual(st.audio);
+    expect(top('studio.trim.')).toEqual(st.trim);
+    expect(top('studio.remux.')).toEqual({ ...strings(st.remux), fromExtra: 'ek: %@' });
+    expect(st.remux.fromExtra('x.m4a')).toBe('ek: x.m4a');
+    expect(top('studio.subtitle.')).toEqual(strings(st.subtitle));
+    expect(family('studio.subtitle.actions.')).toEqual(st.subtitle.actions);
+    expect(family('studio.terms.', '.label')).toEqual(Object.fromEntries(Object.entries(st.terms).map(([k, v]) => [k, v.label])));
+    expect(family('studio.terms.', '.body')).toEqual(Object.fromEntries(Object.entries(st.terms).map(([k, v]) => [k, v.body])));
+  });
+
+  it('says what Ayarlar says', () => {
+    const strings = (table: Record<string, unknown>) =>
+      Object.fromEntries(Object.entries(table).filter(([, value]) => typeof value === 'string'));
+    const top = Object.fromEntries(Object.entries(family('settings.')).filter(([key]) => !key.includes('.')));
+    // "unavailable" is the window's own (before the server answers); everything else is shared.
+    const { unavailable: _native, ...shared } = top;
+    expect(_native).toBeTruthy();
+    expect(shared).toEqual(strings(tr.settings));
+    expect(family('settings.sample.')).toEqual(tr.settings.sample);
+  });
+
+  it('words every Stüdyo notice as the web page does', () => {
+    const render = (template: string, params: Record<string, unknown>) =>
+      template.replace(/\{(\w+)(\^)?(?:\|([^}]*))?\}/g, (_, name: string, upper?: string, fallback?: string) => {
+        const value = params[name];
+        const text = value === undefined || value === null ? (fallback ?? '') : String(value);
+        return upper ? text.toUpperCase() : text;
+      });
+    const notices = family('studio.notice.');
+    expect(Object.keys(notices).sort()).toEqual(Object.keys(tr.studio.notices).sort());
+    const full = { target: -16, codec: 'opus', start: 1.5, end: 3, count: 2, requested: 1.5, actual: 1, charset: 'cp1254' };
+    for (const [code, entry] of Object.entries(tr.studio.notices)) {
+      const web = typeof entry === 'function' ? entry(full) : entry;
+      expect(render(notices[code] ?? '', full), code).toBe(web);
+    }
+  });
+
   /** The native templates (`{codec|Bu}`, `{target^}`) render what the web's functions do. */
   it('words every plan notice as the web page does, with and without params', () => {
     const render = (template: string, params: Record<string, unknown>) =>
