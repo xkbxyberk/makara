@@ -48,6 +48,23 @@ struct LibraryView: View {
             Text("“\(item.title ?? "–")”\n\n" + (item.files.count == 1 ? L("libraryNative.trashBodyOne")
                                                                   : L("libraryNative.trashBodyMany", item.files.count)))
         }
+        .confirmationDialog(L("libraryNative.forgetTitle"), isPresented: Binding(get: { librarian.forgetting != nil },
+                                                                                 set: { if !$0 { librarian.forgetting = nil } }),
+                            titleVisibility: .visible, presenting: librarian.forgetting) { item in
+            Button(L("libraryNative.forget"), role: .destructive) { Task { await librarian.forget(item) } }
+            Button(L("library.cancel"), role: .cancel) { librarian.forgetting = nil }
+                .keyboardShortcut(.defaultAction)
+        } message: { item in
+            Text("“\(item.title ?? "–")”\n\n" + L("libraryNative.forgetBody"))
+        }
+        .confirmationDialog(L("libraryNative.forgetAllTitle", librarian.page?.facets.missing ?? 0), isPresented: $librarian.forgettingAll,
+                            titleVisibility: .visible) {
+            Button(L("libraryNative.forgetAllConfirm"), role: .destructive) { Task { await librarian.forgetAllMissing() } }
+            Button(L("library.cancel"), role: .cancel) {}
+                .keyboardShortcut(.defaultAction)
+        } message: {
+            Text(L("libraryNative.forgetAllBody"))
+        }
         .quickLookPreview($preview)
         // A moment after typing in the search field, at once for any other change (as the web page).
         .task(id: librarian.trigger) {
@@ -132,6 +149,12 @@ struct LibraryView: View {
                                                           set: { librarian.query.status = $0 ? "missing" : "" }))
                 .toggleStyle(.checkbox)
                 .fixedSize()
+            if let missing = librarian.page?.facets.missing, missing > 0 {
+                Button(L("libraryNative.forgetAll", missing), systemImage: "minus.circle") { librarian.forgettingAll = true }
+                    .help(L("libraryNative.forgetAllHelp"))
+                    .fixedSize()
+                    .accessibilityIdentifier("library.forgetAll")
+            }
             Spacer(minLength: 0)
         }
     }
@@ -160,6 +183,12 @@ struct LibraryView: View {
                     .foregroundStyle(.secondary)
             }
             .accessibilityIdentifier("library.scanResult")
+        }
+        if let removed = librarian.forgotten {
+            noticeLine {
+                Image(systemName: "checkmark.circle").foregroundStyle(.secondary)
+                Text(L("libraryNative.forgetAllResult", removed)).foregroundStyle(.secondary)
+            }
         }
         if let code = librarian.actionError {
             noticeLine {
@@ -280,6 +309,10 @@ struct LibraryView: View {
                 // The item asked about is the one on show in the inspector, too.
                 librarian.selection = item.id
                 librarian.confirming = item
+            },
+            forget: { item in
+                librarian.selection = item.id
+                librarian.forgetting = item
             })
     }
 
@@ -296,7 +329,11 @@ struct LibraryView: View {
             }
         }
         Divider()
-        Button(L("library.trash"), role: .destructive) { actions.trash(item) }.disabled(missing)
+        if missing {
+            Button(L("libraryNative.forget"), role: .destructive) { actions.forget(item) }
+        } else {
+            Button(L("library.trash"), role: .destructive) { actions.trash(item) }
+        }
     }
 }
 
@@ -353,6 +390,7 @@ struct ItemInspector: View {
         let quickLook: (LibraryItem) -> Void
         let studio: (LibraryItem) -> Void
         let trash: (LibraryItem) -> Void
+        let forget: (LibraryItem) -> Void
     }
 
     let item: LibraryItem
@@ -385,12 +423,22 @@ struct ItemInspector: View {
     private var buttons: some View {
         let missing = item.isMissing
         return VStack(alignment: .leading, spacing: 6) {
+            if missing {
+                // The file is gone: the only thing left to do is to drop the record.
+                Text(L("library.missingHelp")).font(.caption).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button(role: .destructive) { actions.forget(item) } label: {
+                    Label(L("libraryNative.forget"), systemImage: "minus.circle").frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .accessibilityIdentifier("inspector.forget")
+            }
             Button { actions.play(item) } label: {
                 Label(L("library.play"), systemImage: "play.fill").frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
             .help(L("library.playHelp"))
+            .disabled(missing)
             Group {
                 Button { actions.quickLook(item) } label: { Label(L("libraryNative.quickLook"), systemImage: "eye").frame(maxWidth: .infinity, alignment: .leading) }
                 Button { actions.reveal(item) } label: { Label(L("library.reveal"), systemImage: "folder").frame(maxWidth: .infinity, alignment: .leading) }
@@ -400,8 +448,8 @@ struct ItemInspector: View {
                 }
                 .accessibilityIdentifier("inspector.trash")
             }
+            .disabled(missing)
         }
-        .disabled(missing)
     }
 
     private var details: some View {

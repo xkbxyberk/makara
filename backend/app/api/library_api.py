@@ -99,6 +99,22 @@ def post_open_item(item_id: str, request: Request) -> Any:
     return {"opened": _open(["open", str(path)])}
 
 
+@router.post("/library/forget-missing")
+def post_forget_missing(request: Request) -> dict[str, int]:
+    """Remove every missing record (the UI asks first). Files are never touched."""
+    return _library(request).forget_missing()
+
+
+@router.post("/library/{item_id}/forget")
+def post_forget_item(item_id: str, request: Request) -> Any:
+    """Remove one missing record (the UI asks first). Files are never touched."""
+    try:
+        _library(request).forget(item_id)
+    except errors.AppError as exc:
+        return _error(exc, 404 if exc.code == "ITEM_NOT_FOUND" else 409)
+    return {"ok": True}
+
+
 @router.post("/library/{item_id}/trash")
 def post_trash_item(item_id: str, request: Request) -> Any:
     """Move to the macOS Trash (recoverable). The UI asks for confirmation first."""

@@ -30,6 +30,12 @@ public final class Librarian {
     public var actionError: String?
     /// The item whose Trash confirmation is on screen.
     public var confirming: LibraryItem?
+    /// The missing item whose removal from the catalogue is being confirmed.
+    public var forgetting: LibraryItem?
+    /// "Eksikleri kaldır" is being confirmed.
+    public var forgettingAll = false
+    /// How many records the last "Eksikleri kaldır" removed.
+    public private(set) var forgotten: Int?
     /// Bumped by the server's `library` event: something was added or changed.
     public private(set) var version = 0
 
@@ -92,6 +98,31 @@ public final class Librarian {
     public func perform(_ action: @Sendable (APIClient) async throws -> Void) async {
         actionError = nil
         do { try await action(client()) } catch { actionError = APIError.from(error).code }
+    }
+
+    /// After Berk confirmed: the record of a missing item goes; no file is touched. The item is
+    /// the one the dialog passes (see `trash`).
+    public func forget(_ item: LibraryItem) async {
+        forgetting = nil
+        actionError = nil
+        do {
+            try await client().forget(item: item.id)
+            if selection == item.id { selection = nil }
+            await load()
+        } catch {
+            actionError = APIError.from(error).code
+        }
+    }
+
+    public func forgetAllMissing() async {
+        forgettingAll = false
+        actionError = nil
+        do {
+            forgotten = try await client().forgetMissing().removed
+            await load()
+        } catch {
+            actionError = APIError.from(error).code
+        }
     }
 
     /// After Berk confirmed: the item's files go to the Trash, never deleted outright. The item

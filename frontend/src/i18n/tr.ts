@@ -852,6 +852,10 @@ export const tr = {
       title: 'Ses seviyesi ölçülemedi',
       body: 'Ham kayda bak. Eşitlemeyi kapatıp tekrar dene.',
     },
+    ITEM_NOT_MISSING: {
+      title: 'Dosyası yerinde görünüyor',
+      body: 'Bu öğenin dosyası yeniden bulundu. Önce “Dosyaları denetle”ye bas; bir kayıt yalnızca dosyası gerçekten yokken kaldırılabilir.',
+    },
     ITEM_NOT_TRASHABLE: {
       title: 'Bu öğe çöpe atılamaz',
       body: 'Zaten çöpte ya da dosyası eksik. Önce “Dosyaları denetle”yi dene.',

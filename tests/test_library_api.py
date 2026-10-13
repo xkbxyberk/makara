@@ -127,3 +127,23 @@ def test_settings_round_trip_including_the_clipboard_opt_in(app_env: Any) -> Non
     saved = client.put("/api/settings", json={**settings, "clipboard_watch": True}).json()
     assert saved["clipboard_watch"] is True
     assert client.get("/api/settings").json()["clipboard_watch"] is True
+
+
+def test_a_missing_record_is_removed_through_the_api_and_only_then(
+    app_env: Any, tmp_path: Path
+) -> None:
+    client = app_env()
+    download_audio(client)
+    [item] = client.get("/api/library").json()["items"]
+    # Present: refused, and the record stays.
+    refused = client.post(f"/api/library/{item['id']}/forget")
+    assert refused.status_code == 409 and refused.json()["error"]["code"] == "ITEM_NOT_MISSING"
+    # Deleted in Finder, noticed by a scan: then it can go.
+    moved = tmp_path / "moved-away.m4a"
+    Path(item["primary_path"]).rename(moved)
+    assert client.post("/api/library/scan").json()["missing"] == 1
+    assert client.post(f"/api/library/{item['id']}/forget").json() == {"ok": True}
+    assert client.get("/api/library").json()["items"] == []
+    assert moved.exists()
+    assert client.post("/api/library/forget-missing").json() == {"removed": 0, "kept": 0}
+    assert client.post("/api/library/not-an-id/forget").status_code == 404

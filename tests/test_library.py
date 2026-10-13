@@ -365,3 +365,52 @@ def test_an_identical_later_download_elsewhere_is_not_a_relink(
     counts = library.scan([tmp_path / "downloads"])
     assert counts["repaired"] == 0 and counts["missing"] == 1
     assert library.get(item["id"])["primary_path"] == str(clip)  # type: ignore[index]
+
+
+# ---- removing a missing record (Berk's request, 2026-10-13) ---------------------------------
+def test_a_missing_record_can_be_removed_and_nothing_on_disk_is_touched(
+    library: Library, clip: Path, tmp_path: Path
+) -> None:
+    item = add(library, clip)
+    gone = tmp_path / "elsewhere.mp4"
+    clip.rename(gone)  # Berk deleted (or moved) it in Finder
+    library.scan([tmp_path / "nowhere"])
+    assert library.get(item["id"])["status"] == "missing"
+    library.forget(item["id"])
+    assert library.get(item["id"]) is None
+    assert gone.exists()  # the record went, the file was never looked at again
+    assert library.facets()["missing"] == 0
+
+
+def test_a_record_whose_file_is_back_is_not_removed(
+    library: Library, clip: Path, tmp_path: Path
+) -> None:
+    item = add(library, clip)
+    hidden = tmp_path / "hidden.mp4"
+    clip.rename(hidden)
+    library.scan([tmp_path / "nowhere"])
+    hidden.rename(clip)  # put back before the click
+    with pytest.raises(errors.AppError) as caught:
+        library.forget(item["id"])
+    assert caught.value.code == "ITEM_NOT_MISSING"
+    assert library.get(item["id"]) is not None
+    # And an item that is fine is never "forgotten".
+    other = add(library, clip, title="Fine")
+    with pytest.raises(errors.AppError):
+        library.forget(other["id"])
+
+
+def test_removing_every_missing_record_keeps_the_ones_that_came_back(
+    library: Library, clip: Path, tmp_path: Path, test_media: Path
+) -> None:
+    first = add(library, clip)
+    second_path = clip.parent / "second.mp4"
+    shutil.copy2(test_media / "video_h264.mp4", second_path)
+    second = add(library, second_path, title="Second")
+    clip.rename(tmp_path / "a.mp4")
+    second_path.rename(tmp_path / "b.mp4")
+    library.scan([tmp_path / "nowhere"])
+    (tmp_path / "b.mp4").rename(second_path)  # one comes back
+    assert library.forget_missing() == {"removed": 1, "kept": 1}
+    assert library.get(first["id"]) is None
+    assert library.get(second["id"]) is not None

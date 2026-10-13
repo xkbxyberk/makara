@@ -170,6 +170,17 @@ public struct APIClient: Sendable {
         _ = try await post(item(id) + "/trash", as: LibraryItem.self)
     }
 
+    /// A missing item's record only; refused (ITEM_NOT_MISSING) while its file is back.
+    public func forget(item id: String) async throws {
+        _ = try await post(item(id) + "/forget", as: OK.self)
+    }
+
+    public struct Forgotten: Decodable, Sendable { public let removed: Int; public let kept: Int }
+
+    public func forgetMissing() async throws -> Forgotten {
+        try await post("api/library/forget-missing")
+    }
+
     public func thumbnailURL(item id: String) -> URL { base.appending(path: item(id) + "/thumbnail") }
 
     struct Opened: Decodable { let opened: Bool }

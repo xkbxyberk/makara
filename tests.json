@@ -848,6 +848,18 @@
         }
       ]
     },
+    "N7": {
+      "title": "Stüdyo (redesigned) and Ayarlar in SwiftUI; missing records can be removed",
+      "status": "in progress",
+      "criteria": [
+        {
+          "id": "N7.1",
+          "text": "A missing library record (its file deleted in Finder) can be removed, one or all at once, after a confirmation; refused while its file is back; no file is ever touched",
+          "pass": true,
+          "proof": "test_a_missing_record_can_be_removed_and_nothing_on_disk_is_touched, test_a_record_whose_file_is_back_is_not_removed, test_removing_every_missing_record_keeps_the_ones_that_came_back, test_a_missing_record_is_removed_through_the_api_and_only_then; ShellTests.testMissingRecordsCanBeRemovedFromTheLibrary"
+        }
+      ]
+    },
     "M7a": {
       "title": "Safari session for age-restricted YouTube videos (pulled forward from M7)",
       "status": "done",

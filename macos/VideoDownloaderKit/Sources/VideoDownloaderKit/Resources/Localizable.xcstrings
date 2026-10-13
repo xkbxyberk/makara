@@ -514,6 +514,17 @@
     "library.summaryMissing" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "%d öğe · %@ · %d eksik" } } } },
     "libraryNative.trashBodyOne" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "Bu dosya Çöp Kutusu’na taşınacak. Çöp Kutusu’nu boşaltana kadar geri alabilirsin." } } } },
     "libraryNative.trashBodyMany" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "Bu öğenin %d dosyası Çöp Kutusu’na taşınacak. Çöp Kutusu’nu boşaltana kadar geri alabilirsin." } } } },
-    "libraryNative.quickLook" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "Göz At" } } } }
+    "libraryNative.quickLook" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "Göz At" } } } },
+    "libraryNative.forget" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "Kütüphaneden kaldır" } } } },
+    "libraryNative.forgetTitle" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "Kayıt kütüphaneden kaldırılsın mı?" } } } },
+    "libraryNative.forgetBody" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "Dosya diskte yok; yalnızca bu kayıt silinir, hiçbir dosyaya dokunulmaz. Bu geri alınamaz." } } } },
+    "libraryNative.forgetAll" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "Eksikleri kaldır (%d)" } } } },
+    "libraryNative.forgetAllHelp" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "Dosyası diskte olmayan bütün kayıtları kütüphaneden siler. Hiçbir dosyaya dokunulmaz." } } } },
+    "libraryNative.forgetAllTitle" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "%d eksik kayıt kütüphaneden kaldırılsın mı?" } } } },
+    "libraryNative.forgetAllBody" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "Dosyaları diskte olmayan kayıtlar silinir, hiçbir dosyaya dokunulmaz. Dosyası bu arada geri gelmiş olanlar kalır. Bu geri alınamaz." } } } },
+    "libraryNative.forgetAllConfirm" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "Eksikleri kaldır" } } } },
+    "libraryNative.forgetAllResult" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "%d kayıt kütüphaneden kaldırıldı." } } } },
+    "error.ITEM_NOT_MISSING.title" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "Dosyası yerinde görünüyor" } } } },
+    "error.ITEM_NOT_MISSING.body" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "Bu öğenin dosyası yeniden bulundu. Önce “Dosyaları denetle”ye bas; bir kayıt yalnızca dosyası gerçekten yokken kaldırılabilir." } } } }
   }
 }

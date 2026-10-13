@@ -1,9 +1,12 @@
 """The catalogue of finished downloads, and keeping it honest about what is on disk.
 
 Rules agreed with Berk:
-* A record is never deleted because its file vanished. It is marked "missing" and, if the file
-  turns up elsewhere with the same size and duration, re-linked automatically.
-* The only destructive action is "move to Trash", and only for files the catalogue recorded.
+* A record is never deleted *by itself* because its file vanished. It is marked "missing" and,
+  if the file turns up elsewhere with the same size and duration, re-linked automatically.
+  Berk may remove a missing record himself ("Kütüphaneden kaldır", asked 2026-10-13): only the
+  record goes, and only while its files are really gone -- no file is ever touched by that.
+* The only destructive action on files is "move to Trash", and only for files the catalogue
+  recorded.
 """
 
 from __future__ import annotations
@@ -342,6 +345,36 @@ class Library:
         updated = self._update(item_id, status="trashed", checked_at=time.time())
         assert updated is not None
         return updated
+
+    def forget(self, item_id: str) -> None:
+        """Remove a *missing* item's record. Nothing on disk is touched but the app's own small
+        thumbnail. Refused while any of its files is back (a scan would re-link it)."""
+        item = self.get(item_id)
+        if item is None:
+            raise errors.AppError(code="ITEM_NOT_FOUND", raw=item_id)
+        if item["status"] != "missing":
+            raise errors.AppError(code="ITEM_NOT_MISSING", raw=item["status"])
+        back = [f["path"] for f in item["files"] if Path(f["path"]).exists()]
+        if back or Path(item["primary_path"]).exists():
+            raise errors.AppError(
+                code="ITEM_NOT_MISSING", raw=", ".join(back) or item["primary_path"]
+            )
+        thumb = self.thumbnail(item_id)
+        self._write("DELETE FROM library_items WHERE id = ? AND status = 'missing'", [item_id])
+        if thumb is not None:
+            with contextlib.suppress(OSError):
+                thumb.unlink()
+
+    def forget_missing(self) -> dict[str, int]:
+        """Every missing record whose files are still gone; ones that came back are kept."""
+        removed = kept = 0
+        for row in self._fetch("SELECT id FROM library_items WHERE status = 'missing'"):
+            try:
+                self.forget(row["id"])
+                removed += 1
+            except errors.AppError:
+                kept += 1
+        return {"removed": removed, "kept": kept}
 
     def thumbnail(self, item_id: str) -> Path | None:
         """Only ever a file inside the app's own thumbnail folder."""

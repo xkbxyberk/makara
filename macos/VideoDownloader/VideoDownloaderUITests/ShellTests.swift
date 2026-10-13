@@ -328,6 +328,47 @@ final class ShellTests: XCTestCase {
         XCTAssertEqual(trashed().count, 1, "the file did not go to the (simulated) Trash")
     }
 
+    /// Files deleted in Finder leave "Eksik" records; Berk can remove those records (one, or all
+    /// at once), after a confirmation, and no file is touched.
+    func testMissingRecordsCanBeRemovedFromTheLibrary() throws {
+        app.launch()
+        sidebar("Kütüphane").click()
+        native("Kütüphane boş")
+        _ = try startDownload()
+        let cards = app.windows.firstMatch.descendants(matching: .any).matching(identifier: "library.item")
+        XCTAssertTrue(cards.firstMatch.waitForExistence(timeout: 60))
+        _ = try startDownload()
+        let two = NSPredicate(format: "count == 2")
+        expectation(for: two, evaluatedWith: cards)
+        waitForExpectations(timeout: 60)
+
+        // Deleted in Finder (here: from the test's own download folder), then noticed by a scan.
+        let downloads = scratch.appending(path: "downloads")
+        let files = FileManager.default.enumerator(at: downloads, includingPropertiesForKeys: nil)?
+            .compactMap { $0 as? URL }.filter { $0.pathExtension == "mkv" } ?? []
+        XCTAssertEqual(files.count, 2)
+        for file in files { try FileManager.default.removeItem(at: file) }
+        element("library.scan").click()
+        XCTAssertTrue(element("library.forgetAll").waitForExistence(timeout: 30), "no way to remove the missing records")
+
+        // One, from its inspector: the dialog names it.
+        cards.element(boundBy: 0).click()
+        element("inspector.forget").click()
+        XCTAssertTrue(app.staticTexts["Kayıt kütüphaneden kaldırılsın mı?"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.sheets.staticTexts.matching(NSPredicate(format: "value CONTAINS %@", "“Local test clip”")).firstMatch.exists)
+        screenshot("native-library-forget-light")
+        app.sheets.buttons["Kütüphaneden kaldır"].firstMatch.click()
+        expectation(for: NSPredicate(format: "count == 1"), evaluatedWith: cards)
+        waitForExpectations(timeout: 15)
+
+        // The rest at once.
+        element("library.forgetAll").click()
+        XCTAssertTrue(app.staticTexts["1 eksik kayıt kütüphaneden kaldırılsın mı?"].waitForExistence(timeout: 10))
+        app.sheets.buttons["Eksikleri kaldır"].firstMatch.click()
+        native("Kütüphane boş")
+        native("1 kayıt kütüphaneden kaldırıldı.")
+    }
+
     func testALibraryItemOpensInTheStudio() throws {
         app.launch()
         sidebar("Kütüphane").click()
