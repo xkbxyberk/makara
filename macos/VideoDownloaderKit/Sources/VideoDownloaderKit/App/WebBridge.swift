@@ -21,10 +21,12 @@ public final class WebBridge: NSObject {
     private var pageReady = false
     private var queued: [(expression: String, value: String)] = []
 
-    public init(port: Int) {
+    /// `ephemeral`: nothing kept on disk -- for tests, which run this same bundle and must not
+    /// share Berk's web storage and cache.
+    public init(port: Int, ephemeral: Bool = false) {
         origin = URL(string: "http://127.0.0.1:\(port)")!
         let configuration = WKWebViewConfiguration()
-        configuration.websiteDataStore = .default()
+        configuration.websiteDataStore = ephemeral ? .nonPersistent() : .default()
         webView = DroppingWebView(frame: .zero, configuration: configuration)
         super.init()
         configuration.userContentController.add(WeakMessageHandler(self), name: "vd")
@@ -43,7 +45,9 @@ public final class WebBridge: NSObject {
         self.route = route
         var components = URLComponents(url: origin, resolvingAgainstBaseURL: false)!
         components.queryItems = [URLQueryItem(name: "embedded", value: "1"), URLQueryItem(name: "route", value: route)]
-        webView.load(URLRequest(url: components.url!))
+        // Revalidated, never taken from the cache as is: an index.html cached before the server
+        // said `no-cache` would bring back an old script bundle (one without vd.openInStudio).
+        webView.load(URLRequest(url: components.url!, cachePolicy: .reloadRevalidatingCacheData))
     }
 
     /// Leave the page: its event stream closes with it, so the server can stop at once.
@@ -64,6 +68,12 @@ public final class WebBridge: NSObject {
     public func navigate(_ route: String) {
         self.route = route
         call("vd.navigate(value)", value: route)
+    }
+
+    /// Stüdyo with a library item as its source (the page moves to Stüdyo itself).
+    public func openInStudio(_ itemId: String) {
+        route = "studio"
+        call("vd.openInStudio(value)", value: itemId)
     }
 
     /// The value is passed as an argument, never spliced into the script.

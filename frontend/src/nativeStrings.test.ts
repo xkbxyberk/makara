@@ -88,6 +88,26 @@ describe('the native catalog', () => {
     expect(tr.download.quick.fps(30)).toBe('30 fps');
   });
 
+  it('says what Kütüphane says', () => {
+    const strings = (table: Record<string, unknown>) =>
+      Object.fromEntries(Object.entries(table).filter(([, value]) => typeof value === 'string'));
+    const library = Object.fromEntries(Object.entries(family('library.')).filter(([key]) => !key.includes('.')));
+    expect(library).toEqual({
+      ...strings(tr.library),
+      scanResult: '%d öğe denetlendi · %d dosyanın yeni yeri bulundu · %d geri geldi · %d eksik',
+      summary: '%d öğe · %@',
+      summaryMissing: '%d öğe · %@ · %d eksik',
+    });
+    expect(family('library.sort.')).toEqual(tr.library.sorts);
+    expect(family('library.kind.')).toEqual(tr.library.kinds);
+    const counts = { checked: 4, repaired: 1, restored: 0, missing: 2 };
+    expect(tr.library.scanResult(counts)).toBe('4 öğe denetlendi · 1 dosyanın yeni yeri bulundu · 0 geri geldi · 2 eksik');
+    expect(tr.library.summary(3, '1.5 MB', 0)).toBe('3 öğe · 1.5 MB');
+    expect(tr.library.summary(3, '1.5 MB', 1)).toBe('3 öğe · 1.5 MB · 1 eksik');
+    expect(native['libraryNative.trashBodyOne']).toBe(tr.library.trashBody(1));
+    expect((native['libraryNative.trashBodyMany'] ?? '').replace('%d', '3')).toBe(tr.library.trashBody(3));
+  });
+
   /** The native templates (`{codec|Bu}`, `{target^}`) render what the web's functions do. */
   it('words every plan notice as the web page does, with and without params', () => {
     const render = (template: string, params: Record<string, unknown>) =>

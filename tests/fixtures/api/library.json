@@ -1,0 +1,77 @@
+{
+  "items": [
+    {
+      "id": "<id>",
+      "job_id": "<id>",
+      "title": "Local test clip",
+      "source_url": "https://example.test/local-media",
+      "site": "Generic",
+      "channel": "VD Test Channel",
+      "upload_date": "20260901",
+      "mode": "mkv",
+      "kind": "video",
+      "status": "ok",
+      "primary_path": "<path>",
+      "size": 201677,
+      "duration": 4.008,
+      "files": [
+        {
+          "path": "<path>",
+          "size": 201677,
+          "role": "primary"
+        }
+      ],
+      "tracks": {
+        "video": [
+          {
+            "codec": "vp9",
+            "language": null,
+            "default": false,
+            "width": 640,
+            "height": 360,
+            "channels": null
+          }
+        ],
+        "audio": [
+          {
+            "codec": "opus",
+            "language": "eng",
+            "default": true,
+            "width": null,
+            "height": null,
+            "channels": 1
+          }
+        ],
+        "subtitle": [
+          {
+            "codec": "subrip",
+            "language": "tur",
+            "default": false,
+            "width": null,
+            "height": null,
+            "channels": null
+          },
+          {
+            "codec": "subrip",
+            "language": "eng",
+            "default": false,
+            "width": null,
+            "height": null,
+            "channels": null
+          }
+        ]
+      },
+      "thumbnail": "<path>",
+      "added_at": 0,
+      "checked_at": 0
+    }
+  ],
+  "facets": {
+    "sites": [
+      "Generic"
+    ],
+    "count": 1,
+    "total_size": 201677,
+    "missing": 0
+  }
+}

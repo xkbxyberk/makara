@@ -180,7 +180,14 @@ No fixed profiles: the choices come from the inspected video itself.
       subtitles (machine translations filtered), extras, file name template, the command
 - [x] Tests never load a remote image: the app shows none against a fixture-mode backend, and
       the e2e browser's requests outside this Mac go to a closed port
-### N6 — Kütüphane in SwiftUI (grid/list, inspector, Quick Look, Trash with confirmation)
+### N6 — Kütüphane in SwiftUI (grid/list, inspector, Quick Look, Trash with confirmation) ✅ done
+- [x] Grid and list (`Table`), search in the toolbar, site / kind / sort / missing filters, the
+      count and size under the title, live refresh on the server's `library` event
+- [x] The window's inspector: thumbnail, badges, tracks (languages from the file), files,
+      source, added; Oynat (also a double-click), Göz At (Quick Look, also the space bar),
+      Finder'da göster, Stüdyo'da aç (handed to the embedded Stüdyo page), Çöp Kutusu'na taşı
+      after a confirmation; the same in a context menu
+- [x] "Dosyaları denetle" and its result; the catalogue-failed banner is native, on every screen
 ### N7 — Stüdyo and Ayarlar in SwiftUI
 Each: feature parity with the web screen (same backend calls, same states: empty, loading,
 error), its XCUITest scenarios and screenshots, then the embedded web view for it is removed.

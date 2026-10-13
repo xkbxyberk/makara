@@ -299,4 +299,18 @@ closed proxy, with a guard test that fails without it); a container's accessibil
 overwrote its children's; a Form in a ScrollView rendered nothing; XCUITest spent ~40 s per
 step walking the multi-audio tree.
 
-**Next:** N6 -- Kütüphane in SwiftUI.
+## N6 -- Kütüphane in SwiftUI (13 Oct)
+
+Kütüphane is native (`Librarian` + `LibraryView`): grid and Table, toolbar search, filters, the
+window's inspector, Göz At (Quick Look), double-click to play, Stüdyo'da aç handed to the
+embedded Stüdyo (`vd.openInStudio`), Trash after a confirmation, live refresh, and a native
+catalogue-failed banner. Contract samples gained the library page and a scan result.
+
+Found on the way, all with tests: the app's web view served a stale index.html after a rebuild
+(now `no-cache`) -- in Berk's app an update could have shown the old web UI; the confirmation
+dialog's button did nothing (its binding is cleared before the action runs); two AppKit
+layout-loop crashes (a width-chosen filter bar, then a self-sized notice line in the split
+column); UI tests read Berk's saved window state (after a crash: no window) and shared his web
+storage; an icon-only segment was named after its symbol.
+
+**Next:** N7 -- Stüdyo and Ayarlar in SwiftUI.

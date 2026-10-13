@@ -89,6 +89,11 @@ export function App() {
         setInspectRequest((r) => ({ url, n: (r?.n ?? 0) + 1 }));
         setRoute('inspect');
       },
+      // The native Kütüphane's "Stüdyo'da aç" (Stüdyo is still this page).
+      openInStudio: (itemId: string) => {
+        setStudioRequest((r) => ({ itemId, n: (r?.n ?? 0) + 1 }));
+        setRoute('studio');
+      },
     };
     (window as unknown as { vd?: typeof bridge }).vd = bridge;
     // From here on the app may drive the page; calls made before this are queued natively.
@@ -126,10 +131,10 @@ export function App() {
 
   const { jobs, connection } = useJobs({
     onTransition,
-    // In the app the window offers the link itself, on every screen (two banners would be noise).
+    // In the app the window shows these itself, on every screen (two banners would be noise).
     onClipboard: embedded ? undefined : setClipboardUrl,
     onLibrary: () => setLibraryVersion((v) => v + 1),
-    onLibraryError: () => setCatalogueFailed(true),
+    onLibraryError: embedded ? undefined : () => setCatalogueFailed(true),
   });
   const active = jobs?.filter(isActive).length ?? 0;
 

@@ -132,7 +132,7 @@ struct DownloadPlannerTests {
     /// The panel's state lives with the result, so leaving İncele and coming back keeps it.
     @Test func theInspectorKeepsThePanelOfTheResultOnShow() throws {
         let model = try Self.video()
-        let inspector = Inspector(client: { APIClient(port: 1) }, rules: QuickRules(file: FileManager.default.temporaryDirectory.appending(path: "vd-\(UUID()).json")))
+        let inspector = Inspector(client: { APIClient(port: 1) }, rules: QuickRules(store: LocalStore(folder: FileManager.default.temporaryDirectory.appending(path: "vd-\(UUID())"))))
         inspector.phase = .ready(.video(model), remembered: false)
         let planner = try #require(inspector.planner)
         planner.toggleSubtitle("tr")
@@ -157,7 +157,7 @@ struct DownloadPlannerTests {
 struct QuickRulesTests {
     func store() -> QuickRules {
         let name = "vd-tests-\(UUID().uuidString)"
-        return QuickRules(defaults: UserDefaults(suiteName: name)!)
+        return QuickRules(store: LocalStore(defaults: UserDefaults(suiteName: name)!))
     }
 
     @Test func oneRulePerSiteWithAliases() {
@@ -171,22 +171,24 @@ struct QuickRulesTests {
 
     @Test func testsKeepTheirRulesInTheirOwnDataFolder() throws {
         let dir = FileManager.default.temporaryDirectory.appending(path: "vd-rules-\(UUID())")
-        let rules = QuickRules.forEnvironment(["VD_DATA_DIR": dir.path])
+        let rules = QuickRules(store: .forEnvironment(["VD_DATA_DIR": dir.path]))
         rules.save(QuickRule(kind: "audio", format: "opus"), for: "https://www.youtube.com/watch?v=a")
-        #expect(FileManager.default.fileExists(atPath: dir.appending(path: "native-quick-rules.json").path))
-        #expect(QuickRules.forEnvironment(["VD_DATA_DIR": dir.path]).load(for: "https://youtu.be/b")?.format == "opus")
+        #expect(FileManager.default.fileExists(atPath: dir.appending(path: "native-vd-quick-rules.json").path))
+        #expect(QuickRules(store: .forEnvironment(["VD_DATA_DIR": dir.path])).load(for: "https://youtu.be/b")?.format == "opus")
         try? FileManager.default.removeItem(at: dir)
     }
 
     /// A value that is not an object (a string, a number) once crashed every inspect: serialising
     /// it raises an Objective-C exception that `try?` cannot catch.
     @Test func aValueThatIsNotARuleIsSkipped() throws {
-        let file = FileManager.default.temporaryDirectory.appending(path: "vd-rules-\(UUID()).json")
+        let dir = FileManager.default.temporaryDirectory.appending(path: "vd-rules-\(UUID())")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let file = dir.appending(path: "native-vd-quick-rules.json")
         try Data(#"{"youtube.com": "1080p", "vimeo.com": 3, "dailymotion.com": {"kind": "video", "height": 720}}"#.utf8).write(to: file)
-        let rules = QuickRules(file: file)
+        let rules = QuickRules(store: LocalStore(folder: dir))
         #expect(rules.load(for: "https://youtube.com/watch?v=a") == nil)
         #expect(rules.load(for: "https://dailymotion.com/video/x")?.height == 720)
-        try? FileManager.default.removeItem(at: file)
+        try? FileManager.default.removeItem(at: dir)
     }
 
     @Test func aDamagedRuleIsNoRule() {

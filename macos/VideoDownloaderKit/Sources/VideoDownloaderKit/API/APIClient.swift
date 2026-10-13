@@ -139,6 +139,41 @@ public struct APIClient: Sendable {
         try await post("api/jobs", json: selection)
     }
 
+    // ---- library ----------------------------------------------------------------------------
+
+    private func item(_ id: String) -> String {
+        "api/library/" + (id.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? id)
+    }
+
+    public func library(_ query: LibraryQuery) async throws -> LibraryPage {
+        var request = URLRequest(url: base.appending(path: "api/library").appending(queryItems: query.items))
+        request.timeoutInterval = 10
+        return try await send(request, decoder: JSON.decoder)
+    }
+
+    /// Looks for every item's file: marks vanished ones missing, re-links moved ones.
+    public func scanLibrary() async throws -> ScanResult {
+        try await post("api/library/scan", timeout: 900)  // ffprobe over a big library takes a while
+    }
+
+    /// In the default player (IINA, QuickTime…); there is deliberately no player in the app.
+    public func open(item id: String) async throws {
+        _ = try await post(item(id) + "/open", as: Opened.self)
+    }
+
+    public func reveal(item id: String) async throws {
+        _ = try await post(item(id) + "/reveal", as: Shown.self)
+    }
+
+    /// To the macOS Trash (recoverable). The screen asks first.
+    public func trash(item id: String) async throws {
+        _ = try await post(item(id) + "/trash", as: LibraryItem.self)
+    }
+
+    public func thumbnailURL(item id: String) -> URL { base.appending(path: item(id) + "/thumbnail") }
+
+    struct Opened: Decodable { let opened: Bool }
+
     // ---- system -----------------------------------------------------------------------------
 
     public func doctor() async throws -> DoctorReport {

@@ -178,7 +178,7 @@ Local-only media workstation on yt-dlp + FFmpeg. macOS arm64, single user (Berk)
     the element's *value* in XCUITest, and a badge after a term adds a trailing space: match
     with `BEGINSWITH`. **Screenshot windows, never `XCUIScreen.main`**: a full-screen capture
     once recorded whatever else Berk had open. `typeKey(",", .command)` does not reach the
-    Settings item on this Mac (Turkish keyboard layout); tests click the menu item. The runner is
+    Settings item on this Mac (Turkish keyboard layout); tests click the menu item, and `typeText` drops the letter "i" there (any field: "bir media" arrives as "br meda"; the fixture URL `example.test/local-media` still matches by its host), so typed test strings avoid it. The runner is
     sandboxed: its scratch is under `~/Library/Containers` (it cannot write `/tmp`), so the
     backend refuses that download folder and `PUT /api/settings` fails from a UI test; change a
     setting by writing the test's own `data/settings.json` (read on every request).
@@ -233,6 +233,21 @@ Local-only media workstation on yt-dlp + FFmpeg. macOS arm64, single user (Berk)
     shows none against a fixture-mode backend (`remoteImages`), and Playwright sends every
     request outside this Mac to a closed proxy port (the suite used to fetch i.ytimg.com).
     The paste UI test puts Berk's pasteboard back afterwards.
+39. **AppKit aborts on a layout feedback loop** ("more Update Constraints in Window passes than
+    there are views"; the crash names `SplitViewChildController … didUpdateMinSize`). In a split
+    view column, outside a scroll view, never let a size depend on itself: no text pinned to its
+    own height (`fixedSize(horizontal: false, vertical: true)`, as `NoticeRow` does -- fine
+    inside a ScrollView/List/Form), no `ViewThatFits` choosing by width, no toolbar item that
+    changes size (a spinner swapped for a label). A sideways ScrollView needs a fixed height.
+    Other N6 lessons: a `confirmationDialog` clears its `isPresented` binding *before* the
+    button's action runs -- act on the item it passes, not on state; a segmented control drawn
+    icon-only in the toolbar is named after its SF symbol ("Izgara Görüntüsü"), so give each
+    segment an `accessibilityLabel`; macOS's Turkish name for Quick Look is "Göz At"; the SPA's
+    `index.html` is served `no-cache` (the app's web view kept an old one, and its old scripts,
+    after a rebuild); UI tests pass `-ApplePersistenceIgnoreState YES` (window restoration is
+    Berk's: after a crash it brought the app up with no window) and use an ephemeral web data
+    store. A failing UI test's hierarchy dump includes the Apple menu's recent items: never copy
+    those dumps anywhere.
 
 ## Rules
 

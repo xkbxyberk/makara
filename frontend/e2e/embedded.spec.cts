@@ -67,3 +67,28 @@ test('embedded: the copied-link offer is left to the app (one banner, not two)',
   await browserPage.waitForTimeout(500);
   await expect(offer(page)).toHaveCount(0);
 });
+
+test('embedded: the native Kütüphane hands an item to Stüdyo', async ({ page, request }) => {
+  // A finished download in the library, queued the way the extension does it.
+  const quick = await request.post('/api/quick', { data: { url: 'https://example.test/local-media', rule: { kind: 'video' } } });
+  const jobId = ((await quick.json()) as { job: { id: string } }).job.id;
+  let item: { id: string; primary_path: string } | undefined;
+  await expect
+    .poll(async () => {
+      const jobs = (await (await request.get('/api/jobs')).json()) as { id: string; status: string; output_files: string[] }[];
+      const job = jobs.find((j) => j.id === jobId);
+      if (job?.status !== 'done') return false;
+      const { items } = (await (await request.get('/api/library')).json()) as { items: { id: string; primary_path: string }[] };
+      item = items.find((it) => it.primary_path === job.output_files[0]);
+      return item !== undefined;
+    }, { timeout: 60_000 })
+    .toBe(true);
+  await withNativeBridge(page);
+  await page.goto('/?embedded=1&route=inspect');
+  await page.evaluate(
+    (id) => (window as unknown as { vd: { openInStudio: (i: string) => void } }).vd.openInStudio(id),
+    item!.id,
+  );
+  await expect(page.getByTestId('studio-source')).toContainText(item!.primary_path.split('/').pop()!);
+  expect(await sentToNative(page)).toContainEqual({ type: 'route', route: 'studio' });
+});

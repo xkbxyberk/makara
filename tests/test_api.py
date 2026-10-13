@@ -265,3 +265,23 @@ def test_the_safari_session_setting_round_trips(
         saved = own.put("/api/settings", json={**settings, "safari_login": False}).json()
         assert saved["safari_login"] is False
         assert own.get("/api/settings").json()["safari_login"] is False
+
+
+def test_the_page_itself_is_asked_for_again_every_time(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The app's web view kept serving an old index.html (and its old scripts) from its cache
+    after the web UI was rebuilt: the page must be revalidated; only hashed assets may be kept."""
+    dist = tmp_path / "dist"
+    (dist / "assets").mkdir(parents=True)
+    (dist / "index.html").write_text("<!doctype html><title>VD</title>")
+    from app import paths
+
+    monkeypatch.setattr(paths, "FRONTEND_DIST", dist)
+    from app.main import create_app
+
+    with TestClient(create_app(), base_url="http://127.0.0.1:8787") as own:
+        for path in ["/", "/?embedded=1&route=studio", "/library"]:
+            response = own.get(path)
+            assert response.status_code == 200, path
+            assert response.headers["cache-control"] == "no-cache", path

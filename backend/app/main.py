@@ -165,7 +165,9 @@ def create_app() -> FastAPI:
             index = dist / "index.html"
             if not index.exists():
                 return JSONResponse(status_code=404, content={"error": {"code": "NO_FRONTEND"}})
-            return FileResponse(index)
+            # Asked again every time: the app's web view kept a heuristically "fresh" old
+            # index.html (and so the old script bundle) after an update. Assets are hashed.
+            return FileResponse(index, headers={"Cache-Control": "no-cache"})
 
     return app
 

@@ -806,6 +806,48 @@
         }
       ]
     },
+    "N6": {
+      "title": "Kütüphane in SwiftUI",
+      "status": "done",
+      "criteria": [
+        {
+          "id": "N6.1",
+          "text": "Kütüphane is native: empty state, a finished download appears live with its count and size, details in the window's inspector (languages from the file)",
+          "pass": true,
+          "proof": "ShellTests.testTheLibraryIsNativeAndAsksBeforeTheTrash (native-library-grid-light); ContractTests.library"
+        },
+        {
+          "id": "N6.2",
+          "text": "Grid and list, search with an empty-result state, Göz At (Quick Look) with the space bar, Dosyaları denetle with its result",
+          "pass": true,
+          "proof": "same test (native-library-list-light); LocalizationTests.libraryWordsReadAsOnTheWebPage"
+        },
+        {
+          "id": "N6.3",
+          "text": "The Trash asks first: Vazgeç keeps the item, the confirmation moves its file to the (simulated, in tests) Trash",
+          "pass": true,
+          "proof": "same test (native-library-trash-light; checks the file in data/simulated-trash)"
+        },
+        {
+          "id": "N6.4",
+          "text": "Stüdyo'da aç hands the item to the embedded Stüdyo",
+          "pass": true,
+          "proof": "ShellTests.testALibraryItemOpensInTheStudio; e2e 'embedded: the native Kütüphane hands an item to Stüdyo'"
+        },
+        {
+          "id": "N6.5",
+          "text": "The page is revalidated on every load; tests use neither Berk's saved window state nor his web storage; the layout preference is kept in the test's own data folder",
+          "pass": true,
+          "proof": "test_the_page_itself_is_asked_for_again_every_time; theLibraryRemembersItsLayoutInItsOwnStore; -ApplePersistenceIgnoreState and ephemeral WebBridge under VD_DATA_DIR"
+        },
+        {
+          "id": "N6.6",
+          "text": "Review fixes: a right-click Trash selects the item and the dialog names it; Return cancels; a reconnect reloads the library; a failed reload keeps the selection; the page is loaded revalidating any cache; the scan waits long enough",
+          "pass": true,
+          "proof": "testTheLibraryIsNativeAndAsksBeforeTheTrash (context menu + Return keeps the file, Vazgeç keeps it, the confirmation trashes it; the search keeps its spaces)"
+        }
+      ]
+    },
     "M7a": {
       "title": "Safari session for age-restricted YouTube videos (pulled forward from M7)",
       "status": "done",

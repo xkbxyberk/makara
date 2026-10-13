@@ -6,7 +6,10 @@ public enum ServerEvent: Sendable, Equatable {
     case snapshot([Job])
     case job(Job)
     case removed(String)
+    /// A download or a Stüdyo output was catalogued (or the catalogue changed).
     case library
+    /// A finished download could not be catalogued; its file is still on disk.
+    case libraryError
     case clipboard(String)
     case other(String)
     /// Not from the server: the stream broke and is reconnecting (the next snapshot ends it).
@@ -30,7 +33,8 @@ public enum ServerEvent: Sendable, Equatable {
         case "snapshot": return (try? d.decode([Lenient].self, from: bytes)).map { .snapshot($0.compactMap(\.job)) }
         case "job": return (try? d.decode(JobPayload.self, from: bytes)).map { .job($0.job) }
         case "removed": return (try? d.decode(RemovedPayload.self, from: bytes)).map { .removed($0.id) }
-        case "library", "library_error": return .library
+        case "library": return .library
+        case "library_error": return .libraryError
         case "clipboard": return (try? d.decode(ClipboardPayload.self, from: bytes)).map { .clipboard($0.url) }
         default: return .other(name)
         }

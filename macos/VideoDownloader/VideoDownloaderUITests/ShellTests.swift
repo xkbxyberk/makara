@@ -12,6 +12,9 @@ final class ShellTests: XCTestCase {
         scratch = FileManager.default.temporaryDirectory.appending(path: "vd-uitest-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: scratch, withIntermediateDirectories: true)
         app = XCUIApplication()
+        // Window restoration is the app's (Berk's) saved state: a test must neither read it (after
+        // a crash it brought the app up with no window at all) nor write it.
+        app.launchArguments += ["-ApplePersistenceIgnoreState", "YES"]
         app.launchEnvironment = [
             "VD_PORT": "8789",
             "VD_FIXTURE_MODE": "1",
@@ -106,7 +109,9 @@ final class ShellTests: XCTestCase {
         screenshot("native-doctor-light")
 
         app.typeKey("3", modifierFlags: .command)  // Git > Kütüphane
-        XCTAssertTrue(app.windows["Kütüphane"].waitForExistence(timeout: 10))
+        native("Kütüphane boş")
+        // Its subtitle (the count and size) can be part of the window's title.
+        XCTAssertTrue(app.windows.firstMatch.title.hasPrefix("Kütüphane"), app.windows.firstMatch.title)
     }
 
     func testDarkAppearance() {
@@ -241,6 +246,101 @@ final class ShellTests: XCTestCase {
         sidebar("İncele").click()
         native("Kuyruğa eklendi.")
         XCTAssertFalse(app.buttons["download.submit"].isEnabled, "the same selection could be queued again")
+    }
+
+    /// Kütüphane is native: a finished download appears live, its details sit in the window's
+    /// inspector, the list and the filters work, and the Trash asks first.
+    func testTheLibraryIsNativeAndAsksBeforeTheTrash() throws {
+        app.launch()
+        sidebar("Kütüphane").click()
+        native("Kütüphane boş")
+        XCTAssertFalse(app.webViews.firstMatch.exists, "Kütüphane is a native screen now")
+        _ = try startDownload()
+        let card = element("library.item")
+        XCTAssertTrue(card.waitForExistence(timeout: 60), "the download never reached the library")
+        XCTAssertTrue(app.windows.firstMatch.staticTexts.matching(NSPredicate(format: "value BEGINSWITH %@", "1 öğe ·")).firstMatch
+            .waitForExistence(timeout: 10), "no summary under the title")
+        card.click()
+        XCTAssertTrue(element("inspector").waitForExistence(timeout: 10), "no inspector")
+        XCTAssertTrue(app.buttons["Oynat"].exists)
+        native("İngilizce")  // its audio track, from the file itself
+        screenshot("native-library-grid-light")
+
+        // Quick Look of the file, with the space bar.
+        app.typeKey(" ", modifierFlags: [])
+        // macOS calls the Quick Look panel "Göz At" in Turkish.
+        let preview = app.windows["Göz At"]
+        XCTAssertTrue(preview.waitForExistence(timeout: 10), "no Quick Look panel")
+        app.typeKey(" ", modifierFlags: [])
+
+        // The list, then a search that matches nothing (the open search field can push the
+        // layout picker into the toolbar's overflow, so the grid comes back first).
+        app.radioButtons["Liste"].firstMatch.click()
+        XCTAssertTrue(element("library.list").waitForExistence(timeout: 10))
+        screenshot("native-library-list-light")
+        app.radioButtons["Izgara"].firstMatch.click()
+        XCTAssertTrue(card.waitForExistence(timeout: 10))
+        let search = app.searchFields.firstMatch
+        search.click()
+        // No "i": XCUITest drops it on this Mac's Turkish layout (gotcha 34). Spaces matter here.
+        search.typeText("zzz qqq www")
+        native("Eşleşen öğe yok")
+        // The space bar is Quick Look on the library, never in the search field.
+        XCTAssertEqual(search.value as? String, "zzz qqq www")
+        XCTAssertFalse(app.windows["Göz At"].exists)
+        search.typeKey("a", modifierFlags: .command)
+        search.typeKey(.delete, modifierFlags: [])
+        XCTAssertTrue(card.waitForExistence(timeout: 10))
+
+        // Checking the files finds it where it was.
+        element("library.scan").click()
+        native("1 öğe denetlendi")
+
+        // The Trash asks; "Vazgeç" keeps the item, the confirmation moves it (to the test's own
+        // simulated Trash, never Berk's).
+        let trashFolder = scratch.appending(path: "data/simulated-trash")
+        func trashed() -> [URL] {
+            FileManager.default.enumerator(at: trashFolder, includingPropertiesForKeys: nil)?
+                .compactMap { $0 as? URL }.filter { $0.pathExtension == "mkv" } ?? []
+        }
+        // From the context menu: the dialog names the item, and Return means "Vazgeç".
+        card.rightClick()
+        app.menuItems["Çöp Kutusu’na taşı"].firstMatch.click()
+        XCTAssertTrue(app.staticTexts["Çöp Kutusu’na taşınsın mı?"].waitForExistence(timeout: 10), "no confirmation")
+        XCTAssertTrue(app.sheets.staticTexts.matching(NSPredicate(format: "value CONTAINS %@", "“Local test clip”")).firstMatch.exists,
+                      "the dialog does not say which item")
+        screenshot("native-library-trash-light")
+        app.typeKey(.return, modifierFlags: [])
+        XCTAssertTrue(app.sheets.firstMatch.waitForNonExistence(timeout: 10))
+        sleep(1)
+        XCTAssertEqual(trashed(), [], "Return trashed it")
+        // From the inspector, "Vazgeç" keeps it too.
+        element("inspector.trash").click()
+        XCTAssertTrue(app.staticTexts["Çöp Kutusu’na taşınsın mı?"].waitForExistence(timeout: 10), "no confirmation")
+        app.sheets.buttons["Vazgeç"].firstMatch.click()
+        XCTAssertTrue(app.sheets.firstMatch.waitForNonExistence(timeout: 10))
+        sleep(1)  // a wrongly started trash would have finished by now
+        XCTAssertTrue(card.exists, "cancelling still trashed it")
+        XCTAssertEqual(trashed(), [], "cancelling still trashed it")
+        element("inspector.trash").click()
+        app.sheets.buttons["Çöp Kutusu’na taşı"].firstMatch.click()
+        native("Kütüphane boş")
+        XCTAssertEqual(trashed().count, 1, "the file did not go to the (simulated) Trash")
+    }
+
+    func testALibraryItemOpensInTheStudio() throws {
+        app.launch()
+        sidebar("Kütüphane").click()
+        _ = try startDownload()
+        let card = element("library.item")
+        XCTAssertTrue(card.waitForExistence(timeout: 60))
+        card.click()
+        app.buttons["Stüdyo’da aç"].firstMatch.click()
+        XCTAssertTrue(app.windows["Stüdyo"].waitForExistence(timeout: 10))
+        let source = app.webViews.staticTexts.matching(NSPredicate(format: "value CONTAINS %@ OR label CONTAINS %@",
+                                                                       "Local test clip [localclip01]", "Local test clip [localclip01]")).firstMatch
+        XCTAssertTrue(source.waitForExistence(timeout: 30), "Stüdyo did not open the item")
+        screenshot("native-studio-from-library-light")
     }
 
     /// The opt-in clipboard watcher's offer is native and shows on any screen.

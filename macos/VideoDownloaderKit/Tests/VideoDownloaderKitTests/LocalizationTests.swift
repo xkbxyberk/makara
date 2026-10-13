@@ -64,6 +64,9 @@ struct LocalizationTests {
             keys += ["term.\(term).label", "term.\(term).body"]
         }
         for codec in ["H.264", "HEVC", "AV1", "VP9", "AAC", "Opus"] { keys.append("codec.\(codec)") }
+        // Kütüphane (N6).
+        for sort in ["added", "uploaded", "title", "size", "duration"] { keys.append("library.sort.\(sort)") }
+        for kind in ["all", "video", "audio"] { keys.append("library.kind.\(kind)") }
         for key in keys { #expect(localizedIfPresent(key) != nil, "\(key)") }
     }
 
@@ -81,6 +84,31 @@ struct LocalizationTests {
         #expect(Format.duration(3725) == "1:02:05")
         #expect(L("queue.item", 3, 12) == "3/12")
         #expect(L("queue.eta", "1:15") == "1:15 kaldı")
+    }
+
+    @Test func libraryWordsReadAsOnTheWebPage() {
+        #expect(L("library.summary", 3, "1.5 MB") == "3 öğe · 1.5 MB")
+        #expect(L("library.summaryMissing", 3, "1.5 MB", 1) == "3 öğe · 1.5 MB · 1 eksik")
+        #expect(L("library.scanResult", 4, 1, 0, 2) == "4 öğe denetlendi · 1 dosyanın yeni yeri bulundu · 0 geri geldi · 2 eksik")
+        #expect(L("libraryNative.trashBodyMany", 3).hasPrefix("Bu öğenin 3 dosyası"))
+        // The catalogue stores three-letter codes (from the file's own tracks).
+        let tracks = [LibraryTrack(codec: "opus", language: "eng", height: nil),
+                      LibraryTrack(codec: "aac", language: "tur", height: nil),
+                      LibraryTrack(codec: "aac", language: "eng", height: nil)]
+        #expect(ItemInspector.languages(tracks) == "İngilizce, Türkçe")
+        #expect(ItemInspector.languages([]) == L("library.noTracks"))
+    }
+
+    @MainActor @Test func theLibraryRemembersItsLayoutInItsOwnStore() {
+        let folder = FileManager.default.temporaryDirectory.appending(path: "vd-store-\(UUID())")
+        let librarian = Librarian(client: { APIClient(port: 1) }, store: LocalStore(folder: folder))
+        #expect(librarian.layout == .grid)
+        librarian.layout = .list
+        #expect(Librarian(client: { APIClient(port: 1) }, store: LocalStore(folder: folder)).layout == .list)
+        let before = librarian.trigger
+        librarian.changed()
+        #expect(librarian.trigger != before)  // the server's library event reloads the list
+        try? FileManager.default.removeItem(at: folder)
     }
 
     @Test func portsAndCodesAreNeverDigitGrouped() {

@@ -40,7 +40,12 @@ struct MainSplitView: View {
         } detail: {
             detail
                 .navigationTitle(model.route.title)
-                .safeAreaInset(edge: .top, spacing: 0) { clipboardBanner }
+                .safeAreaInset(edge: .top, spacing: 0) {
+                    VStack(spacing: 0) {
+                        catalogueBanner
+                        clipboardBanner
+                    }
+                }
                 .environment(\.remoteImages, model.remoteImages)
         }
     }
@@ -55,8 +60,27 @@ struct MainSplitView: View {
                       client: model.backend.client)
         case .doctor:
             DoctorView(client: model.backend.client)
-        case .library, .studio:
+        case .library:
+            LibraryView(librarian: model.librarian, client: model.backend.client) { model.openInStudio(item: $0) }
+        case .studio:
             WebScreen(bridge: model.web)
+        }
+    }
+
+    /// A finished download could not be catalogued: say so on every screen (the file is safe).
+    @ViewBuilder private var catalogueBanner: some View {
+        if model.catalogueFailed {
+            HStack(spacing: 10) {
+                Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.yellow)
+                Text(L("library.catalogueFailed"))
+                Spacer()
+                Button(L("clipboard.dismiss")) { model.catalogueFailed = false }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(.bar)
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("library.catalogueFailed")
         }
     }
 

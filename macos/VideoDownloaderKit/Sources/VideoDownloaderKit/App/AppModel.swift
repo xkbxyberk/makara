@@ -21,6 +21,11 @@ public final class AppModel {
     /// A link the opt-in clipboard watcher saw being copied, offered for inspection.
     public var clipboardOffer: String?
     public let inspector: Inspector
+    public let librarian: Librarian
+    /// A finished download could not be added to the library (its file is on disk).
+    public var catalogueFailed = false
+    /// Per-user conveniences; a file in the data folder under tests (never Berk's preferences).
+    @ObservationIgnored public let store: LocalStore
     public private(set) var activeCount = 0 {
         didSet { NSApp?.dockTile.badgeLabel = activeCount > 0 ? String(activeCount) : nil }
     }
@@ -42,9 +47,14 @@ public final class AppModel {
     public init(config: BackendConfig = .resolve()) {
         let backend = BackendController(config: config)
         self.backend = backend
-        inspector = Inspector(client: { backend.client }, rules: QuickRules.forEnvironment(config.environment))
-        web = WebBridge(port: config.port)
-        settingsWeb = WebBridge(port: config.port)
+        let store = LocalStore.forEnvironment(config.environment)
+        self.store = store
+        inspector = Inspector(client: { backend.client }, rules: QuickRules(store: store))
+        librarian = Librarian(client: { backend.client }, store: store)
+        // Tests: never Berk's web storage (the same rule as LocalStore.forEnvironment).
+        let ephemeral = !(config.environment["VD_DATA_DIR"] ?? "").isEmpty
+        web = WebBridge(port: config.port, ephemeral: ephemeral)
+        settingsWeb = WebBridge(port: config.port, ephemeral: ephemeral)
         web.onRoute = { [weak self] raw in self?.pageMoved(to: raw) }
         backend.onLost = { [weak self] in self?.backendLost() }
         web.onDrop = { [weak self] url in self?.handle(.inspect(url)) }
@@ -124,6 +134,12 @@ public final class AppModel {
         }
     }
 
+    /// "Stüdyo'da aç" from Kütüphane: Stüdyo is still the embedded page, so it is handed the item.
+    public func openInStudio(item id: String) {
+        route = .studio
+        web.openInStudio(id)
+    }
+
     public func inspectClipboard() {
         guard let text = NSPasteboard.general.string(forType: .string)?.trimmingCharacters(in: .whitespacesAndNewlines),
               let url = URL(string: text), let incoming = IncomingURL.parse(url) else { return }
@@ -158,6 +174,8 @@ public final class AppModel {
             jobs = Dictionary(all.map { ($0.id, $0) }, uniquingKeysWith: { $1 })
             jobsLoaded = true
             connection = .open
+            // A (re)connect may have missed `library` events: ask the library again.
+            librarian.changed()
         case .disconnected:
             connection = .reconnecting
         case .job(let job):
@@ -168,7 +186,11 @@ public final class AppModel {
             jobs[id] = nil
         case .clipboard(let url):
             clipboardOffer = url
-        case .library, .other:
+        case .library:
+            librarian.changed()
+        case .libraryError:
+            catalogueFailed = true
+        case .other:
             break  // the embedded page shows these
         }
         activeCount = jobs.values.filter { $0.status.isActive }.count

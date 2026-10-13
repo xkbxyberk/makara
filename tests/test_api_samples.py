@@ -23,7 +23,17 @@ SAMPLES = Path(__file__).parent / "fixtures" / "api"
 LOCAL_URL = "https://example.test/local-media"
 MULTI_AUDIO_URL = "https://www.youtube.com/watch?v=0e3GPea1Tyg"
 PLAYLIST_URL = "https://www.youtube.com/@TED/videos"
-VOLATILE_KEYS = {"id", "inspect_id", "created_at", "started_at", "finished_at", "updated_at"}
+VOLATILE_KEYS = {
+    "id",
+    "inspect_id",
+    "job_id",
+    "created_at",
+    "started_at",
+    "finished_at",
+    "updated_at",
+    "added_at",
+    "checked_at",
+}
 
 
 def scrub(value: Any, key: str = "") -> Any:
@@ -136,3 +146,14 @@ def test_samples_for_the_native_app(client: TestClient) -> None:
     check("jobs", client.get("/api/jobs").json())
     # What an SSE `job` event carries, as the manager publishes it.
     check("event-job", {"type": "job", "job": job})
+
+    # The finished download, as Kütüphane lists it (catalogued just after the job ends).
+    library: dict[str, Any] = {}
+    while time.monotonic() < deadline:
+        library = client.get("/api/library").json()
+        if library["items"]:
+            break
+        time.sleep(0.05)
+    assert library["items"], "the download was never catalogued"
+    check("library", library)
+    check("scan", client.post("/api/library/scan").json())

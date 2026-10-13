@@ -83,7 +83,7 @@ struct ContractTests {
         let names = try FileManager.default.contentsOfDirectory(atPath: Self.samples.path)
             .filter { $0.hasSuffix(".json") }.sorted()
         #expect(names == ["doctor.json", "error.json", "event-job.json", "health.json", "inspect-playlist.json", "inspect-video.json",
-                          "jobs.json", "plan.json", "settings.json", "supports.json"])
+                          "jobs.json", "library.json", "plan.json", "scan.json", "settings.json", "supports.json"])
     }
 
     @Test func inspectedVideo() throws {
@@ -110,6 +110,28 @@ struct ContractTests {
         }
         #expect(model.entryCount > 0 && !model.entries.isEmpty)
         #expect(model.entries.first?.url != nil)
+    }
+
+    @Test func library() throws {
+        let page = try JSON.decoder.decode(LibraryPage.self, from: sample("library"))
+        let item = try #require(page.items.first)
+        #expect(item.title == "Local test clip")
+        #expect(item.status == "ok" && !item.isMissing)
+        #expect(item.tracks.audio.first?.language == "eng")
+        #expect(item.tracks.video.first?.height == 360)
+        #expect(page.facets.count == 1 && page.facets.sites == ["Generic"])
+        let scan = try JSON.decoder.decode(ScanResult.self, from: sample("scan"))
+        #expect(scan.checked == 1 && scan.missing == 0)
+    }
+
+    @Test func libraryQueryLeavesEmptyFieldsOut() {
+        var query = LibraryQuery()
+        #expect(query.items == [URLQueryItem(name: "sort", value: "added")])
+        #expect(!query.isFiltered)
+        query.search = "klip"
+        query.status = "missing"
+        #expect(query.items.map(\.name) == ["search", "status", "sort"])
+        #expect(query.isFiltered)
     }
 
     @Test func plan() throws {

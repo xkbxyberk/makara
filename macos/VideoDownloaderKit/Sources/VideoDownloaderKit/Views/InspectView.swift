@@ -11,6 +11,8 @@ extension EnvironmentValues {
 /// server is asked when remote images are off.
 struct RemoteImage: View {
     let url: String?
+    /// Shown when there is no picture (a film or a note, for a library item).
+    var systemImage = "photo"
     @Environment(\.remoteImages) private var remoteImages
 
     var body: some View {
@@ -34,7 +36,7 @@ struct RemoteImage: View {
 
     private var placeholder: some View {
         Rectangle().fill(.quaternary).aspectRatio(16 / 9, contentMode: .fit)
-            .overlay(Image(systemName: "photo").foregroundStyle(.tertiary))
+            .overlay(Image(systemName: systemImage).font(.title).foregroundStyle(.tertiary))
     }
 }
 
