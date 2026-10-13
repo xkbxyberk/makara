@@ -256,4 +256,11 @@ panel); a double click queued two downloads; the link menu could make the app fe
 loopback addresses. Also: wrong audio role labels, endless progress polling, "+" turning into a
 space, a lost media flag when Safari unloads the background, unvalidated stored rules.
 
-**Next:** Berk's live check of N3, then N4.
+**N3 live check** (Berk asked me to restart Safari): Safari loaded the new extension; on the
+test video the background script asked the app (3 support checks, all answered) and the button
+read "Bu sayfadaki videoyu indir"; the popup, opened by a temporary UI test that was deleted
+afterwards, showed the real choices (2160p … 144p AV1 with sizes). Nothing was downloaded. The
+access log and the page dump (it held his YouTube recommendations) were deleted. Not yet seen
+live: the link menu and ⌃⇧D.
+
+**Next:** N4 — İndirmeler and Sistem in SwiftUI.

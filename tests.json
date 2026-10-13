@@ -688,19 +688,19 @@
     },
     "N3": {
       "title": "Safari extension",
-      "status": "built; live check pending",
+      "status": "done (link menu and shortcut not yet seen live)",
       "criteria": [
         {
           "id": "N3.1",
           "text": "Icon state from the offline support check and the page's own media; nothing inspected until the popup opens",
           "pass": true,
-          "proof": "vitest extensionShared.test.ts (iconState); content.js / background.js reviewed. Live in Safari: pending Berk (restart Safari, allow all websites)"
+          "proof": "vitest (iconState); live 2026-10-13: after a Safari restart, opening the test video made the extension ask /api/supports for it (3x, 200) and the toolbar button read 'Bu sayfadaki videoyu indir'"
         },
         {
           "id": "N3.2",
           "text": "Popup shows the video's own choices, preselects the remembered one, downloads with one click and follows progress to done",
           "pass": true,
-          "proof": "e2e extension.spec.cts (11 tests: choices, preselect, language/subtitles reaching the job, untouched default and lowered match remembering nothing, output switch after a click, double click = one job); screenshots extension-popup-light/dark.png"
+          "proof": "e2e extension.spec.cts (11 tests: choices, preselect, language/subtitles reaching the job, untouched default and lowered match remembering nothing, output switch after a click, double click = one job); screenshots extension-popup-light/dark.png; live 2026-10-13: the popup in Safari showed the real video's title, channel, duration and 2160p..144p AV1 rows with sizes (a temporary UI test opened it; nothing was downloaded)"
         },
         {
           "id": "N3.3",
