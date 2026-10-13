@@ -218,21 +218,22 @@ Berk asks (session limits).
       watching (a playing `<video>`/`<audio>`, MSE/blob players included) and its *permalink*
       (X: the tweet's `/status/` link inside the `<article>`; generic: canonical/og:url, the
       page itself), asks `/api/supports` (offline), and only then offers it
-- [ ] An in-page offer, small and dismissible ("Bu videoyu indir?" with the quick choice and
-      "İncele"), shown once per media, never on sites Berk muted; the toolbar popup still works
+- [ ] Both, chosen in Settings (Berk, 2026-10-14): by default a small dismissible in-page offer
+      ("Bu videoyu indir?" with the quick choice and "İncele"), once per media, mutable per
+      site; or the toolbar icon only. The toolbar popup works either way
 - [ ] Site-specific permalink finders kept in one table (X, Instagram, TikTok, Reddit,
       Vimeo, Facebook…), generic fallback for the rest
 
 ### P2 — Download acceleration (IDM-style)
 - [ ] Fragmented formats (HLS/DASH, most sites): yt-dlp's `concurrent_fragment_downloads`
-- [ ] Single-file HTTP formats: several connections with byte ranges -- aria2c (needs Berk's
-      approval: Homebrew) or our own segmented downloader; per-download connection count,
+- [ ] Single-file HTTP formats: several connections with byte ranges via **aria2c** (Berk chose
+      it 2026-10-14 and so approved `brew install aria2`); per-download connection count,
       live per-segment progress in İndirmeler
 - [ ] Pause / resume (keep `.part` files), a global speed limit, a "faster" setting
 
 ### P3 — Library by kind in the sidebar
-- [ ] Kütüphane splits by what was downloaded: Videolar, Müzik (sound only), Stüdyo çıktıları,
-      maybe Altyazılar; counts as badges; site filters stay inside each
+- [ ] Kütüphane splits by what was downloaded (Berk's choice): Videolar · Müzik · Stüdyo, under
+      the Kütüphane heading, with counts; the site and other filters stay inside each
 
 ### P4 — Menu bar app, launch at login, Dock
 - [ ] A status-bar item (default on) with the app's template icon: active downloads with
