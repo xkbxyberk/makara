@@ -1,8 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// A backend error code in words: the same table as the web page's `tr.errors`
-/// (`error.<CODE>.title/body`; a vitest keeps the two catalogs equal).
+/// A backend error code in words (`error.<CODE>.title/body` in the catalog).
 public enum ErrorCopy {
     public static func title(_ code: String) -> String {
         localizedIfPresent("error.\(code).title") ?? L("error.UNKNOWN.title")

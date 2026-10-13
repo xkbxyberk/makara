@@ -1,0 +1,13 @@
+{
+  "name": "videodownloader-extension-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test shared.test.mjs",
+    "e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "@types/node": "^22.10.0"
+  }
+}

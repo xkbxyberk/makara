@@ -93,8 +93,8 @@ def test_template_preview_uses_the_samples_the_ui_sends(app_env: Any) -> None:
 
 def test_system_actions_never_run_in_fixture_mode(app_env: Any) -> None:
     client = app_env()
-    picked = client.post("/api/system/pick-folder", json={"prompt": "Klasör seç"})
-    assert picked.status_code == 501
+    opened = client.post("/api/system/open-full-disk-access")
+    assert opened.status_code == 501
     updated = client.post("/api/system/update-ytdlp")
     assert updated.status_code == 501
     assert updated.json()["error"]["code"] == "UPDATE_UNAVAILABLE"

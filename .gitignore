@@ -5,7 +5,6 @@ __pycache__/
 .ruff_cache/
 .mypy_cache/
 node_modules/
-frontend/dist/
 test-results/
 playwright-report/
 .DS_Store

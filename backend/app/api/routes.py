@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 
 from app import doctor, errors, inspect_service, paths
 from app import settings as settings_store
-from app.ytdlp import command, offers, support
+from app.ytdlp import offers, support
 
 router = APIRouter(prefix="/api")
 
@@ -43,14 +43,6 @@ def with_preselection(model: dict[str, Any], rule: Rule | None) -> dict[str, Any
     return {**model, "offers": {**model["offers"], "preselected": preselected}}
 
 
-class CommandRequest(BaseModel):
-    url: str = Field(min_length=1, max_length=2048)
-    video_format_id: str | None = None
-    audio_format_ids: list[str] = Field(default_factory=list)
-    subtitle_keys: list[str] = Field(default_factory=list)
-    mode: str = command.MODE_MKV
-
-
 def _error_response(exc: errors.AppError) -> JSONResponse:
     status = 400 if exc.code in ("INVALID_URL", "UNSUPPORTED_SITE") else 502
     return JSONResponse(status_code=status, content={"error": exc.as_dict()})
@@ -79,15 +71,3 @@ async def post_inspect(request: InspectRequest) -> Any:
 def get_supports(url: str = Query(min_length=1, max_length=2048)) -> dict[str, Any]:
     """Offline: does yt-dlp have an extractor for this page (the generic one aside)?"""
     return support.supports(url)
-
-
-@router.post("/command")
-def post_command(request: CommandRequest) -> dict[str, Any]:
-    argv = command.build_command(
-        request.url,
-        video_format_id=request.video_format_id,
-        audio_format_ids=request.audio_format_ids,
-        subtitle_keys=request.subtitle_keys,
-        mode=request.mode,
-    )
-    return {"argv": argv, "text": command.quote(argv)}

@@ -8,9 +8,9 @@ import { expect, test, type APIRequestContext, type Page } from '@playwright/tes
  * that only carries messages: the relay's allowlist itself is tested in Swift (RelayTests).
  */
 const LOCAL = 'https://example.test/local-media';
-const SHOTS = '../test-results/screenshots';
+const SHOTS = '../../test-results/screenshots';
 const messages = JSON.parse(
-  readFileSync(path.resolve(__dirname, '../../macos/extension/_locales/tr/messages.json'), 'utf8'),
+  readFileSync(path.resolve(__dirname, '../extension/_locales/tr/messages.json'), 'utf8'),
 ) as Record<string, { message: string }>;
 
 interface Options {

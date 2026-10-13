@@ -61,18 +61,14 @@ def test_inspect_reports_an_unsupported_site(client: TestClient) -> None:
     assert response.json()["error"]["code"] == "UNSUPPORTED_SITE"
 
 
-def test_command_endpoint_builds_a_multi_audio_selector(client: TestClient) -> None:
-    body = client.post(
-        "/api/command",
-        json={
-            "url": "https://www.youtube.com/watch?v=0e3GPea1Tyg",
-            "video_format_id": "616",
-            "audio_format_ids": ["251-0", "251-1"],
-            "subtitle_keys": ["tr", "en"],
-        },
-    ).json()
-    assert "--audio-multistreams" in body["argv"]
-    assert "--sub-langs" in body["argv"]
+def test_the_web_pages_own_endpoints_are_gone(client: TestClient) -> None:
+    """The browser UI was removed (N8): nothing may still open a picker or post a notification
+    for whoever asks. (Commands are built by /api/plan; test_errors_and_command covers them.)"""
+    for path in ["/api/command", "/api/notify", "/api/system/pick-folder", "/api/system/pick-file"]:
+        assert client.post(path, json={"prompt": "x", "title": "x", "url": "x"}).status_code in (
+            404,
+            405,
+        ), path
 
 
 def test_a_rebinding_hostname_is_rejected(client: TestClient) -> None:
@@ -244,7 +240,7 @@ def test_outside_fixture_mode_there_is_no_extension_route(
 
     with TestClient(create_app(), base_url="http://127.0.0.1:8787") as plain:
         response = plain.get("/__test/extension/popup.html")
-        assert b"popup.js" not in response.content  # the SPA's index at most, never the popup
+        assert response.status_code == 404
 
 
 def test_api_answers_are_never_cached(client: TestClient) -> None:
@@ -267,23 +263,10 @@ def test_the_safari_session_setting_round_trips(
         assert own.get("/api/settings").json()["safari_login"] is False
 
 
-def test_the_page_itself_is_asked_for_again_every_time(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """The app's web view kept serving an old index.html (and its old scripts) from its cache
-    after the web UI was rebuilt: the page must be revalidated; only hashed assets may be kept."""
-    dist = tmp_path / "dist"
-    (dist / "assets").mkdir(parents=True)
-    (dist / "index.html").write_text("<!doctype html><title>VD</title>")
-    from app import paths
-
-    monkeypatch.setattr(paths, "FRONTEND_DIST", dist)
-    from app.main import create_app
-
-    with TestClient(create_app(), base_url="http://127.0.0.1:8787") as own:
-        for path in ["/", "/?embedded=1&route=studio", "/library"]:
-            response = own.get(path)
-            assert response.status_code == 200, path
-            assert response.headers["cache-control"] == "no-cache", path
-        # An unknown API path is a 404, never the page.
-        assert own.get("/api/no-such-thing").status_code == 404
+def test_there_is_no_web_page_only_the_api(client: TestClient) -> None:
+    """The app is native since N7 and the browser UI is gone (N8): no path serves a page, and an
+    unknown API path is a 404 too."""
+    for path in ["/", "/library", "/index.html", "/assets/index.js", "/api/no-such-thing"]:
+        response = client.get(path)
+        assert response.status_code == 404, path
+        assert response.json()["error"]["code"] == "NOT_FOUND", path

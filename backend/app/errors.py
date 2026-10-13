@@ -1,7 +1,7 @@
 """Raw yt-dlp/FFmpeg failures in, machine-readable codes out.
 
-The backend never returns Turkish text. The frontend owns every user-facing string
-(`frontend/src/i18n/tr.ts`), so adding a second language is a one-file change.
+The backend never returns Turkish text. The app owns every user-facing string (its
+`Localizable.xcstrings`; the Safari extension has `_locales/tr/messages.json`).
 """
 
 from __future__ import annotations

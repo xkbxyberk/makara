@@ -9,11 +9,10 @@ step "ruff (lint)";        uv run ruff check backend tests scripts
 step "ruff (format)";      uv run ruff format --check backend tests scripts
 step "mypy";               uv run mypy
 step "pytest";             uv run pytest -q
-step "tsc";                (cd frontend && npx tsc -b --noEmit)
-step "eslint";             (cd frontend && npx eslint .)
-step "vitest";             (cd frontend && npx vitest run)
-step "frontend build";     (cd frontend && npm run build)
-step "playwright (e2e)";   (cd frontend && npx playwright test)
+# The Safari extension: its shared logic (node --test), then its popup against the fixture-mode
+# server (Playwright; Safari itself cannot be scripted).
+step "extension (shared.js)"; (cd macos/extension-tests && node --test shared.test.mjs)
+step "extension (popup e2e)"; (cd macos/extension-tests && npx playwright test)
 step "server log is clean"
 # A request can fail inside the server while every UI assertion still passes; don't let it hide.
 if ! grep -q "VideoDownloader listening" test-results/e2e-server.log; then

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import shlex
-import sys
 import uuid
 from pathlib import Path
 from typing import Any, Literal
@@ -13,7 +12,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from app import errors, paths
+from app import errors
 from app import settings as settings_store
 from app.jobs.manager import JobManager, public
 from app.library import Library
@@ -37,10 +36,6 @@ class StudioBody(BaseModel):
     output_name: str = Field(min_length=1, max_length=400)
     output_dir: str | None = Field(default=None, max_length=4096)
     extra_paths: list[str] = Field(default_factory=list, max_length=16)
-
-
-class PickFileBody(BaseModel):
-    prompt: str = Field(min_length=1, max_length=200)
 
 
 def _error(exc: errors.AppError, status: int = 400) -> JSONResponse:
@@ -205,30 +200,3 @@ async def post_job(body: StudioBody, request: Request) -> Any:
     manager.publish({"type": "job", "job": public(job)})
     manager.wake()
     return public(job)
-
-
-_PICK_FILE = [
-    "-e",
-    "on run argv",
-    "-e",
-    "POSIX path of (choose file with prompt (item 1 of argv))",
-    "-e",
-    "end run",
-]
-
-
-@router.post("/system/pick-file")
-async def post_pick_file(body: PickFileBody) -> Any:
-    if sys.platform != "darwin" or paths.fixture_mode():
-        return _error(errors.AppError(code="PICKER_UNAVAILABLE"), 501)
-    proc = await asyncio.create_subprocess_exec(
-        "osascript",
-        *_PICK_FILE,
-        body.prompt[:200],
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-    )
-    out, _ = await proc.communicate()
-    if proc.returncode != 0:
-        return {"path": None}  # cancelled
-    return {"path": out.decode().strip() or None}

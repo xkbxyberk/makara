@@ -68,11 +68,6 @@ class SettingsBody(BaseModel):
     notifications: bool = True
 
 
-class NotifyBody(BaseModel):
-    title: str = Field(min_length=1, max_length=200)
-    body: str = Field(default="", max_length=500)
-
-
 class RevealBody(BaseModel):
     index: int = Field(ge=0, lt=1000)
 
@@ -242,11 +237,6 @@ async def put_settings(body: SettingsBody, request: Request) -> Any:
     )
     _manager(request).wake()  # a higher concurrency limit takes effect immediately
     return saved.as_dict()
-
-
-@router.post("/notify")
-def post_notify(body: NotifyBody) -> dict[str, bool]:
-    return {"shown": notify.notify(body.title, body.body)}
 
 
 @router.post("/jobs/{job_id}/reveal")

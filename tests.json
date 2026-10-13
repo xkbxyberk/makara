@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-13",
+  "updated": "2026-10-14",
   "gate": "./scripts/check.sh",
   "milestones": {
     "M0": {
@@ -926,5 +926,6 @@
         }
       ]
     }
-  }
+  },
+  "note": "N8 (2026-10-14): frontend/ was removed. Proofs naming e2e/*.spec.cts, vitest or tr.ts are historical; the native UI tests and macos/extension-tests cover those screens now."
 }

@@ -1,4 +1,4 @@
-"""Things that touch the Mac itself: the folder picker, the yt-dlp updater, the clipboard.
+"""Things that touch the Mac itself: System Settings, the yt-dlp updater, the clipboard.
 
 All of it uses argv lists. User-facing text (the picker's prompt) arrives from the UI and is
 passed to AppleScript as an argument, never spliced into the script.
@@ -22,28 +22,6 @@ URL_RE = re.compile(r"^https?://\S+$", re.IGNORECASE)
 CLIPBOARD_POLL_SECONDS = 1.0
 # One update at a time: two `uv lock`/`uv sync` runs over the same venv would race.
 _UPDATING = threading.Lock()
-
-_PICK_FOLDER = [
-    "-e",
-    "on run argv",
-    "-e",
-    "POSIX path of (choose folder with prompt (item 1 of argv))",
-    "-e",
-    "end run",
-]
-
-
-def pick_folder(prompt: str) -> str | None:
-    """The native macOS folder picker. None when the user cancels."""
-    if sys.platform != "darwin" or paths.fixture_mode():
-        raise errors.AppError(code="PICKER_UNAVAILABLE")
-    proc = subprocess.run(
-        ["osascript", *_PICK_FOLDER, prompt[:200]], capture_output=True, text=True, check=False
-    )
-    if proc.returncode != 0:
-        return None  # "User canceled." is AppleScript error -128
-    return proc.stdout.strip().rstrip("/") or None
-
 
 # System Settings > Privacy & Security > Full Disk Access (a fixed URL; nothing from a request).
 FULL_DISK_ACCESS = (

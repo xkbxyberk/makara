@@ -13,7 +13,6 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 FIXTURE_DIR = PROJECT_ROOT / "tests" / "fixtures" / "infojson"
 MEDIA_FIXTURE_DIR = PROJECT_ROOT / "tests" / "fixtures" / "media"
 EXTENSION_DIR = PROJECT_ROOT / "macos" / "extension"
-FRONTEND_DIST = PROJECT_ROOT / "frontend" / "dist"
 
 APP_SUPPORT_DIR = Path.home() / "Library" / "Application Support" / "VideoDownloader"
 DEFAULT_DOWNLOAD_DIR = Path.home() / "Movies" / "VideoDownloader"

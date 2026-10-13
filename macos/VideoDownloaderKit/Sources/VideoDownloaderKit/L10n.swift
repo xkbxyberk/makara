@@ -1,7 +1,7 @@
 import Foundation
 
-/// Every user-facing string of the native app comes from `Resources/Localizable.xcstrings`
-/// (the native counterpart of `frontend/src/i18n/tr.ts`).
+/// Every user-facing string of the app comes from `Resources/Localizable.xcstrings` (Turkish;
+/// the backend only returns codes).
 public func L(_ key: String) -> String {
     Bundle.module.localizedString(forKey: key, value: "⟦\(key)⟧", table: nil)
 }

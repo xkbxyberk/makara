@@ -20,10 +20,6 @@ from app.ytdlp import naming
 router = APIRouter(prefix="/api")
 
 
-class PickFolderBody(BaseModel):
-    prompt: str = Field(min_length=1, max_length=200)
-
-
 class TemplatePreviewBody(BaseModel):
     template: str = Field(min_length=1, max_length=500)
     sample: dict[str, str | int | None] = Field(default_factory=dict)
@@ -125,14 +121,6 @@ def post_trash_item(item_id: str, request: Request) -> Any:
         return _error(exc, status)
 
 
-@router.post("/system/pick-folder")
-async def post_pick_folder(body: PickFolderBody) -> Any:
-    try:
-        return {"path": await asyncio.to_thread(system.pick_folder, body.prompt)}
-    except errors.AppError as exc:
-        return _error(exc, 501)
-
-
 @router.post("/system/open-full-disk-access")
 async def post_open_full_disk_access() -> Any:
     try:
@@ -156,7 +144,7 @@ async def post_update_ytdlp(request: Request) -> Any:
 
 @router.post("/settings/preview-template")
 def post_preview_template(body: TemplatePreviewBody) -> Any:
-    """Render a template against sample values the UI provides (its text lives in tr.ts)."""
+    """Render a template against sample values the UI provides (the app words it)."""
     try:
         relative = naming.render_relative(body.template, dict(body.sample), body.ext)
     except errors.AppError as exc:

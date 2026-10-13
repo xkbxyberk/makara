@@ -251,8 +251,6 @@
     "error.DOWNLOAD_DIR_MISSING.body" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "Üst klasör yok. Var olan bir klasör seç." } } } },
     "error.DOWNLOAD_DIR_NOT_WRITABLE.title" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "Bu klasöre yazılamıyor" } } } },
     "error.DOWNLOAD_DIR_NOT_WRITABLE.body" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "Yazma iznin olan bir klasör seç." } } } },
-    "error.PICKER_UNAVAILABLE.title" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "Klasör seçici açılamadı" } } } },
-    "error.PICKER_UNAVAILABLE.body" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "Klasör yolunu elle yazabilirsin." } } } },
     "error.UPDATE_UNAVAILABLE.title" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "Güncelleme bu modda kapalı" } } } },
     "error.UPDATE_UNAVAILABLE.body" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "Test modunda Python ortamına dokunulmaz." } } } },
     "error.UPDATE_FAILED.title" : { "localizations" : { "tr" : { "stringUnit" : { "state" : "translated", "value" : "Güncelleme başarısız" } } } },

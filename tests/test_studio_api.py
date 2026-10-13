@@ -128,9 +128,10 @@ def test_a_blocking_plan_is_never_queued(app_env: Any, tmp_path: Path, test_medi
     assert client.get("/api/jobs").json() == []
 
 
-def test_the_file_picker_never_opens_in_fixture_mode(app_env: Any) -> None:
+def test_the_file_picker_is_gone(app_env: Any) -> None:
+    """The app picks files natively; the server no longer runs an AppleScript picker."""
     response = app_env().post("/api/system/pick-file", json={"prompt": "Dosya seç"})
-    assert response.status_code == 501
+    assert response.status_code in (404, 405)
 
 
 def test_the_preview_names_the_file_claim_will_really_use(

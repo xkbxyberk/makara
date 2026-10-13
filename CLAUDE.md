@@ -2,17 +2,16 @@
 
 Local-only media workstation on yt-dlp + FFmpeg. macOS arm64, single user (Berk).
 **Talk to Berk in Turkish. Code, comments, commits and docs in English.**
-**Every user-facing web string lives in `frontend/src/i18n/tr.ts`; native ones in the Kit's `Localizable.xcstrings` (gotcha 37).**
+**Every user-facing string lives in the Kit's `Localizable.xcstrings` (gotcha 37); the Safari extension's in `macos/extension/_locales/tr/messages.json`.**
 
 ## Commands
 
 | What | Command |
 |---|---|
-| The gate (lint, types, pytest, vitest, build, e2e) | `./scripts/check.sh` |
+| The gate (lint, types, pytest, extension tests, Swift, app build, UI tests) | `./scripts/check.sh` |
 | Backend tests only | `uv run pytest -q` |
-| Frontend unit tests | `cd frontend && npx vitest run` |
-| End-to-end + screenshots | `cd frontend && npx playwright test` |
-| Dev servers | `PYTHONPATH=backend uv run python -m app.main` + `cd frontend && npm run dev` |
+| Extension tests | `cd macos/extension-tests && node --test shared.test.mjs && npx playwright test` |
+| Backend alone | `PYTHONPATH=backend uv run python -m app.main` |
 | Desktop app (builds if needed) | `open VideoDownloader.command` |
 | Update yt-dlp | `uv lock --upgrade-package yt-dlp --upgrade-package yt-dlp-ejs && uv sync` (see gotcha 2) |
 | macOS app (build / UI tests) | `xcodebuild -project macos/VideoDownloader/VideoDownloader.xcodeproj -scheme VideoDownloader -derivedDataPath macos/build -allowProvisioningUpdates build` (or `test`) |
@@ -22,19 +21,24 @@ Local-only media workstation on yt-dlp + FFmpeg. macOS arm64, single user (Berk)
 
 ## Architecture decisions
 
-- **FastAPI on 127.0.0.1:8787**, serving `frontend/dist` as an SPA. Never bind anything else.
+- **FastAPI on 127.0.0.1:8787**, JSON only: the browser UI was removed in N8 (2026-10-14) and
+  every other path is a 404. Never bind anything else.
 - **Every yt-dlp/FFmpeg job runs in its own child process.** Cancel means kill the child; a
   crash cannot take the server down. Worker protocol: one JSON request on stdin, one JSON
   response (later: JSONL progress) on stdout. `shell=True` appears nowhere.
 - **`backend/app/ytdlp/normalize.py` is the heart.** Every screen consumes its output and
   every test asserts against it. Change it deliberately.
-- **Backend never returns Turkish.** `errors.py` produces stable codes; `tr.ts` renders them.
+- **Backend never returns Turkish.** `errors.py` produces stable codes; the app's catalog words them.
 - **Tests never touch the network.** They read `tests/fixtures/infojson/*.json`, recorded once
-  from the real sites. The e2e suite runs the real server with `VD_FIXTURE_MODE=1`.
-- Frontend is plain React + hand-written CSS variables. No UI framework, no router, no state
-  library — the app is too small to earn them.
+  from the real sites. The UI tests and the extension's popup e2e run the real server with
+  `VD_FIXTURE_MODE=1`.
+- The UI is native SwiftUI (`macos/VideoDownloaderKit`); the Safari extension is plain JS with
+  no build step.
 
 ## Gotchas that will bite you
+
+Numbers are cited from code, so they stay put; 10, 22, 24, 26, 27 and 33 were about the browser
+UI and went with it (N8).
 
 1. **JS runtime.** Modern YouTube needs `yt-dlp-ejs` (ships with `yt-dlp[default]`) *and* a
    JavaScript engine. The `YoutubeDL` key is the top-level **`js_runtimes`**, and passing a
@@ -70,8 +74,6 @@ Local-only media workstation on yt-dlp + FFmpeg. macOS arm64, single user (Berk)
    explain the trade-off, never silently pick one.
 9. `format_id` values are de-duplicated by yt-dlp (`140-0`, `251-drc`, `247-sr`). Always key on
    the final `format_id` string, never a raw itag.
-10. Playwright specs are `frontend/e2e/*.spec.cts` (`.cts`, because the package is ESM and
-    `@playwright/test` is CommonJS). Screenshots land in `test-results/screenshots/`.
 11. **We mux, not yt-dlp.** The worker downloads raw streams with `-f v,a1,a2` (comma) and
     `backend/app/ffmpeg/mux.py` builds the file. Do not "simplify" back to `+` and yt-dlp's
     merger: with several formats it re-fetches subtitles per format and reports a wrong subtitle
@@ -92,8 +94,8 @@ Local-only media workstation on yt-dlp + FFmpeg. macOS arm64, single user (Berk)
     the library has its own connection and a lock because it is also used from threads.
 18. **Tests never touch Berk's folders.** An autouse fixture points `VD_DATA_DIR` and
     `VD_DOWNLOAD_DIR` at tmp dirs; fixture mode sends Trash to `simulated-trash`, and the
-    folder picker and yt-dlp updater refuse to run. `scripts/check.sh` fails if the e2e server
-    logged a traceback.
+    yt-dlp updater and System Settings refuse to run. `scripts/check.sh` fails if the extension
+    e2e server logged a traceback.
 19. An FFmpeg input seek (`-ss`), even to 0, drops an audio file's single cover-art packet, and
     FFmpeg then exits 0 without writing anything. Check that outputs exist, not just exit codes.
 20. **Never download from a sanitized/re-processed YouTube info dict.** Format URLs are finished
@@ -106,15 +108,11 @@ Local-only media workstation on yt-dlp + FFmpeg. macOS arm64, single user (Berk)
     (B-frame reordering: 27 frames instead of 25 per 1 s piece at 25 fps). Tests state that bound;
     frame-accurate cuts are within one frame.
 
-22. **Toolbar actions are portals.** A screen puts its toolbar buttons in
-    `<ToolbarItems>` (`components/Toolbar.tsx`); they render into the window toolbar. Icons go
-    through `<Icon name="sf.symbol.name">` (`components/Icon.tsx`) so the SF-style names stay in
-    one map. An icon-only button needs an `aria-label` (the e2e tests find buttons by it).
 23. **The native app** (`macos/`) owns the backend: `uv sync`, then `.venv/bin/python -m
     app.main` (not `uv run`, so one SIGTERM reaches the server once), spawned with posix_spawn
     in its own process group, PATH extended with Homebrew, `VD_PARENT_PID` set. The server
-    shuts itself down when that parent disappears (crash, kill). On quit the app closes its
-    web views first, then SIGTERM, SIGKILL after 15 s. uvicorn has
+    shuts itself down when that parent disappears (crash, kill). On quit the app sends
+    SIGTERM, SIGKILL after 15 s. uvicorn has
     `timeout_graceful_shutdown=2`: without it an open event stream held shutdown until the
     SIGKILL, and running workers were orphaned. If a server already answers on the port the
     app attaches to it and never stops it, but keeps checking its health: a server that stops
@@ -122,19 +120,10 @@ Local-only media workstation on yt-dlp + FFmpeg. macOS arm64, single user (Berk)
     Workers (own sessions) hold a **lifeline** (`app/workers/lifeline.py`): re-parented after
     a SIGKILL of the server, they kill their own group. The signal handler announces shutdown
     so open event streams end at once.
-24. **Motion** lives in `theme.css` (the "motion" block) plus `components/motion.ts`, which
-    slides every `.segmented` thumb by observing the DOM and cross-fades theme changes with view
-    transitions. Everything stops under "Reduce motion". Screenshots pass
-    `animations: 'disabled'`; hover a term only after the page has settled (the download plan
-    grows the panel and shifts the page).
 25. **A file created after an item was catalogued is never that item's file** (`_born_after`,
     macOS `st_birthtime`, which survives moves, renames, tags and Put Back). Without that rule a
     re-download of the same video, reusing a deleted file's name with identical bytes, was
     "restored" into the old record: two records, one file.
-26. Help tags (`<Term>`) render into `document.body` with fixed positioning, so panels with
-    `overflow: hidden` cannot clip them.
-27. The e2e server runs on port 8788 (`VD_PORT`), so the suite can run while the real app is open
-    on 8787.
 
 28. **The macOS project** (`macos/VideoDownloader/`) was generated once by Apple's
     `xcrun safari-web-extension-packager` and is maintained by hand. The web extension's files
@@ -163,17 +152,6 @@ Local-only media workstation on yt-dlp + FFmpeg. macOS arm64, single user (Berk)
     whatever one video offered (found twice in review, in the panel and the popup).
     The audio-only defaults (`selection.DEFAULT_AUDIO_CODEC/QUALITY`) mirror the panel's
     initial `mp3`/`192`; change both together.
-33. **Embedded web UI** -- *no longer used by the app since N7* (WebBridge is gone; the
-    browser UI remains until N8). It was `?embedded=1`, `frontend/src/lib/embedded.ts`: no sidebar, title or
-    theme (the window follows the system appearance), no notifications (the app posts them),
-    and `window.vd.navigate/inspect` for the app; the page reports `ready` and route changes
-    through `window.webkit.messageHandlers.vd`. **WebBridge queues every call until `ready`**:
-    a script run while the page loads dies with that document (a link handed to a closed app
-    was lost). `?embedded=1&route=settings` renders the settings screen alone
-    (`SettingsWindow.tsx`). Incoming links (`IncomingURL`) are inspected without a click, so
-    only public http(s) hosts qualify -- never loopback, the LAN, or a nested file. The native strings live in
-    `macos/VideoDownloaderKit/Sources/VideoDownloaderKit/Resources/Localizable.xcstrings`
-    (Turkish only; the app declares `tr`, so the system menus are Turkish too).
 34. **Native UI tests run against a fixture-mode backend on port 8789** with temporary
     `VD_DATA_DIR`/`VD_DOWNLOAD_DIR`/`VD_LOG_FILE` and `VD_APPEARANCE=light|dark`. Web text is
     the element's *value* in XCUITest, and a badge after a term adds a trailing space: match
@@ -184,13 +162,13 @@ Local-only media workstation on yt-dlp + FFmpeg. macOS arm64, single user (Berk)
     backend refuses that download folder and `PUT /api/settings` fails from a UI test; change a
     setting by writing the test's own `data/settings.json` (read on every request).
 35. **The Safari extension** (`macos/extension/`, plain JS, no build step): `shared.js` (also
-    loaded by vitest), `background.js` (icon + link menu), `content.js` (looks for
+    loaded by `macos/extension-tests/shared.test.mjs`), `background.js` (icon + link menu), `content.js` (looks for
     `<video>`/`<audio>`/manifests, tells only the background script), `popup.*`. All app access
     goes through `sendNativeMessage` -> `SafariWebExtensionHandler` -> `Relay.swift`, whose
     allowlist is the security boundary: GET health/supports/jobs, POST inspect/quick, open
     `videodownloader://inspect|show`. Nothing else (Trash, pickers, updater, settings).
-    Strings: `_locales/tr/messages.json` (the extension's catalog). The e2e suite serves the
-    folder at `/__test/extension/` (fixture mode only) and stubs `browser.*` as a transport.
+    Strings: `_locales/tr/messages.json` (the extension's catalog). The popup e2e
+    (`macos/extension-tests/`, Playwright, port 8788) serves the folder at `/__test/extension/` (fixture mode only) and stubs `browser.*` as a transport.
     **Safari only loads a rebuilt extension after it is restarted**, and the extension needs
     "all websites" access, which only Berk can grant. `VD_ACCESS_LOG=1` turns on the request
     log for debugging it; never leave it on (it records the pages he visits). The handler uses
@@ -209,10 +187,10 @@ Local-only media workstation on yt-dlp + FFmpeg. macOS arm64, single user (Berk)
     address containing "login" once turned an unsupported page into LOGIN_REQUIRED, which
     would have sent the session to that site. Tests set VD_SAFARI_COOKIES (conftest), so no
     test ever reads the real store.
-37. **Native screens** (every screen since N7) live in `VideoDownloaderKit/Views/`. They call the same endpoints
-    as the web screen, through `APIClient`. Backend codes and states are worded from the native
-    catalog (`error.<CODE>.title/body`, `queue.status.*`, `doctor.*`), a copy of `tr.ts` that
-    `frontend/src/nativeStrings.test.ts` keeps equal: change both together. Decode `/api/doctor`
+37. **Native screens** (every screen since N7) live in `VideoDownloaderKit/Views/`. They reach the backend
+    through `APIClient`. Backend codes and states are worded from the catalog
+    (`error.<CODE>.title/body`, `queue.status.*`, `doctor.*`); a new backend code needs both
+    strings there. Decode `/api/doctor`
     with `JSON.plain`: `convertFromSnakeCase` also rewrites *dictionary keys*
     (`ffmpeg_path` -> `ffmpegPath`). Keys built at run time are not seen by the catalog scan;
     list new families in `LocalizationTests.everyStateTheScreensNameIsTranslated`. On macOS a
@@ -224,14 +202,15 @@ Local-only media workstation on yt-dlp + FFmpeg. macOS arm64, single user (Berk)
     reach only the focused view, so İncele makes its page focusable for ⌘V. XCUITest walks the
     whole accessibility tree for every query: a big result (the multi-audio fixture) made each
     step take ~40 s until table rows became one element each (`.combine`). The native panel's
-    remembered quick choices live in UserDefaults (`vd-quick-rules`), apart from the web page's
-    localStorage and the Safari popup's storage; with `VD_DATA_DIR` set (every test) they go to
+    remembered quick choices live in UserDefaults (`vd-quick-rules`), apart from the Safari
+    popup's storage; with `VD_DATA_DIR` set (every test) they go to
     `<data>/native-quick-rules.json` instead, because UI tests run this same bundle and would
     otherwise read and ratchet Berk's real rules. The panel's state (`DownloadPlanner`) lives in
     `Inspector`, not in a view's `@State`: leaving İncele must not reset the tracks. Fixture mode
     counts as "unknown, so no remote images" until `/api/health` has answered. **Tests never load remote images**: the app
-    shows none against a fixture-mode backend (`remoteImages`), and Playwright sends every
-    request outside this Mac to a closed proxy port (the suite used to fetch i.ytimg.com).
+    shows none against a fixture-mode backend (`remoteImages`), and the extension's Playwright
+    run sends every request outside this Mac to a closed proxy port (the old web suite used to
+    fetch i.ytimg.com).
     The paste UI test puts Berk's pasteboard back afterwards.
 39. **AppKit aborts on a layout feedback loop** ("more Update Constraints in Window passes than
     there are views"; the crash names `SplitViewChildController … didUpdateMinSize`). In a split
@@ -242,11 +221,9 @@ Local-only media workstation on yt-dlp + FFmpeg. macOS arm64, single user (Berk)
     Other N6 lessons: a `confirmationDialog` clears its `isPresented` binding *before* the
     button's action runs -- act on the item it passes, not on state; a segmented control drawn
     icon-only in the toolbar is named after its SF symbol ("Izgara Görüntüsü"), so give each
-    segment an `accessibilityLabel`; macOS's Turkish name for Quick Look is "Göz At"; the SPA's
-    `index.html` is served `no-cache` (the app's web view kept an old one, and its old scripts,
-    after a rebuild); UI tests pass `-ApplePersistenceIgnoreState YES` (window restoration is
-    Berk's: after a crash it brought the app up with no window) and use an ephemeral web data
-    store. A failing UI test's hierarchy dump includes the Apple menu's recent items: never copy
+    segment an `accessibilityLabel`; macOS's Turkish name for Quick Look is "Göz At"; UI tests pass
+    `-ApplePersistenceIgnoreState YES` (window restoration is Berk's: after a crash it brought
+    the app up with no window). A failing UI test's hierarchy dump includes the Apple menu's recent items: never copy
     those dumps anywhere.
 
 40. **Stüdyo cuts on frames** (Berk's request, 2026-10-13). The native timeline works on a

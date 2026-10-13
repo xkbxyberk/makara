@@ -206,7 +206,8 @@ error), its XCUITest scenarios and screenshots, then the embedded web view for i
 
 ### N8 — Wrap-up
 - [x] Decided 2026-10-14: the web UI is removed (the native app is the only UI)
-- [ ] Remove `frontend/`, the SPA serving, web-only endpoints; check.sh and docs follow
+- [x] Removed `frontend/`, the SPA serving and the web-only endpoints (`/command`, `/notify`, the
+  AppleScript folder/file pickers); the extension's tests moved to `macos/extension-tests/`
 - [ ] App installed in `~/Applications`, signed with Developer ID -- *after* P-series below
 
 ## P-series — Berk's wishes of 2026-10-14 (before signing and installing)

@@ -333,3 +333,17 @@ rate. Fixed (frames counted from the video's first frame, a coarse then exact se
 cuts for VFR) with tests that generate those sources and compare pixels.
 
 **Next:** N8 -- wrap-up (the browser UI's fate, Developer ID, ~/Applications).
+
+## 2026-10-14 — N8: the browser UI is removed
+
+Berk's decision: "Web arayüzü kalmasın, kaldır." `frontend/` is gone (React app, its vitest and
+Playwright suites); the server serves no page (every non-API path, like an unknown API path, is a
+404) and lost the endpoints only the page used: `/api/command`, `/api/notify` and the AppleScript
+folder/file pickers. The Safari extension keeps its tests in `macos/extension-tests/`:
+`shared.test.mjs` (`node --test`, no dependencies; byte sizes now pinned as literals) and the
+popup e2e moved there unchanged. The native catalog is now the only string source, so the vitest
+that kept it equal to `tr.ts` went with tr.ts. CLAUDE.md drops the web-only gotchas (10, 22, 24,
+26, 27, 33) and keeps the other numbers. Tests were not run (Berk's working mode since today),
+apart from the touched pytest files and the shared.js tests.
+
+**Next:** the P-series (PLAN.md), starting with P1 — the Safari extension beyond YouTube.

@@ -16,7 +16,6 @@ from typing import Any
 
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import FileResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app import db, errors, paths
@@ -159,21 +158,10 @@ def create_app() -> FastAPI:
             request.app.state.jobs.publish({"type": "clipboard", "url": str(body["url"])})
             return {"ok": True}
 
-    dist = paths.FRONTEND_DIST
-    if dist.exists():
-        app.mount("/assets", StaticFiles(directory=dist / "assets"), name="assets")
-
-        @app.get("/{full_path:path}", response_model=None)
-        def spa(full_path: str) -> FileResponse | JSONResponse:
-            # An unknown API path is an error, not the page (an old client must not get HTML).
-            if full_path == "api" or full_path.startswith("api/"):
-                return JSONResponse(status_code=404, content={"error": {"code": "NOT_FOUND"}})
-            index = dist / "index.html"
-            if not index.exists():
-                return JSONResponse(status_code=404, content={"error": {"code": "NO_FRONTEND"}})
-            # Asked again every time: the app's web view kept a heuristically "fresh" old
-            # index.html (and so the old script bundle) after an update. Assets are hashed.
-            return FileResponse(index, headers={"Cache-Control": "no-cache"})
+    # No web page any more (the app is native): an unknown path, API or not, is a 404.
+    @app.get("/{full_path:path}", response_model=None)
+    def not_found(full_path: str) -> JSONResponse:
+        return JSONResponse(status_code=404, content={"error": {"code": "NOT_FOUND"}})
 
     return app
 

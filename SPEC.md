@@ -3,7 +3,7 @@
 A local-only media workstation over yt-dlp and FFmpeg. One user, one Mac, never deployed.
 Four areas share one job queue: **Inspect · Download · Library · Studio**.
 
-Turkish is the only UI language shipped; every string lives in `frontend/src/i18n/tr.ts`.
+Turkish is the only UI language shipped; every string lives in the app's `Localizable.xcstrings` (the Safari extension has its own `_locales/tr/messages.json`).
 
 ---
 
@@ -12,7 +12,7 @@ Turkish is the only UI language shipped; every string lives in `frontend/src/i18
 | Decision | Choice |
 |---|---|
 | Shell (until N2) | pywebview desktop window + double-clickable `VideoDownloader.command`; also reachable in a browser at `http://127.0.0.1:8787` |
-| Shell (from N2, built) | A native `VideoDownloader.app` (SwiftUI) over the same backend: native sidebar, title bar, menus (Git: ⌘1–⌘5), Settings window (⌘,), Dock badge, notifications, `videodownloader://`. It starts the backend itself and stops it on quit. Every screen and the Settings window are native SwiftUI (N4–N7); the app shows no web page. The web UI stays reachable in a browser until N8 decides. The pywebview window is gone |
+| Shell (from N2, built) | A native `VideoDownloader.app` (SwiftUI) over the same backend: native sidebar, title bar, menus (Git: ⌘1–⌘5), Settings window (⌘,), Dock badge, notifications, `videodownloader://`. It starts the backend itself and stops it on quit. Every screen and the Settings window are native SwiftUI (N4–N7); the app shows no web page. The browser UI was removed in N8 (2026-10-14). The pywebview window is gone |
 | Safari | A Safari web extension inside the app: detects downloadable media and downloads with one click from the qualities and audio streams that video actually offers. Never downloads on its own |
 | Safari extension (N3) | Toolbar icon: filled on pages yt-dlp supports or that play media, outline otherwise; only the page URL goes to the app on this Mac, offline. Popup: the video's own choices (MKV / MP4 / Sadece ses, size and re-encode per row, audio language, subtitles), the site's last clicked choice preselected, one "İndir", live progress, "Uygulamada incele". When the app is closed it offers to open it. Lists open in the app; DRM and unsupported pages say so. Right-click a link: download with the remembered choice, or inspect in the app. ⌃⇧D opens the popup |
 | Quick choices | No fixed profiles. The inspect model lists the source's own video qualities (per output, MKV or MP4) and audio-only options with sizes; the last choice per site is remembered as a rule and pre-selected |
@@ -30,7 +30,7 @@ Turkish is the only UI language shipped; every string lives in `frontend/src/i18
 
 ```
 backend/app/
-  main.py            FastAPI on 127.0.0.1:8787, serves frontend/dist as an SPA
+  main.py            FastAPI on 127.0.0.1:8787, JSON only (no web page since N8)
   paths.py           every filesystem root; VD_DATA_DIR / VD_DOWNLOAD_DIR override for tests
   errors.py          raw failure -> stable code (never Turkish prose)
   doctor.py          yt-dlp / JS runtime / ffmpeg capability probing
@@ -40,13 +40,11 @@ backend/app/
   workers/           one child process per extraction or job
   inspect_service.py drives the worker; serves fixtures when VD_FIXTURE_MODE=1
   api/routes.py      the HTTP surface
-frontend/src/
-  i18n/tr.ts         every user-facing string
-  theme.css          design tokens, light + dark
-  lib/api.ts         typed client; ApiError carries a code, not a sentence
-  lib/format.ts      bytes, duration, bitrate, dates, language names
-  components/ui.tsx  Panel, Term (tooltip), Badge, Empty/Loading/Error states, CopyButton
-  routes/            InspectRoute, DoctorRoute
+macos/
+  VideoDownloader/     the app target (starts the backend), the Safari extension target, UI tests
+  VideoDownloaderKit/  every screen (SwiftUI), APIClient, Localizable.xcstrings
+  extension/           the Safari web extension (plain JS)
+  extension-tests/     shared.js unit tests (node --test) and the popup e2e (Playwright)
 ```
 
 **Why a child process per job:** cancelling means killing the child, and a yt-dlp or FFmpeg
@@ -260,7 +258,7 @@ slides, sheets drop from the top, the Library inspector slides in, theme changes
 
 ### Ayarlar (M3, built)
 - Download folder (text + native "Seç…" picker; `/` and system folders refused), filename
-  template with a live preview rendered from sample values in `tr.ts`, concurrency (1–6),
+  template with a live preview rendered from sample values the app supplies, concurrency (1–6),
   default mode, theme (system/light/dark, stored locally), clipboard watcher (opt-in, default
   off), notifications. Save is disabled until something changes; unsaved changes are flagged.
 
@@ -281,7 +279,7 @@ When the opt-in watcher sees a link copied, a banner offers "İncele" / "Yoksay"
     default, move up/down); add external audio/subtitle files.
   - *Altyazı*: convert, shift (seconds, negative = earlier), or clean YouTube auto captions
     (pre-selected when the file looks like one).
-  - Output name, defaulting to "<source> (kesit|ses|remux|altyazı)" from `tr.ts`.
+  - Output name, defaulting to "<source> (kesit|ses|remux|altyazı)" from the app's catalog.
 - **Command panel:** notices (e.g. "Başlangıç 1.5 sn yerine 1 sn olacak"), the exact output
   path(s), every FFmpeg command with a copy button, and the in-app steps described in words.
   "Çalıştır" is disabled until the plan matches the current form and nothing blocks.
@@ -316,6 +314,6 @@ WebP output, because this FFmpeg build lacks libass and libwebp.
 
 ## 8. Verification
 
-`./scripts/check.sh` is the gate: ruff, ruff-format, mypy, pytest, tsc, eslint, vitest, the
-production build, and Playwright. Tests never reach the network; the one live test is behind
+`./scripts/check.sh` is the gate: ruff, ruff-format, mypy, pytest, the extension's tests
+(node --test, Playwright for the popup), Swift package tests, the app build and its UI tests. Tests never reach the network; the one live test is behind
 `RUN_LIVE_TESTS=1`. Per-feature end-to-end scenarios live in `tests.json`.

@@ -5,13 +5,12 @@ Sunucu sadece `127.0.0.1` üzerinden dinler; hiçbir veri dışarı gönderilmez
 
 ## Kurulum
 
-Gereken hazır araçlar: [uv](https://docs.astral.sh/uv/), Node 22+, ve `ffmpeg` (`brew install ffmpeg`).
+Gereken hazır araçlar: [uv](https://docs.astral.sh/uv/), Xcode ve `ffmpeg` (`brew install ffmpeg`).
 YouTube için bir JavaScript motoru gerekir; `deno` önerilir (`brew install deno`).
 
 ```bash
 cd ~/VideoDownloader
 uv sync                      # Python bağımlılıkları (yt-dlp dahil)
-cd frontend && npm install && npm run build && cd ..
 ```
 
 ## Çalıştırma
@@ -26,12 +25,6 @@ Uygulama sunucuyu kendisi başlatır ve kapanırken durdurur. Günlük:
 `~/Library/Logs/VideoDownloader/backend.log`. Bağlantıları `videodownloader://inspect?url=…`
 ile, Dock simgesine sürükleyerek ya da pencereye bırakarak da inceletebilirsin. Ayarlar ⌘, ile
 açılır.
-
-Tarayıcıda:
-
-```bash
-PYTHONPATH=backend uv run python -m app.main   # http://127.0.0.1:8787
-```
 
 İlk açılışta **Sistem** sekmesine bak: yt-dlp sürümü, JavaScript motoru ve FFmpeg yetenekleri
 orada listelenir. Bir sorun varsa yanında kopyalanabilir çözüm komutu çıkar.
@@ -60,7 +53,7 @@ uv lock --upgrade-package yt-dlp --prerelease=allow && uv sync
 ## Geliştirme
 
 ```bash
-./scripts/check.sh    # lint + tipler + pytest + vitest + derleme + uçtan uca testler
+./scripts/check.sh    # lint + tipler + pytest + eklenti testleri + uygulama derlemesi + arayüz testleri
 ```
 
 Testler **hiçbir zaman ağa çıkmaz**; `tests/fixtures/infojson/` altındaki gerçek kayıtları
