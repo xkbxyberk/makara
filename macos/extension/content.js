@@ -242,9 +242,11 @@
         for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
         svg.append(el);
       };
-      shape('rect', { x: '1', y: '1', width: '30', height: '30', rx: '8', fill: '#0a84ff' });
-      shape('path', { d: 'M16 8v12m-5-5 5 5 5-5M10 24h12', fill: 'none', stroke: '#fff', 'stroke-width': '2.4',
-        'stroke-linecap': 'round', 'stroke-linejoin': 'round' });
+      // The app icon's mark (macos/design): a play triangle pointing down onto a shelf.
+      shape('rect', { x: '1', y: '1', width: '30', height: '30', rx: '8', fill: '#15224a' });
+      shape('path', { d: 'M11 9.6h10L16 17.4Z', fill: '#ff7a5a', stroke: '#ff7a5a', 'stroke-width': '2.6',
+        'stroke-linejoin': 'round' });
+      shape('rect', { x: '10.4', y: '21.2', width: '11.2', height: '2.4', rx: '1.2', fill: '#f5f7fc' });
       return svg;
     }
 

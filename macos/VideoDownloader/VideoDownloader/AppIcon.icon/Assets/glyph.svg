@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- A play triangle turned to point down: playing and downloading in one mark. -->
+  <defs>
+    <linearGradient id="warm" x1="512" y1="276" x2="512" y2="640" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFC94D"/>
+      <stop offset="1" stop-color="#FF3D6A"/>
+    </linearGradient>
+  </defs>
+  <path d="M354 318 L670 318 L512 586 Z" fill="url(#warm)" stroke="url(#warm)" stroke-width="88" stroke-linejoin="round"/>
+</svg>

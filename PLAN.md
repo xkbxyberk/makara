@@ -250,9 +250,13 @@ Berk asks (session limits).
 - [x] Defaults: menu bar on, launch at login on after first run (asked once)
 
 ### P5 — Icon and design
-- [ ] A professional SVG app icon that says what it does (download arrow + film/waveform),
+- [~] A professional SVG app icon that says what it does (download arrow + film/waveform),
       rendered to the asset catalog sizes, the extension's toolbar icons and a template
-      status-bar glyph; UI/UX polish pass over every screen
+      status-bar glyph; UI/UX polish pass over every screen. Icon done (2026-10-14): an Icon
+      Composer document (`AppIcon.icon`, SVG layers: a play triangle pointing down onto a shelf,
+      film sprockets, navy ground) so macOS gives it Liquid Glass and the tinted/dark looks;
+      `scripts/render_icons.sh` makes the extension's PNGs; the menu bar glyph is a template
+      SVG. The UI/UX pass is still open
 
 ### P6 — Ideas added by Claude (to discuss)
 - [ ] Extension: "zaten indirildi" when the page's video is in the library; one-click with the

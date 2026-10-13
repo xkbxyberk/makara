@@ -297,6 +297,18 @@ UI and went with it (N8).
     the open-application event's `keyAELaunchedAsLogInItem`). The one-time "start at login?"
     question is skipped whenever `VD_DATA_DIR` is set (tests, development).
 
+44. **Icons (P5).** The app icon is an Icon Composer document,
+    `macos/VideoDownloader/VideoDownloader/AppIcon.icon` (`icon.json` + SVG layers in
+    `Assets/`), referenced by the project as `folder.iconcomposer.icon`; Xcode builds the icns
+    and the asset-catalog renditions from it (the old `AppIcon.appiconset` is gone: two
+    `AppIcon`s would clash). Preview a change with Icon Composer's own `ictool`
+    (`…/Icon Composer.app/Contents/Executables/ictool X.icon --export-image --output-file o.png
+    --platform macOS --rendition Default|Dark|TintedDark --width 512 --height 512 --scale 1`;
+    `Developer/usr/bin/ictool` is another tool and refuses those flags). The template glyphs
+    (Safari toolbar: outline idle, filled active, black on transparent; menu bar: `menubar.svg`
+    in `MenuBarIcon.imageset`, template intent) live in `macos/design/`; run
+    `scripts/render_icons.sh` after changing any of them. The page card draws the mark inline.
+
 ## Rules
 
 - **Never delete, skip, weaken or `xfail` a test to make the suite pass.** Fix the code.

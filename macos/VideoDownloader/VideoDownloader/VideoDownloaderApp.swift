@@ -38,7 +38,7 @@ struct MenuBarLabel: View {
     let model: AppModel
 
     var body: some View {
-        Image(systemName: "arrow.down.circle")
+        Image("MenuBarIcon")  // the app icon's mark, a template (macos/design/menubar.svg)
         if model.activeCount > 0 { Text("\(model.activeCount)") }
     }
 }

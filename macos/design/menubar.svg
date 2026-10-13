@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" width="18" height="18">
+  <!-- The menu bar item: 18 pt, a template image (the system colours it). -->
+  <path d="M5.3 4.4 L12.7 4.4 L9 10.4 Z" fill="#000" stroke="#000" stroke-width="2.3" stroke-linejoin="round"/>
+  <rect x="4.6" y="13.1" width="8.8" height="2.1" rx="1.05" fill="#000"/>
+</svg>

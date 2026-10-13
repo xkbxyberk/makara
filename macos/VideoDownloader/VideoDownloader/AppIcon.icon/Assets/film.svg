@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Film sprocket holes down both sides: this is about video. -->
+  <rect x="178" y="268" width="44" height="60" rx="13" fill="#FFFFFF" fill-opacity="0.2"/>
+  <rect x="178" y="372" width="44" height="60" rx="13" fill="#FFFFFF" fill-opacity="0.2"/>
+  <rect x="178" y="476" width="44" height="60" rx="13" fill="#FFFFFF" fill-opacity="0.2"/>
+  <rect x="178" y="580" width="44" height="60" rx="13" fill="#FFFFFF" fill-opacity="0.2"/>
+  <rect x="178" y="684" width="44" height="60" rx="13" fill="#FFFFFF" fill-opacity="0.2"/>
+  <rect x="802" y="268" width="44" height="60" rx="13" fill="#FFFFFF" fill-opacity="0.2"/>
+  <rect x="802" y="372" width="44" height="60" rx="13" fill="#FFFFFF" fill-opacity="0.2"/>
+  <rect x="802" y="476" width="44" height="60" rx="13" fill="#FFFFFF" fill-opacity="0.2"/>
+  <rect x="802" y="580" width="44" height="60" rx="13" fill="#FFFFFF" fill-opacity="0.2"/>
+  <rect x="802" y="684" width="44" height="60" rx="13" fill="#FFFFFF" fill-opacity="0.2"/>
+</svg>
