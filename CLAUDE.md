@@ -278,6 +278,13 @@ UI and went with it (N8).
     `VD_ARIA2C` enables it. **Pause** = cancel that ends `paused` and keeps the scratch
     directory (the `.part` and `.aria2` files); resume requeues it. Stüdyo jobs cannot pause.
 
+42. **Kütüphane's shelves (P3)** are routes (`Route.shelves`: videos, music, edits) showing the
+    same `LibraryView`; the route sets `LibraryQuery.category` (not a filter: `isFiltered`
+    ignores it). The backend's `category` is a fixed SQL clause per name (`library.CATEGORIES`):
+    a Stüdyo output (`mode = 'studio'` or site `Studio`) is on the Stüdyo shelf whatever it
+    holds. Counts come from `facets.categories`; the sidebar reloads them on library events
+    when another screen is shown. New Route cases go at the *end*: ⌘1… follow `allCases`.
+
 ## Rules
 
 - **Never delete, skip, weaken or `xfail` a test to make the suite pass.** Fix the code.

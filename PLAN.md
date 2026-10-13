@@ -235,8 +235,10 @@ Berk asks (session limits).
 - [x] Pause / resume (keep `.part` files), a global speed limit, a "faster" setting
 
 ### P3 — Library by kind in the sidebar
-- [ ] Kütüphane splits by what was downloaded (Berk's choice): Videolar · Müzik · Stüdyo, under
-      the Kütüphane heading, with counts; the site and other filters stay inside each
+- [x] Kütüphane splits by what was downloaded (Berk's choice): Videolar · Müzik · Stüdyo, under
+      the Kütüphane heading, with counts; the site and other filters stay inside each (built as
+      rows under a Kütüphane disclosure; the Stüdyo shelf is named "Stüdyo çıktıları" so it is
+      not mistaken for the Stüdyo screen)
 
 ### P4 — Menu bar app, launch at login, Dock
 - [ ] A status-bar item (default on) with the app's template icon: active downloads with

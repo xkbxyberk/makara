@@ -99,6 +99,25 @@ def test_search_sort_and_filters(library: Library, tmp_path: Path, test_media: P
     assert library.facets()["count"] == 2
 
 
+def test_the_sidebar_shelves_videos_music_and_studio_output(
+    library: Library, tmp_path: Path, test_media: Path
+) -> None:
+    video, song, cut = tmp_path / "v.mp4", tmp_path / "s.m4a", tmp_path / "v (kesit).mp4"
+    shutil.copy2(test_media / "video_h264.mp4", video)
+    shutil.copy2(test_media / "audio_en.m4a", song)
+    shutil.copy2(test_media / "video_h264.mp4", cut)
+    add(library, video, title="A video")
+    add(library, song, title="A song")
+    studio = outcome_for(cut, title="ignored")
+    studio["meta"]["extractor_key"] = "Studio"
+    library.add(job={"id": "job2", "mode": "studio", "title": None}, outcome=studio)
+    # A Stüdyo cut is a video, but it is on the Stüdyo shelf, not with the downloads.
+    assert [i["title"] for i in library.query(category="videos")] == ["A video"]
+    assert [i["title"] for i in library.query(category="music")] == ["A song"]
+    assert [i["title"] for i in library.query(category="studio")] == ["v (kesit)"]
+    assert library.facets()["categories"] == {"videos": 1, "music": 1, "studio": 1}
+
+
 def test_a_deleted_file_is_marked_missing_never_forgotten(
     library: Library, clip: Path, tmp_path: Path
 ) -> None:

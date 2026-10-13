@@ -70,6 +70,11 @@
     "sites": [
       "Generic"
     ],
+    "categories": {
+      "videos": 1,
+      "music": 0,
+      "studio": 0
+    },
     "count": 1,
     "total_size": 201677,
     "missing": 0

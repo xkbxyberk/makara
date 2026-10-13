@@ -41,12 +41,15 @@ def get_library(
     search: str = "",
     site: str | None = None,
     kind: Literal["video", "audio"] | None = None,
+    category: Literal["videos", "music", "studio"] | None = None,
     status: Literal["ok", "missing"] | None = None,
     sort: Literal["added", "title", "size", "duration", "uploaded"] = "added",
 ) -> dict[str, Any]:
     library = _library(request)
     return {
-        "items": library.query(search=search[:200], site=site, kind=kind, status=status, sort=sort),
+        "items": library.query(
+            search=search[:200], site=site, kind=kind, category=category, status=status, sort=sort
+        ),
         "facets": library.facets(),
     }
 

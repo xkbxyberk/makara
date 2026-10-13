@@ -32,13 +32,14 @@ struct LocalizationTests {
     /// Keys built at run time (`queue.status.\(status)`) that the scan above cannot see.
     @MainActor @Test func everyStateTheScreensNameIsTranslated() {
         var keys: [String] = []
-        for status in ["queued", "running", "done", "failed", "cancelled"] { keys.append("queue.status.\(status)") }
-        for stage in ["queued", "starting", "preparing", "downloading", "postprocessing", "finalizing", "retrying", "cancelling"] {
+        for status in ["queued", "running", "paused", "done", "failed", "cancelled"] { keys.append("queue.status.\(status)") }
+        for stage in ["queued", "starting", "preparing", "downloading", "postprocessing", "finalizing", "retrying", "cancelling",
+                      "pausing", "paused"] {
             keys.append("queue.stage.\(stage)")
         }
         for mode in ["mkv", "compat_mp4", "separate", "audio", "studio"] { keys.append("mode.\(mode)") }
         for status in ["ok", "warn", "error"] { keys += ["doctor.status.\(status)", "doctor.checkStatus.\(status)"] }
-        for check in ["yt_dlp", "js_runtime", "ffmpeg", "safari_session"] {
+        for check in ["yt_dlp", "js_runtime", "ffmpeg", "aria2c", "safari_session"] {
             keys += ["doctor.check.\(check)", "doctor.checkHelp.\(check)"]
         }
         for state in ["off", "unavailable", "no_access", "signed_out", "signed_in", "unknown"] { keys.append("doctor.session.\(state)") }
@@ -49,6 +50,10 @@ struct LocalizationTests {
             keys += ["error.\(code).title", "error.\(code).body"]
         }
         keys.append("queue.warning.SUBTITLE_SKIPPED")
+        // Kütüphane's shelves (P3).
+        for shelf in Route.shelves.compactMap(\.libraryCategory) {
+            keys += ["library.shelfEmpty.\(shelf)", "library.shelfEmptyBody.\(shelf)"]
+        }
         // İncele and the download panel (N5).
         for code in ["MKV_PLAYERS", "VIDEO_REENCODE", "COMPATIBLE_ALTERNATIVE", "AUDIO_REENCODE", "AUDIO_MODE_COPY",
                      "AUDIO_MODE_REENCODE", "LOSSLESS_FROM_LOSSY", "UNKNOWN_SELECTION"] { keys.append("download.notice.\(code)") }

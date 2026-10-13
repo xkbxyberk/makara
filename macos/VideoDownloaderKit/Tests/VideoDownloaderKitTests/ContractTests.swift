@@ -39,7 +39,7 @@ struct ContractTests {
 
     @Test func doctor() throws {
         let report = try JSON.plain.decode(DoctorReport.self, from: sample("doctor"))
-        #expect(report.checks.map(\.id) == ["yt_dlp", "js_runtime", "ffmpeg", "safari_session"])
+        #expect(report.checks.map(\.id) == ["yt_dlp", "js_runtime", "ffmpeg", "aria2c", "safari_session"])
         let ffmpeg = try #require(report.checks.first { $0.id == "ffmpeg" })
         // Keys exactly as sent: the snake-case decoder would have made these "ffmpegPath", "videotoolboxH264".
         #expect(ffmpeg.values["ffmpeg_path"] != nil)
@@ -157,8 +157,11 @@ struct ContractTests {
     }
 
     @Test func anUnknownJobStatusDoesNotBreakDecoding() throws {
-        let json = #"{"id":"x","kind":"download","status":"paused","output_files":[]}"#
+        let json = #"{"id":"x","kind":"download","status":"hibernating","output_files":[]}"#
         let job = try JSON.decoder.decode(Job.self, from: Data(json.utf8))
         #expect(job.status == .unknown)
+        // "paused" was the example of an unknown status until P2 made it a real one.
+        let paused = #"{"id":"x","kind":"download","status":"paused","output_files":[]}"#
+        #expect(try JSON.decoder.decode(Job.self, from: Data(paused.utf8)).status == .paused)
     }
 }

@@ -92,6 +92,7 @@ struct CheckSection: View {
         "yt_dlp": ["version", "channel", "origin", "ejs_version"],
         "js_runtime": ["active"],
         "ffmpeg": ["version", "ffmpeg_path", "ffprobe_path"],
+        "aria2c": ["version", "path"],
     ]
     nonisolated static let structured: Set<String> = ["capabilities", "found", "missing_optional", "state"]
 

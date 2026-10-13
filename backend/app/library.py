@@ -59,6 +59,13 @@ SORTS = {
     "duration": "duration DESC",
     "uploaded": "upload_date DESC",
 }
+# The sidebar's split (Berk, 2026-10-14): what Stüdyo made is its own shelf, whatever it holds.
+STUDIO = "(mode = 'studio' OR site = 'Studio')"
+CATEGORIES = {
+    "videos": f"(kind = 'video' AND NOT {STUDIO})",
+    "music": f"(kind = 'audio' AND NOT {STUDIO})",
+    "studio": STUDIO,
+}
 DURATION_TOLERANCE = 1.0  # seconds; remuxes can shift the container duration slightly
 SPOTLIGHT_TIMEOUT = 10
 
@@ -188,6 +195,7 @@ class Library:
         search: str = "",
         site: str | None = None,
         kind: str | None = None,
+        category: str | None = None,
         status: str | None = None,
         sort: str = "added",
         include_trashed: bool = False,
@@ -208,6 +216,8 @@ class Library:
         if kind in ("video", "audio"):
             where.append("kind = ?")
             args.append(kind)
+        if category in CATEGORIES:
+            where.append(CATEGORIES[category])  # a fixed clause, never the input itself
         if status in ("ok", "missing", "trashed"):
             where.append("status = ?")
             args.append(status)
@@ -231,8 +241,16 @@ class Library:
             "SUM(CASE WHEN status = 'missing' THEN 1 ELSE 0 END) "
             "FROM library_items WHERE status != 'trashed'"
         )
+        counts = self._fetch(
+            "SELECT "
+            + ", ".join(
+                f"SUM(CASE WHEN {clause} THEN 1 ELSE 0 END)" for clause in CATEGORIES.values()
+            )
+            + " FROM library_items WHERE status != 'trashed'"
+        )[0]
         return {
             "sites": sites,
+            "categories": {name: n or 0 for name, n in zip(CATEGORIES, counts, strict=True)},
             "count": totals[0],
             "total_size": totals[1],
             "missing": totals[2] or 0,

@@ -134,10 +134,12 @@ struct LibraryView: View {
                     Text(L("library.allSites")).tag("")
                     ForEach(librarian.page?.facets.sites ?? [], id: \.self) { Text($0).tag($0) }
                 }
-                Picker(L("library.kindLabel"), selection: $librarian.query.kind) {
-                    Text(L("library.kind.all")).tag("")
-                    Text(L("library.kind.video")).tag("video")
-                    Text(L("library.kind.audio")).tag("audio")
+                if librarian.query.category.isEmpty {  // a shelf already is one kind
+                    Picker(L("library.kindLabel"), selection: $librarian.query.kind) {
+                        Text(L("library.kind.all")).tag("")
+                        Text(L("library.kind.video")).tag("video")
+                        Text(L("library.kind.audio")).tag("audio")
+                    }
                 }
                 Picker(L("library.sortLabel"), selection: $librarian.query.sort) {
                     ForEach(["added", "uploaded", "title", "size", "duration"], id: \.self) { Text(L("library.sort.\($0)")).tag($0) }
@@ -218,6 +220,10 @@ struct LibraryView: View {
                 if librarian.query.isFiltered {
                     ContentUnavailableView(L("library.noMatchTitle"), systemImage: "magnifyingglass",
                                            description: Text(L("library.noMatchBody")))
+                } else if !librarian.query.category.isEmpty {
+                    ContentUnavailableView(L("library.shelfEmpty.\(librarian.query.category)"),
+                                           systemImage: "books.vertical",
+                                           description: Text(L("library.shelfEmptyBody.\(librarian.query.category)")))
                 } else {
                     ContentUnavailableView(L("library.emptyTitle"), systemImage: "books.vertical",
                                            description: Text(L("library.emptyBody")))

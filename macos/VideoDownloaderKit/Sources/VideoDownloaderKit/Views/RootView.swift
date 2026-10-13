@@ -25,18 +25,31 @@ public struct RootView: View {
 
 struct MainSplitView: View {
     @Bindable var model: AppModel
+    @State private var libraryOpen = true
 
     var body: some View {
         NavigationSplitView {
             List(selection: Binding(get: { model.route }, set: { if let next = $0 { model.route = next } })) {
                 Section(L("nav.section.media")) {
-                    ForEach(Route.media) { route in row(route) }
+                    row(.inspect)
+                    row(.download)
+                    // The shelves sit under Kütüphane, which itself shows everything.
+                    DisclosureGroup(isExpanded: $libraryOpen) {
+                        ForEach(Route.shelves) { route in row(route) }
+                    } label: {
+                        row(.library)
+                    }
+                    row(.studio)
                 }
                 Section(L("nav.section.app")) {
                     ForEach(Route.app) { route in row(route) }
                 }
             }
             .navigationSplitViewColumnWidth(min: 180, ideal: 210, max: 280)
+            // The shelves' counts, kept current while another screen is shown.
+            .task(id: model.librarian.version) {
+                if model.route.libraryCategory == nil { await model.librarian.load() }
+            }
         } detail: {
             detail
                 .navigationTitle(model.route.title)
@@ -47,6 +60,12 @@ struct MainSplitView: View {
                     }
                 }
                 .environment(\.remoteImages, model.remoteImages)
+        }
+        .onChange(of: model.route, initial: true) {
+            if let category = model.route.libraryCategory, model.librarian.query.category != category {
+                model.librarian.query.category = category
+                model.librarian.selection = nil
+            }
         }
     }
 
@@ -60,7 +79,7 @@ struct MainSplitView: View {
                       client: model.backend.client)
         case .doctor:
             DoctorView(client: model.backend.client)
-        case .library:
+        case .library, .videos, .music, .edits:
             LibraryView(librarian: model.librarian, client: model.backend.client) { model.openInStudio(item: $0) }
         case .studio:
             StudioView(studio: model.studio, preview: model.preview, client: model.backend.client,
@@ -112,9 +131,20 @@ struct MainSplitView: View {
 
     private func row(_ route: Route) -> some View {
         Label(route.title, systemImage: route.symbol)
-            .badge(route == .download ? model.activeCount : 0)
+            .badge(count(route))
             .tag(route)
             .accessibilityIdentifier("sidebar.\(route.rawValue)")
+    }
+
+    private func count(_ route: Route) -> Int {
+        let facets = model.librarian.page?.facets
+        switch route {
+        case .download: return model.activeCount
+        case .library: return facets?.count ?? 0
+        default:
+            guard let category = route.libraryCategory, !category.isEmpty else { return 0 }
+            return facets?.categories?[category] ?? 0
+        }
     }
 }
 

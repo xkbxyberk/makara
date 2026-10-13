@@ -47,6 +47,8 @@ public struct LibraryPage: Decodable, Sendable, Equatable {
         public let count: Int
         public let totalSize: Double
         public let missing: Int
+        /// Items per shelf: "videos", "music", "studio" (absent from an older backend).
+        public var categories: [String: Int]? = nil
     }
 
     public let items: [LibraryItem]
@@ -65,15 +67,21 @@ public struct LibraryQuery: Sendable, Equatable, Hashable {
     public var search = ""
     public var site = ""
     public var kind = ""
+    /// The sidebar shelf ("videos", "music", "studio"); set by the route, not a filter.
+    public var category = ""
     public var status = ""
     public var sort = "added"
 
     public init() {}
 
-    public var isFiltered: Bool { self != LibraryQuery() }
+    public var isFiltered: Bool {
+        var unfiltered = LibraryQuery()
+        unfiltered.category = category
+        return self != unfiltered
+    }
 
     var items: [URLQueryItem] {
-        [("search", search), ("site", site), ("kind", kind), ("status", status), ("sort", sort)]
+        [("search", search), ("site", site), ("kind", kind), ("category", category), ("status", status), ("sort", sort)]
             .filter { !$0.1.isEmpty }.map { URLQueryItem(name: $0.0, value: $0.1) }
     }
 }
