@@ -40,19 +40,47 @@ struct MainSplitView: View {
         } detail: {
             detail
                 .navigationTitle(model.route.title)
+                .safeAreaInset(edge: .top, spacing: 0) { clipboardBanner }
+                .environment(\.remoteImages, model.remoteImages)
         }
     }
 
     /// Screens ported to SwiftUI are native; the rest are still the embedded web page.
     @ViewBuilder private var detail: some View {
         switch model.route {
+        case .inspect:
+            InspectView(inspector: model.inspector, client: model.backend.client) { model.route = .download }
         case .download:
             QueueView(jobs: model.jobList, loaded: model.jobsLoaded, connection: model.connection,
                       client: model.backend.client)
         case .doctor:
             DoctorView(client: model.backend.client)
-        case .inspect, .library, .studio:
+        case .library, .studio:
             WebScreen(bridge: model.web)
+        }
+    }
+
+    /// The opt-in clipboard watcher saw a link being copied: offer it, on every screen.
+    @ViewBuilder private var clipboardBanner: some View {
+        if let url = model.clipboardOffer {
+            HStack(spacing: 10) {
+                Image(systemName: "link").foregroundStyle(Color.accentColor)
+                Text(L("clipboard.offer"))
+                Text(url).font(.system(.callout, design: .monospaced)).lineLimit(1).truncationMode(.middle)
+                Spacer()
+                Button(L("clipboard.inspect")) {
+                    model.clipboardOffer = nil
+                    model.handle(.inspect(URL(string: url)!))
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(URL(string: url) == nil)
+                Button(L("clipboard.dismiss")) { model.clipboardOffer = nil }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(.bar)
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("clipboard.offer")
         }
     }
 

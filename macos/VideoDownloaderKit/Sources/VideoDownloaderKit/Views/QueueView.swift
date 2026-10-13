@@ -19,6 +19,7 @@ struct QueueView: View {
                 } description: {
                     Text(L("queue.emptyBody"))
                 }
+                .accessibilityElement(children: .contain)
                 .accessibilityIdentifier("queue.empty")
             } else {
                 List(jobs) { job in
@@ -27,6 +28,7 @@ struct QueueView: View {
                 }
                 .listStyle(.inset)
                 .alternatingRowBackgrounds(.disabled)
+                .accessibilityElement(children: .contain)
                 .accessibilityIdentifier("queue.list")
             }
         }

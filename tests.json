@@ -758,6 +758,54 @@
         }
       ]
     },
+    "N5": {
+      "title": "İncele, download panel and track picker in SwiftUI",
+      "status": "done",
+      "criteria": [
+        {
+          "id": "N5.1",
+          "text": "İncele is native: typing, ⌘V anywhere, the URL scheme, a .webloc and a link at launch all inspect natively; empty, loading and error (with retry) states",
+          "pass": true,
+          "proof": "ShellTests: testInspectingAndDownloadingIsNative, testPastingAnywhereInspectsTheCopiedLink, testABadLinkIsExplainedWithARetry, testTheURLSchemeInspectsALink, testALinkHandedOverAtLaunch…, testAWebLinkFileOpenedWithTheAppIsInspected"
+        },
+        {
+          "id": "N5.2",
+          "text": "Every track of a multi-audio video is shown (formats, audio roles, subtitles) and the track picker lists them",
+          "pass": true,
+          "proof": "ShellTests.testTheTrackPickerAndEveryTrackOfAMultiAudioVideo (native-inspected-multi-audio-light, native-track-picker-light); ContractTests.inspectedVideo/inspectedPlaylist"
+        },
+        {
+          "id": "N5.3",
+          "text": "The panel follows the web rules: defaults and settings output, remembered choice, quick choices keep subtitles, language order, audio-only selection, template default, only a clicked choice is remembered, the selection is sent as the backend names it",
+          "pass": true,
+          "proof": "DownloadPlannerTests (9), QuickRulesTests (2)"
+        },
+        {
+          "id": "N5.4",
+          "text": "İndir works only on the plan of the current selection; a queued download finishes in İndirmeler",
+          "pass": true,
+          "proof": "testInspectingAndDownloadingIsNative (waits for İndir to enable, then Kuyruğa eklendi → İndirmeleri aç → Tamamlandı)"
+        },
+        {
+          "id": "N5.5",
+          "text": "Plan notices and every İncele/panel string read as on the web page",
+          "pass": true,
+          "proof": "nativeStrings.test.ts (notice templates with and without params), NoticeTextTests, LocalizationTests"
+        },
+        {
+          "id": "N5.6",
+          "text": "No test loads a remote image: the app shows none in fixture mode; the e2e browser cannot reach the network",
+          "pass": true,
+          "proof": "RemoteImage (remoteImages env); e2e 'the suite never reaches the network, not even for a thumbnail' (fails without the proxy)"
+        },
+        {
+          "id": "N5.7",
+          "text": "Review fixes: the panel survives a trip to İndirmeler (and the same selection is not queued twice); tests keep quick rules in their own data folder; a non-object rule no longer crashes; repeated notices; summary in default-track order; fixture mode unknown means no remote images; the embedded page leaves the clipboard offer to the app",
+          "pass": true,
+          "proof": "theInspectorKeepsThePanelOfTheResultOnShow, testsKeepTheirRulesInTheirOwnDataFolder, aValueThatIsNotARuleIsSkipped, onlyAClickedQuickChoiceIsRemembered (ruleToSave); UI: testInspectingAndDownloadingIsNative (back to İncele), testACopiedLinkIsOfferedAndInspected; e2e 'embedded: the copied-link offer is left to the app'"
+        }
+      ]
+    },
     "M7a": {
       "title": "Safari session for age-restricted YouTube videos (pulled forward from M7)",
       "status": "done",

@@ -40,6 +40,15 @@ public struct APIClient: Sendable {
         return try await send(request, decoder: JSON.decoder)
     }
 
+    /// A body the models describe (sent snake-cased, as the backend names its fields).
+    public func post<T: Decodable, B: Encodable>(_ path: String, json body: B, as type: T.Type = T.self,
+                                                 timeout: TimeInterval = 10, decoder: JSONDecoder = JSON.decoder) async throws -> T {
+        var request = request(path, method: "POST", timeout: timeout)
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSON.encoder.encode(body)
+        return try await send(request, decoder: decoder)
+    }
+
     public func delete<T: Decodable>(_ path: String, as type: T.Type = T.self) async throws -> T {
         try await send(request(path, method: "DELETE", timeout: 10), decoder: JSON.decoder)
     }
@@ -96,6 +105,38 @@ public struct APIClient: Sendable {
     /// Selects one output file in Finder; the backend checks it is inside that job's folder.
     public func reveal(job id: String, file index: Int) async throws {
         _ = try await post(job(id) + "/reveal", body: ["index": index], as: Shown.self)
+    }
+
+    // ---- inspect and download ---------------------------------------------------------------
+
+    struct InspectBody: Encodable {
+        let url: String
+        let rule: QuickRule?
+
+        func encode(to encoder: Encoder) throws {
+            var c = encoder.container(keyedBy: CodingKeys.self)
+            try c.encode(url, forKey: .url)
+            try c.encode(rule, forKey: .rule)  // null, not absent, when there is none
+        }
+
+        enum CodingKeys: String, CodingKey { case url, rule }
+    }
+
+    /// Runs yt-dlp against the site (the backend caches the answer for a while).
+    public func inspect(_ url: String, rule: QuickRule?) async throws -> InspectResult {
+        try await post("api/inspect", json: InspectBody(url: url, rule: rule), timeout: Self.inspectTimeout)
+    }
+
+    /// The backend gives the inspect worker 180 s, and a video that needs the Safari session is
+    /// inspected twice (once without, once with): wait a little more than both.
+    public static let inspectTimeout: TimeInterval = 400
+
+    public func plan(_ selection: Selection) async throws -> Plan {
+        try await post("api/plan", json: selection, decoder: JSON.plain)
+    }
+
+    public func createJob(_ selection: Selection) async throws -> Job {
+        try await post("api/jobs", json: selection)
     }
 
     // ---- system -----------------------------------------------------------------------------

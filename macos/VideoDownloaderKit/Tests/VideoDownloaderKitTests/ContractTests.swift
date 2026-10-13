@@ -82,7 +82,42 @@ struct ContractTests {
     @Test func everySampleIsCoveredByATest() throws {
         let names = try FileManager.default.contentsOfDirectory(atPath: Self.samples.path)
             .filter { $0.hasSuffix(".json") }.sorted()
-        #expect(names == ["doctor.json", "error.json", "event-job.json", "health.json", "jobs.json", "settings.json", "supports.json"])
+        #expect(names == ["doctor.json", "error.json", "event-job.json", "health.json", "inspect-playlist.json", "inspect-video.json",
+                          "jobs.json", "plan.json", "settings.json", "supports.json"])
+    }
+
+    @Test func inspectedVideo() throws {
+        guard case .video(let model) = try JSON.decoder.decode(InspectResult.self, from: sample("inspect-video")) else {
+            Issue.record("not a video")
+            return
+        }
+        #expect(model.media.title?.isEmpty == false)
+        #expect(!model.videoFormats.isEmpty && !model.audioLanguages.isEmpty)
+        #expect(model.audioLanguages.contains { $0.role == "original" })
+        #expect(!model.subtitles.autoTranslated.isEmpty)
+        // `compat_mp4` keys decode (the snake-case strategy maps them onto compatMp4).
+        #expect(model.defaults.compatMp4.videoFormatId != nil)
+        let offer = try #require(model.offers.video.first)
+        #expect(offer.outputs.compatMp4.vcodecLabel == "H.264")
+        #expect(!model.offers.audio.isEmpty)
+        #expect(model.commands.suggested.hasPrefix("yt-dlp "))
+    }
+
+    @Test func inspectedPlaylist() throws {
+        guard case .playlist(let model) = try JSON.decoder.decode(InspectResult.self, from: sample("inspect-playlist")) else {
+            Issue.record("not a playlist")
+            return
+        }
+        #expect(model.entryCount > 0 && !model.entries.isEmpty)
+        #expect(model.entries.first?.url != nil)
+    }
+
+    @Test func plan() throws {
+        let plan = try JSON.plain.decode(Plan.self, from: sample("plan"))
+        #expect(!plan.blocking)
+        #expect(plan.filename?.hasSuffix(".mp4") == true)
+        #expect(plan.notices.first?.params["codec"] == .string("AV1"))
+        #expect(plan.notices.contains { $0.params["format_id"] == .string("137") })  // keys as sent
     }
 
     @Test func aRunningJobSaysWhetherItHasAPercentage() throws {

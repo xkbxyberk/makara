@@ -11,7 +11,7 @@ public enum Route: String, CaseIterable, Identifiable, Sendable {
 
     /// Screens drawn in SwiftUI. The embedded page never shows these: moving it there would
     /// only make it fetch for nothing (its Sistem screen runs the whole doctor again).
-    public var isNative: Bool { self == .download || self == .doctor }
+    public var isNative: Bool { self == .inspect || self == .download || self == .doctor }
 
     /// Where the embedded page should be while this screen is on show: the screen itself, or
     /// nil to leave it where it was (on a native screen).

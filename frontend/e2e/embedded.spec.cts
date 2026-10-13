@@ -48,3 +48,22 @@ test('embedded settings follow the system appearance and offer no theme choice',
   // A theme stored by the browser version is ignored inside the app.
   expect(await page.evaluate(() => document.documentElement.getAttribute('data-theme'))).toBeNull();
 });
+
+test('embedded: the copied-link offer is left to the app (one banner, not two)', async ({ page, context, request }) => {
+  await withNativeBridge(page);
+  await page.goto('/?embedded=1&route=library');
+  await expect(page.getByLabel('Başlık veya kanal ara')).toBeVisible();
+  // A normal page on the same server proves the event really went out.
+  const browserPage = await context.newPage();
+  await browserPage.goto('/');
+  const offer = (p: Page) => p.getByRole('status').filter({ hasText: 'Panoya bir bağlantı kopyaladın' });
+  await expect
+    .poll(async () => {
+      await request.post('/api/test/clipboard', { data: { url: 'https://example.test/local-media' } });
+      return offer(browserPage).isVisible();
+    })
+    .toBe(true);
+  await request.post('/api/test/clipboard', { data: { url: 'https://example.test/local-media' } });
+  await browserPage.waitForTimeout(500);
+  await expect(offer(page)).toHaveCount(0);
+});

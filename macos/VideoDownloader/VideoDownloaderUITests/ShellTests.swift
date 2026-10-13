@@ -96,7 +96,7 @@ final class ShellTests: XCTestCase {
         _ = sidebar("İncele")
         for title in ["İndirmeler", "Kütüphane", "Stüdyo", "Sistem"] { _ = sidebar(title) }
         XCTAssertFalse(app.outlines.staticTexts["Ayarlar"].exists, "Settings belongs in its own window")
-        page("Henüz bir şey incelemedin")
+        native("Henüz bir şey incelemedin")
         screenshot("native-inspect-light")
 
         sidebar("Sistem").click()
@@ -112,7 +112,7 @@ final class ShellTests: XCTestCase {
     func testDarkAppearance() {
         app.launchEnvironment["VD_APPEARANCE"] = "dark"
         app.launch()
-        page("Henüz bir şey incelemedin")
+        native("Henüz bir şey incelemedin")
         screenshot("native-inspect-dark")
         sidebar("Sistem").click()
         native("JavaScript çalıştırıcı")
@@ -124,7 +124,7 @@ final class ShellTests: XCTestCase {
 
     func testSettingsOpenInTheirOwnWindowFromTheAppMenu() {
         app.launch()
-        page("Henüz bir şey incelemedin")
+        native("Henüz bir şey incelemedin")
         // VideoDownloader > Ayarlar… (the system's own item, which carries ⌘,).
         let item = app.menuBars.menuItems["Ayarlar…"]
         XCTAssertTrue(item.waitForExistence(timeout: 10))
@@ -166,7 +166,7 @@ final class ShellTests: XCTestCase {
 
     func testTheQueueIsNativeAndFollowsADownload() throws {
         app.launch()
-        page("Henüz bir şey incelemedin")
+        native("Henüz bir şey incelemedin")
         sidebar("İndirmeler").click()
         native("Henüz indirme yok")
         XCTAssertEqual(app.windows.firstMatch.title, "İndirmeler")
@@ -194,14 +194,124 @@ final class ShellTests: XCTestCase {
         native("Henüz indirme yok")
     }
 
+    private func inspect(_ link: String) {
+        let field = app.textFields["inspect.url"]
+        XCTAssertTrue(field.waitForExistence(timeout: 30), "no link field")
+        field.click()
+        field.typeKey("a", modifierFlags: .command)
+        field.typeText(link + "\r")
+    }
+
+    func testInspectingAndDownloadingIsNative() {
+        app.launch()
+        native("Henüz bir şey incelemedin")
+        XCTAssertFalse(app.webViews.firstMatch.exists, "İncele is a native screen now")
+        screenshot("native-inspect-empty-light")
+
+        inspect("https://example.test/local-media")
+        native("Local test clip")
+        XCTAssertTrue(element("quick").waitForExistence(timeout: 10), "no quick choices")
+        native("Tahmini boyut")
+        let download = app.buttons["download.submit"]
+        // İndir waits for the plan of exactly this selection.
+        XCTAssertTrue(download.waitForExistence(timeout: 10))
+        let enabled = NSPredicate(format: "isEnabled == true")
+        expectation(for: enabled, evaluatedWith: download)
+        waitForExpectations(timeout: 15)
+        screenshot("native-inspected-local-light")
+
+        // Audio only, in the picker: no video section, a format (and a quality) instead.
+        app.buttons["download.picker"].click()
+        native("Görüntü")
+        app.radioButtons["Sadece ses"].firstMatch.click()
+        native("Ses biçimi")
+        XCTAssertFalse(element("picker").staticTexts["Görüntü"].exists)
+        app.radioButtons["Arşiv MKV"].firstMatch.click()
+        XCTAssertTrue(download.waitForExistence(timeout: 5))
+        expectation(for: enabled, evaluatedWith: download)
+        waitForExpectations(timeout: 15)
+
+        download.click()
+        native("Kuyruğa eklendi.")
+        app.buttons["İndirmeleri aç"].click()
+        XCTAssertTrue(app.windows["İndirmeler"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.windows.firstMatch.staticTexts["Tamamlandı"].waitForExistence(timeout: 60), "the download never finished")
+
+        // Back on İncele the panel is as it was left: queued, and not queued twice.
+        sidebar("İncele").click()
+        native("Kuyruğa eklendi.")
+        XCTAssertFalse(app.buttons["download.submit"].isEnabled, "the same selection could be queued again")
+    }
+
+    /// The opt-in clipboard watcher's offer is native and shows on any screen.
+    func testACopiedLinkIsOfferedAndInspected() throws {
+        app.launch()
+        sidebar("Sistem").click()
+        native("JavaScript çalıştırıcı")
+        try api("POST", "api/test/clipboard", ["url": "https://example.test/local-media"])
+        XCTAssertTrue(element("clipboard.offer").waitForExistence(timeout: 15), "no clipboard offer")
+        XCTAssertFalse(app.webViews.firstMatch.exists)
+        element("clipboard.offer").buttons["İncele"].click()
+        native("Local test clip")
+        XCTAssertTrue(app.windows["İncele"].waitForExistence(timeout: 10))
+        XCTAssertFalse(element("clipboard.offer").exists, "the offer stayed after it was taken")
+    }
+
+    func testTheTrackPickerAndEveryTrackOfAMultiAudioVideo() {
+        app.launch()
+        inspect("https://www.youtube.com/watch?v=0e3GPea1Tyg")  // a recorded answer: no network
+        native("$456,000 Squid Game In Real Life!")
+        native("Ses parçaları")
+        native("Orijinal")
+        native("Dublaj")
+        screenshot("native-inspected-multi-audio-light")
+        app.buttons["download.picker"].click()
+        XCTAssertTrue(element("picker").waitForExistence(timeout: 10), "no track picker")
+        native("Görüntü")
+        native("Ekler")
+        screenshot("native-track-picker-light")
+    }
+
+    /// ⌘V outside the field inspects the copied link, as on the web page.
+    func testPastingAnywhereInspectsTheCopiedLink() {
+        app.launch()
+        let empty = native("Henüz bir şey incelemedin")
+        // The pasteboard is Berk's: whatever he had copied goes back afterwards.
+        let board = NSPasteboard.general
+        let saved = board.pasteboardItems?.map { item in
+            item.types.reduce(into: [NSPasteboard.PasteboardType: Data]()) { $0[$1] = item.data(forType: $1) }
+        } ?? []
+        addTeardownBlock {
+            board.clearContents()
+            board.writeObjects(saved.map { types in
+                let item = NSPasteboardItem()
+                for (type, data) in types { item.setData(data, forType: type) }
+                return item
+            })
+        }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString("https://example.test/local-media", forType: .string)
+        empty.click()
+        app.typeKey("v", modifierFlags: .command)
+        native("Local test clip")
+        XCTAssertEqual(app.textFields["inspect.url"].value as? String, "https://example.test/local-media")
+    }
+
+    func testABadLinkIsExplainedWithARetry() {
+        app.launch()
+        inspect("not a link")
+        native("Bu bir bağlantı değil")
+        XCTAssertTrue(app.buttons["Tekrar dene"].exists)
+    }
+
     func testTheURLSchemeInspectsALink() {
         app.launch()
-        page("Henüz bir şey incelemedin")
+        native("Henüz bir şey incelemedin")
         sidebar("Sistem").click()
         native("JavaScript çalıştırıcı")
         let link = URL(string: "videodownloader://inspect?url=https%3A%2F%2Fexample.test%2Flocal-media")!
         NSWorkspace.shared.open(link)
-        page("Local test clip")
+        native("Local test clip")
         XCTAssertTrue(app.windows["İncele"].waitForExistence(timeout: 10), "the sidebar did not follow to İncele")
         screenshot("native-inspected-light")
     }
@@ -211,7 +321,7 @@ final class ShellTests: XCTestCase {
     func testALinkHandedOverAtLaunchIsInspectedOnceThePageIsReady() {
         app.launchEnvironment["VD_OPEN_AT_LAUNCH"] = "videodownloader://inspect?url=https%3A%2F%2Fexample.test%2Flocal-media"
         app.launch()
-        page("Local test clip")
+        native("Local test clip")
         XCTAssertTrue(app.windows["İncele"].exists)
     }
 
@@ -226,7 +336,7 @@ final class ShellTests: XCTestCase {
     /// (`application(_:open:)`).
     func testAWebLinkFileOpenedWithTheAppIsInspected() throws {
         app.launch()
-        page("Henüz bir şey incelemedin")
+        native("Henüz bir şey incelemedin")
         let webloc = scratch.appending(path: "clip.webloc")
         let plist = try PropertyListSerialization.data(fromPropertyList: ["URL": "https://example.test/local-media"],
                                                        format: .xml, options: 0)
@@ -237,7 +347,7 @@ final class ShellTests: XCTestCase {
             opened.fulfill()
         }
         wait(for: [opened], timeout: 10)
-        page("Local test clip")
+        native("Local test clip")
     }
 
     func testABackendThatCannotStartIsExplainedWithARetry() {
@@ -252,7 +362,7 @@ final class ShellTests: XCTestCase {
 
     func testClosingTheWindowQuitsAndStopsTheBackend() {
         app.launch()
-        page("Henüz bir şey incelemedin")
+        native("Henüz bir şey incelemedin")
         let started = Date()
         app.windows.firstMatch.buttons[XCUIIdentifierCloseWindow].click()
         XCTAssertTrue(app.wait(for: .notRunning, timeout: 30), "the app did not quit")

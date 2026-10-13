@@ -14,6 +14,10 @@ export default defineConfig({
   use: {
     baseURL: `http://127.0.0.1:${PORT}`,
     trace: 'retain-on-failure',
+    // Zero network for the browser too: every request but this Mac's goes to a closed port.
+    // A recorded YouTube answer points its thumbnails at i.ytimg.com, which the page fetched
+    // for real during the suite until 13 Oct. Chromium never proxies loopback.
+    proxy: { server: 'http://127.0.0.1:9', bypass: '127.0.0.1,localhost' },
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {

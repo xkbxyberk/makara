@@ -21,6 +21,8 @@ from fastapi.testclient import TestClient
 
 SAMPLES = Path(__file__).parent / "fixtures" / "api"
 LOCAL_URL = "https://example.test/local-media"
+MULTI_AUDIO_URL = "https://www.youtube.com/watch?v=0e3GPea1Tyg"
+PLAYLIST_URL = "https://www.youtube.com/@TED/videos"
 VOLATILE_KEYS = {"id", "inspect_id", "created_at", "started_at", "finished_at", "updated_at"}
 
 
@@ -97,6 +99,29 @@ def test_samples_for_the_native_app(client: TestClient) -> None:
     check("error", client.post("/api/quick", json={}).json())
     check("supports", client.get("/api/supports", params={"url": LOCAL_URL}).json())
     check("doctor", scrub_doctor(client.get("/api/doctor").json()), scrubbed_already=True)
+
+    # What the native İncele screen reads: a video (with offers), a playlist, and a plan.
+    multi = client.post("/api/inspect", json={"url": MULTI_AUDIO_URL, "rule": None}).json()
+    # Offer, thumbnail and entry ids are content, not volatile: only the inspect id changes.
+    check("inspect-video", {**multi, "inspect_id": "<id>"}, scrubbed_already=True)
+    playlist = client.post("/api/inspect", json={"url": PLAYLIST_URL}).json()
+    check("inspect-playlist", playlist, scrubbed_already=True)
+    selection = {
+        "inspect_id": multi["inspect_id"],
+        # The archive's AV1 + Opus in an MP4: notices that carry params (codec, height).
+        "mode": "compat_mp4",
+        **multi["defaults"]["mkv"],
+        "audio_codec": None,
+        "audio_quality": None,
+        "filename_template": None,
+        "extras": {
+            "thumbnail": True,
+            "thumbnail_file": False,
+            "description": False,
+            "info_json": False,
+        },
+    }
+    check("plan", client.post("/api/plan", json=selection).json())
 
     quick = client.post("/api/quick", json={"url": LOCAL_URL, "rule": {"kind": "video"}}).json()
     job_id = quick["job"]["id"]

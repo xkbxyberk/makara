@@ -37,6 +37,109 @@ public enum Format {
     }
 }
 
+extension Format {
+    static let turkish = Locale(identifier: "tr")
+    private static let posix = Locale(identifier: "en_US_POSIX")
+
+    /// "1.2 Mbps" / "128 kbps", as the web page's `formatBitrate`.
+    public static func bitrate(_ kbps: Double?) -> String {
+        guard let kbps, kbps.isFinite, kbps > 0 else { return "–" }
+        return kbps >= 1000 ? String(format: "%.1f %@", locale: posix, kbps / 1000, L("unit.mbps"))
+                            : "\(Int(kbps.rounded())) \(L("unit.kbps"))"
+    }
+
+    public static func sampleRate(_ hz: Double?) -> String {
+        guard let hz, hz.isFinite, hz > 0 else { return "–" }
+        return String(format: "%.1f %@", locale: posix, hz / 1000, L("unit.khz"))
+    }
+
+    /// A size with its trust marker ("≈1.2 GB"), or "–".
+    public static func size(_ bytes: Double?, _ kind: SizeKind) -> String {
+        guard let bytes else { return "–" }
+        return kind.prefix + Format.bytes(bytes)
+    }
+
+    public static func count(_ value: Double?) -> String {
+        guard let value, value.isFinite, value > 0 else { return "–" }
+        return value.formatted(.number.notation(.compactName).locale(turkish))
+    }
+
+    /// yt-dlp gives upload_date as YYYYMMDD.
+    public static func uploadDate(_ value: String?) -> String {
+        guard let value, value.count == 8, value.allSatisfy(\.isNumber),
+              let year = Int(value.prefix(4)), let month = Int(value.dropFirst(4).prefix(2)), let day = Int(value.suffix(2)),
+              let date = Calendar(identifier: .gregorian).date(from: DateComponents(year: year, month: month, day: day))
+        else { return "–" }
+        return date.formatted(Date.FormatStyle(date: .abbreviated, time: .omitted).locale(turkish))
+    }
+
+    /// A number as JavaScript prints it: 30, not 30.0; 29.97 as is.
+    public static func plain(_ value: Double) -> String {
+        value == value.rounded() && abs(value) < 1e15 ? String(Int(value)) : String(value)
+    }
+
+    /// Language codes into Turkish names. YouTube's audio-description tracks arrive as "en-desc",
+    /// which is not a real tag, so the suffix is peeled off first (as `languageName`).
+    public static func language(_ code: String?) -> String {
+        guard let code, !code.isEmpty else { return L("app.unknown") }
+        let base = code.hasSuffix("-desc") ? String(code.dropLast(5)) : code
+        return turkish.localizedString(forIdentifier: base) ?? base
+    }
+
+    /// A plan notice from its template: `{name}` is the param, `{name|Bu}` falls back to "Bu"
+    /// when it is missing, `{name^}` upper-cases it (the web page's notice functions).
+    public static func notice(_ template: String, _ params: [String: JSONValue]) -> String {
+        var result = ""
+        var rest = Substring(template)
+        while let open = rest.firstIndex(of: "{"), let close = rest[open...].firstIndex(of: "}") {
+            result += rest[..<open]
+            var spec = String(rest[rest.index(after: open)..<close])
+            let upper = spec.hasSuffix("^")
+            if upper { spec.removeLast() }
+            let parts = spec.split(separator: "|", maxSplits: 1, omittingEmptySubsequences: false)
+            let name = String(parts[0])
+            var value: String?
+            switch params[name] {
+            case .string(let text)?: value = text
+            case .number(let number)?: value = plain(number)
+            case .bool(let flag)?: value = String(flag)
+            default: value = nil
+            }
+            let text = value ?? (parts.count > 1 ? String(parts[1]) : "")
+            result += upper ? text.uppercased(with: posix) : text
+            rest = rest[rest.index(after: close)...]
+        }
+        return result + rest
+    }
+}
+
+/// A plan notice in words; a code this app does not know yet is shown as it is.
+func noticeText(_ notice: Plan.Notice) -> String {
+    localizedIfPresent("download.notice.\(notice.code)").map { Format.notice($0, notice.params) } ?? notice.code
+}
+
+/// A label with its explanation one hover away (the web page's `<Term>`).
+struct Term: View {
+    let label: String
+    let help: String
+
+    init(_ label: String, help: String) {
+        self.label = label
+        self.help = help
+    }
+
+    /// `term.<key>.label/body` from the catalog.
+    init(term key: String) {
+        self.init(L("term.\(key).label"), help: L("term.\(key).body"))
+    }
+
+    var body: some View {
+        Text(label)
+            .underline(pattern: .dot, color: .secondary.opacity(0.6))
+            .help(help)
+    }
+}
+
 /// A small tinted capsule: a mode, a status, "Safari oturumuyla".
 struct Badge: View {
     enum Tone { case neutral, accent, ok, warn, danger }
@@ -86,6 +189,7 @@ struct ErrorStateView: View {
                 RawDetails(raw: error.raw)
             }
         }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("error.\(error.code)")
     }
 }

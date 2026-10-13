@@ -168,7 +168,18 @@ No fixed profiles: the choices come from the inspected video itself.
       with its Full Disk Access / Settings shortcut, refresh in the toolbar, loading and error
 - [x] Error and state wording copied into the native catalog; a vitest keeps it equal to `tr.ts`
 - [x] Both screens no longer use the embedded web page in the app (the browser UI keeps them)
-### N5 — İncele + download panel + track picker in SwiftUI
+### N5 — İncele + download panel + track picker in SwiftUI ✅ done
+- [x] İncele: link field, ⌘V anywhere, drops, links from Safari / the Dock / the URL scheme and
+      the clipboard banner (now native, on every screen); empty / loading / error states; the
+      video (metadata, warnings, video and muxed tables, audio groups, three subtitle groups,
+      chapters, heatmap, thumbnails, commands) and the playlist view
+- [x] Download panel: outputs, the video's quick choices (remembered per site, saved only when
+      clicked), summary, size and file name from `/api/plan`, its notices, İndir (⌘↵) only on
+      the plan of exactly this selection, "Kuyruğa eklendi" → İndirmeler, INSPECT_EXPIRED
+- [x] Track picker: video, audio languages and variants, audio-only format and quality,
+      subtitles (machine translations filtered), extras, file name template, the command
+- [x] Tests never load a remote image: the app shows none against a fixture-mode backend, and
+      the e2e browser's requests outside this Mac go to a closed port
 ### N6 — Kütüphane in SwiftUI (grid/list, inspector, Quick Look, Trash with confirmation)
 ### N7 — Stüdyo and Ayarlar in SwiftUI
 Each: feature parity with the web screen (same backend calls, same states: empty, loading,

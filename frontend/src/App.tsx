@@ -126,7 +126,8 @@ export function App() {
 
   const { jobs, connection } = useJobs({
     onTransition,
-    onClipboard: setClipboardUrl,
+    // In the app the window offers the link itself, on every screen (two banners would be noise).
+    onClipboard: embedded ? undefined : setClipboardUrl,
     onLibrary: () => setLibraryVersion((v) => v + 1),
     onLibraryError: () => setCatalogueFailed(true),
   });

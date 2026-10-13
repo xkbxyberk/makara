@@ -14,6 +14,13 @@ public final class AppModel {
     /// False until the first snapshot: "loading", not "no downloads yet".
     public private(set) var jobsLoaded = false
     public private(set) var connection: Connection = .connecting
+    /// The backend runs on recorded answers (tests): no remote image is loaded then. Unknown
+    /// (nil) counts as yes: an answer that came late must not let a test fetch i.ytimg.com.
+    public private(set) var fixtureMode: Bool?
+    public var remoteImages: Bool { fixtureMode == false }
+    /// A link the opt-in clipboard watcher saw being copied, offered for inspection.
+    public var clipboardOffer: String?
+    public let inspector: Inspector
     public private(set) var activeCount = 0 {
         didSet { NSApp?.dockTile.badgeLabel = activeCount > 0 ? String(activeCount) : nil }
     }
@@ -33,7 +40,9 @@ public final class AppModel {
     @ObservationIgnored private var askedForNotifications = false
 
     public init(config: BackendConfig = .resolve()) {
-        backend = BackendController(config: config)
+        let backend = BackendController(config: config)
+        self.backend = backend
+        inspector = Inspector(client: { backend.client }, rules: QuickRules.forEnvironment(config.environment))
         web = WebBridge(port: config.port)
         settingsWeb = WebBridge(port: config.port)
         web.onRoute = { [weak self] raw in self?.pageMoved(to: raw) }
@@ -55,7 +64,9 @@ public final class AppModel {
         let waiting = pending
         pending = []
         for case .show(let target?) in waiting { route = target }
+        // The page is only seen on the screens not ported yet; it waits on an idle one.
         web.load(route: route.pageRoute ?? Route.inspect.rawValue)
+        fixtureMode = await backend.client.health(timeout: 10)?.fixtureMode
         listen()
         waiting.forEach(handle)
     }
@@ -107,7 +118,7 @@ public final class AppModel {
         switch incoming {
         case .inspect(let url):
             route = .inspect
-            web.inspect(url)
+            inspector.run(url.absoluteString)
         case .show(let target):
             if let target { route = target }
         }
@@ -155,7 +166,9 @@ public final class AppModel {
             await notify(previous: previous, current: job)
         case .removed(let id):
             jobs[id] = nil
-        case .library, .clipboard, .other:
+        case .clipboard(let url):
+            clipboardOffer = url
+        case .library, .other:
             break  // the embedded page shows these
         }
         activeCount = jobs.values.filter { $0.status.isActive }.count

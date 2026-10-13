@@ -286,4 +286,17 @@ stale texts in tr.ts fixed: LOGIN_REQUIRED and BOT_CHECK still promised cookie l
 phase". UI tests: the queue follows a real offline download to done, Finder reveal of a moved
 file, removal; the doctor shows every check and the test server's (never Berk's) session state.
 
-**Next:** N5 -- İncele, the download panel and track picker in SwiftUI.
+## N5 -- İncele, the download panel and the track picker in SwiftUI (13 Oct)
+
+İncele is native: `Inspector` (the screen's state, kept by the app model so a result survives
+a trip elsewhere and incoming links land in it) and `DownloadPlanner` (the panel's rules, a
+line-by-line port of DownloadPanel.tsx, unit-tested against the real multi-audio answer).
+Incoming links and the clipboard offer now go to the native screen; the embedded page no
+longer shows its own clipboard banner. Contract samples gained a video, a playlist and a plan
+with parameterised notices (whose native templates `{codec|Bu}` a vitest checks against the
+tr.ts functions). Found on the way: the e2e browser fetched real YouTube thumbnails (now a
+closed proxy, with a guard test that fails without it); a container's accessibility id
+overwrote its children's; a Form in a ScrollView rendered nothing; XCUITest spent ~40 s per
+step walking the multi-audio tree.
+
+**Next:** N6 -- Kütüphane in SwiftUI.

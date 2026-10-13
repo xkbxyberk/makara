@@ -1,0 +1,44 @@
+{
+  "size": {
+    "bytes": 327632694,
+    "kind": "exact",
+    "unreliable": false,
+    "missing": 0
+  },
+  "notices": [
+    {
+      "code": "VIDEO_REENCODE",
+      "level": "warn",
+      "params": {
+        "codec": "AV1"
+      }
+    },
+    {
+      "code": "COMPATIBLE_ALTERNATIVE",
+      "level": "info",
+      "params": {
+        "format_id": "137",
+        "height": 1080
+      }
+    },
+    {
+      "code": "AUDIO_REENCODE",
+      "level": "info",
+      "params": {
+        "codec": "Opus"
+      }
+    }
+  ],
+  "plan": {
+    "video": "transcode",
+    "audio": [
+      "transcode"
+    ],
+    "subtitles": "mov_text"
+  },
+  "blocking": false,
+  "filename": "Youtube/MrBeast/2021-11-24 - $456,000 Squid Game In Real Life! [0e3GPea1Tyg].mp4",
+  "filename_error": null,
+  "download_dir": "<path>",
+  "command": "yt-dlp -f 399+251-23 --merge-output-format mp4 --recode-video mp4 --embed-chapters --embed-metadata --write-subs --write-auto-subs --sub-langs tr,en --embed-subs 'https://www.youtube.com/watch?v=0e3GPea1Tyg'"
+}

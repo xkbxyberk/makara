@@ -30,7 +30,7 @@ struct LocalizationTests {
     }
 
     /// Keys built at run time (`queue.status.\(status)`) that the scan above cannot see.
-    @Test func everyStateTheScreensNameIsTranslated() {
+    @MainActor @Test func everyStateTheScreensNameIsTranslated() {
         var keys: [String] = []
         for status in ["queued", "running", "done", "failed", "cancelled"] { keys.append("queue.status.\(status)") }
         for stage in ["queued", "starting", "preparing", "downloading", "postprocessing", "finalizing", "retrying", "cancelling"] {
@@ -49,6 +49,21 @@ struct LocalizationTests {
             keys += ["error.\(code).title", "error.\(code).body"]
         }
         keys.append("queue.warning.SUBTITLE_SKIPPED")
+        // İncele and the download panel (N5).
+        for code in ["MKV_PLAYERS", "VIDEO_REENCODE", "COMPATIBLE_ALTERNATIVE", "AUDIO_REENCODE", "AUDIO_MODE_COPY",
+                     "AUDIO_MODE_REENCODE", "LOSSLESS_FROM_LOSSY", "UNKNOWN_SELECTION"] { keys.append("download.notice.\(code)") }
+        for role in ["original", "default", "dub", "descriptive", "unknown"] { keys += ["role.\(role)", "roleHelp.\(role)"] }
+        for code in ["USED_SAFARI_LOGIN", "DRM_PRESENT", "DRM_MAYBE", "SIZES_ARE_ESTIMATES", "NO_JS_RUNTIME"] {
+            keys.append("inspectWarning.\(code)")
+        }
+        for mode in Mode.allCases { keys += ["download.modeHelp.\(mode.rawValue)", "mode.\(mode.rawValue)"] }
+        for codec in DownloadPlanner.codecs { keys.append("download.audioCodec.\(codec)") }
+        for format in ["m4a", "opus", "mp3"] { keys.append("download.quick.format.\(format)") }
+        for term in ["format", "fps", "codec", "hdr", "bitrate", "container", "manifest", "channels", "sampleRate",
+                     "drm", "aiUpscaled", "drc", "muxed", "approxSize", "partialSize"] {
+            keys += ["term.\(term).label", "term.\(term).body"]
+        }
+        for codec in ["H.264", "HEVC", "AV1", "VP9", "AAC", "Opus"] { keys.append("codec.\(codec)") }
         for key in keys { #expect(localizedIfPresent(key) != nil, "\(key)") }
     }
 

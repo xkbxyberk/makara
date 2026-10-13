@@ -152,3 +152,20 @@ test('screenshots: inspect in light, dark and at a narrow width', async ({ page 
   await page.setViewportSize({ width: 420, height: 900 });
   await page.screenshot({ animations: 'disabled', path: `${SHOTS}/inspect-narrow.png`, fullPage: false });
 });
+
+test('the suite never reaches the network, not even for a thumbnail', async ({ page }) => {
+  await page.goto('/');
+  // An image, as the page loads thumbnails (a no-cors fetch fails here even with network).
+  const outcome = await page.evaluate(
+    () =>
+      new Promise<string>((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve('loaded');
+        img.onerror = () => resolve('blocked');
+        img.src = 'https://i.ytimg.com/vi/0e3GPea1Tyg/maxresdefault.jpg';
+      }),
+  );
+  expect(outcome).toBe('blocked');
+  // This Mac's own server still answers.
+  expect((await page.request.get('/api/health')).ok()).toBe(true);
+});

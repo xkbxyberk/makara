@@ -66,10 +66,6 @@ public final class WebBridge: NSObject {
         call("vd.navigate(value)", value: route)
     }
 
-    public func inspect(_ url: URL) {
-        call("vd.inspect(value)", value: url.absoluteString)
-    }
-
     /// The value is passed as an argument, never spliced into the script.
     private func call(_ expression: String, value: String) {
         guard pageReady else {

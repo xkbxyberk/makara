@@ -1,0 +1,143 @@
+{
+  "kind": "playlist",
+  "media": {
+    "id": "UCAuUUnT6oDeKwE6v1NGQxug",
+    "title": "TED - Videos",
+    "webpage_url": "https://www.youtube.com/@TED/videos",
+    "extractor": "YoutubeTab",
+    "channel": "TED",
+    "channel_url": "https://www.youtube.com/channel/UCAuUUnT6oDeKwE6v1NGQxug",
+    "description": "The TED Talks channel features the best talks and performances from the TED Conference, where the world's leading thinkers and doers give the talk of their lives in 18 minutes (or less) — plus originals, podcasts and exclusive content. Look for videos on Technology, Entertainment and Design as well as science, business, global issues, the arts and more.\n\nVisit https://TED.com for our entire library, transcripts, translations and personalized recommendations.\n\nTED videos may be used for non-commercial purposes under a Creative Commons License, Attribution–Non Commercial–No Derivatives (or the CC BY – NC – ND 4.0 International) and in accordance with the TED Talks Usage Policy: https://www.ted.com/about/our-organization/our-policies-terms/ted-talks-usage-policy. For more information on using TED for commercial purposes (e.g. employee learning, in a film or online course), submit a request at https://media-requests.ted.com"
+  },
+  "entries": [
+    {
+      "id": "Zgu97mCGS74",
+      "title": "Why You Should Embrace Unproductive Hobbies | TED Intersections",
+      "url": "https://www.youtube.com/watch?v=Zgu97mCGS74",
+      "duration": 1610,
+      "timestamp": null,
+      "live_status": null,
+      "view_count": 29000,
+      "thumbnail": "https://i.ytimg.com/vi/Zgu97mCGS74/hq720_custom_2.jpg?sqp=CLC2zNUG-oaymwEcCNAFEJQDSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLBMfGTT5brCixWLM77Bva-hexPjGQ"
+    },
+    {
+      "id": "PRmIrFhce04",
+      "title": "How to Help People Make Sense of Science | Jessica Malaty Rivera | TED",
+      "url": "https://www.youtube.com/watch?v=PRmIrFhce04",
+      "duration": 1174,
+      "timestamp": null,
+      "live_status": null,
+      "view_count": 77000,
+      "thumbnail": "https://i.ytimg.com/vi/PRmIrFhce04/hq720.jpg?sqp=-oaymwEcCNAFEJQDSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLD1Pcn4PUU-DFVRiai9K1lOctYkzw"
+    },
+    {
+      "id": "SD1MypHgAwc",
+      "title": "Why You Fear the Unknown — and What It Can Teach You | Maya Shankar and Simone Stolzoff | TED",
+      "url": "https://www.youtube.com/watch?v=SD1MypHgAwc",
+      "duration": 2943,
+      "timestamp": null,
+      "live_status": null,
+      "view_count": 84000,
+      "thumbnail": "https://i.ytimg.com/vi/SD1MypHgAwc/hq720.jpg?sqp=-oaymwEcCNAFEJQDSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLBgEYs4DV2vxg48f3wd04tvckdvNA"
+    },
+    {
+      "id": "e0Q_TcQUCks",
+      "title": "You Already Know How to Wiggle | Jacob Collier | TED",
+      "url": "https://www.youtube.com/watch?v=e0Q_TcQUCks",
+      "duration": 631,
+      "timestamp": null,
+      "live_status": null,
+      "view_count": 233000,
+      "thumbnail": "https://i.ytimg.com/vi/e0Q_TcQUCks/hq720_custom_3.jpg?sqp=CLC2zNUG-oaymwEcCNAFEJQDSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLBfVavSUTFJcP77FT5JLmQaJXRp4w"
+    },
+    {
+      "id": "X6hstmAa0cg",
+      "title": "Meet the Youngest-Ever Mayor in Japan’s History | Ryosuke Takashima | TED",
+      "url": "https://www.youtube.com/watch?v=X6hstmAa0cg",
+      "duration": 339,
+      "timestamp": null,
+      "live_status": null,
+      "view_count": 82000,
+      "thumbnail": "https://i.ytimg.com/vi/X6hstmAa0cg/hq720.jpg?sqp=-oaymwEcCNAFEJQDSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLCOXW2oR9jKwZtxnaGy5uTwk3lz_A"
+    },
+    {
+      "id": "zc_eKn13GQU",
+      "title": "This Is What the Birth of the Universe Sounded Like | Mark Whittle | TED",
+      "url": "https://www.youtube.com/watch?v=zc_eKn13GQU",
+      "duration": 746,
+      "timestamp": null,
+      "live_status": null,
+      "view_count": 94000,
+      "thumbnail": "https://i.ytimg.com/vi/zc_eKn13GQU/hq720_custom_2.jpg?sqp=CLC2zNUG-oaymwEcCNAFEJQDSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLBjCWBQERfds5K-M2ACisG4C-kWNQ"
+    },
+    {
+      "id": "4qtsOh2FwIs",
+      "title": "How Tech Will (and Won’t) Replace Your Doctor | TED Intersections",
+      "url": "https://www.youtube.com/watch?v=4qtsOh2FwIs",
+      "duration": 1555,
+      "timestamp": null,
+      "live_status": null,
+      "view_count": 97000,
+      "thumbnail": "https://i.ytimg.com/vi/4qtsOh2FwIs/hq720_custom_3.jpg?sqp=CLC2zNUG-oaymwEcCNAFEJQDSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLBkezpySYwEk4JjpgR_2RMeBcCyWg"
+    },
+    {
+      "id": "zYO9UbpEC9Y",
+      "title": "How Bullying Spreads — and How Social Bravery Stops It | Amy Cuddy | TED",
+      "url": "https://www.youtube.com/watch?v=zYO9UbpEC9Y",
+      "duration": 864,
+      "timestamp": null,
+      "live_status": null,
+      "view_count": 95000,
+      "thumbnail": "https://i.ytimg.com/vi/zYO9UbpEC9Y/hq720.jpg?sqp=-oaymwEcCNAFEJQDSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLAfJ_1oNPxnI8FDJONgndDECv2lWQ"
+    },
+    {
+      "id": "owRN5fVLoEk",
+      "title": "The Four Steps to Hearing Hard Feedback Gracefully | Chris Wheatley | TED",
+      "url": "https://www.youtube.com/watch?v=owRN5fVLoEk",
+      "duration": 750,
+      "timestamp": null,
+      "live_status": null,
+      "view_count": 118000,
+      "thumbnail": "https://i.ytimg.com/vi/owRN5fVLoEk/hq720_custom_1.jpg?sqp=CLC2zNUG-oaymwEcCNAFEJQDSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLBc_j5INyFcvYz4NbWYs1jgPuBfuw"
+    },
+    {
+      "id": "4WUVkpC8MKs",
+      "title": "A New Take on an Ancient Sound | Tina Lajevardian | TED",
+      "url": "https://www.youtube.com/watch?v=4WUVkpC8MKs",
+      "duration": 201,
+      "timestamp": null,
+      "live_status": null,
+      "view_count": 94000,
+      "thumbnail": "https://i.ytimg.com/vi/4WUVkpC8MKs/hq720.jpg?sqp=-oaymwEcCNAFEJQDSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLBontb-csv3m7eOzSsGxgoe5UyI-A"
+    },
+    {
+      "id": "u3qlbHrB7KI",
+      "title": "How to Fix Africa’s Learning Crisis | Rapelang Rabana | TED",
+      "url": "https://www.youtube.com/watch?v=u3qlbHrB7KI",
+      "duration": 622,
+      "timestamp": null,
+      "live_status": null,
+      "view_count": 78000,
+      "thumbnail": "https://i.ytimg.com/vi/u3qlbHrB7KI/hq720.jpg?sqp=-oaymwEcCNAFEJQDSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLBoWX7Ova6oppuNK_bozZfTfh28dw"
+    },
+    {
+      "id": "1r2fqbD0KZ4",
+      "title": "The Secret to Deeper Conversations | TED Intersections",
+      "url": "https://www.youtube.com/watch?v=1r2fqbD0KZ4",
+      "duration": 1687,
+      "timestamp": null,
+      "live_status": null,
+      "view_count": 90000,
+      "thumbnail": "https://i.ytimg.com/vi/1r2fqbD0KZ4/hq720.jpg?sqp=-oaymwEcCNAFEJQDSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLAf3zq7Pof3i147NFve9QEvhuoWHg"
+    }
+  ],
+  "entry_count": 12,
+  "warnings": [
+    "PLAYLIST_TRACKS_NEED_PER_VIDEO_INSPECT"
+  ],
+  "source_url": "https://www.youtube.com/@TED/videos",
+  "commands": {
+    "inspect": "yt-dlp -J --no-download --write-subs --write-auto-subs https://www.youtube.com/@TED/videos",
+    "suggested": "yt-dlp --merge-output-format mkv --embed-chapters --embed-metadata https://www.youtube.com/@TED/videos"
+  }
+}

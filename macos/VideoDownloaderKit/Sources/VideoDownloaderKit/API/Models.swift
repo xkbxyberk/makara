@@ -157,4 +157,10 @@ public enum JSON {
 
     /// Keys exactly as sent: `convertFromSnakeCase` rewrites dictionary keys too.
     public static let plain = JSONDecoder()
+
+    public static let encoder: JSONEncoder = {
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        return encoder
+    }()
 }

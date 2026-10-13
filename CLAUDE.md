@@ -217,6 +217,22 @@ Local-only media workstation on yt-dlp + FFmpeg. macOS arm64, single user (Berk)
     (`ffmpeg_path` -> `ffmpegPath`). Keys built at run time are not seen by the catalog scan;
     list new families in `LocalizationTests.everyStateTheScreensNameIsTranslated`. On macOS a
     grouped `Form` puts a bare button row under the box (as System Settings does).
+38. **SwiftUI pitfalls met in N5.** An `accessibilityIdentifier` on a container that is not an
+    accessibility element is copied onto *every child*, replacing their own identifiers: give
+    such containers `.accessibilityElement(children: .contain)` first. A `Form` inside a
+    `ScrollView` collapses to nothing (the track picker uses plain sections). Paste commands
+    reach only the focused view, so İncele makes its page focusable for ⌘V. XCUITest walks the
+    whole accessibility tree for every query: a big result (the multi-audio fixture) made each
+    step take ~40 s until table rows became one element each (`.combine`). The native panel's
+    remembered quick choices live in UserDefaults (`vd-quick-rules`), apart from the web page's
+    localStorage and the Safari popup's storage; with `VD_DATA_DIR` set (every test) they go to
+    `<data>/native-quick-rules.json` instead, because UI tests run this same bundle and would
+    otherwise read and ratchet Berk's real rules. The panel's state (`DownloadPlanner`) lives in
+    `Inspector`, not in a view's `@State`: leaving İncele must not reset the tracks. Fixture mode
+    counts as "unknown, so no remote images" until `/api/health` has answered. **Tests never load remote images**: the app
+    shows none against a fixture-mode backend (`remoteImages`), and Playwright sends every
+    request outside this Mac to a closed proxy port (the suite used to fetch i.ytimg.com).
+    The paste UI test puts Berk's pasteboard back afterwards.
 
 ## Rules
 
