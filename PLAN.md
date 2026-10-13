@@ -205,8 +205,57 @@ Each of N4–N7: feature parity with the web screen (same backend calls, same st
 error), its XCUITest scenarios and screenshots, then the embedded web view for it is removed.
 
 ### N8 — Wrap-up
-- [ ] Decide with Berk whether the web UI stays reachable in a browser or is removed
-- [ ] App installed in `~/Applications`, signed with Developer ID; docs and CLAUDE.md updated
+- [x] Decided 2026-10-14: the web UI is removed (the native app is the only UI)
+- [ ] Remove `frontend/`, the SPA serving, web-only endpoints; check.sh and docs follow
+- [ ] App installed in `~/Applications`, signed with Developer ID -- *after* P-series below
+
+## P-series — Berk's wishes of 2026-10-14 (before signing and installing)
+Working mode from now on: development first; no full gate / UI tests / review agents unless
+Berk asks (session limits).
+
+### P1 — Safari extension beyond YouTube
+- [ ] Every site yt-dlp supports, not only YouTube: the content script finds the media Berk is
+      watching (a playing `<video>`/`<audio>`, MSE/blob players included) and its *permalink*
+      (X: the tweet's `/status/` link inside the `<article>`; generic: canonical/og:url, the
+      page itself), asks `/api/supports` (offline), and only then offers it
+- [ ] An in-page offer, small and dismissible ("Bu videoyu indir?" with the quick choice and
+      "İncele"), shown once per media, never on sites Berk muted; the toolbar popup still works
+- [ ] Site-specific permalink finders kept in one table (X, Instagram, TikTok, Reddit,
+      Vimeo, Facebook…), generic fallback for the rest
+
+### P2 — Download acceleration (IDM-style)
+- [ ] Fragmented formats (HLS/DASH, most sites): yt-dlp's `concurrent_fragment_downloads`
+- [ ] Single-file HTTP formats: several connections with byte ranges -- aria2c (needs Berk's
+      approval: Homebrew) or our own segmented downloader; per-download connection count,
+      live per-segment progress in İndirmeler
+- [ ] Pause / resume (keep `.part` files), a global speed limit, a "faster" setting
+
+### P3 — Library by kind in the sidebar
+- [ ] Kütüphane splits by what was downloaded: Videolar, Müzik (sound only), Stüdyo çıktıları,
+      maybe Altyazılar; counts as badges; site filters stay inside each
+
+### P4 — Menu bar app, launch at login, Dock
+- [ ] A status-bar item (default on) with the app's template icon: active downloads with
+      progress, "Panodaki bağlantıyı indir/incele", open window, pause all, quit
+- [ ] Settings: "Açılışta başlat" (SMAppService), "Dock'ta göster" (activation policy),
+      "Menü çubuğunda göster"; closing the window keeps the app (and the extension's server)
+      running when it lives in the menu bar
+- [ ] Defaults: menu bar on, launch at login on after first run (asked once)
+
+### P5 — Icon and design
+- [ ] A professional SVG app icon that says what it does (download arrow + film/waveform),
+      rendered to the asset catalog sizes, the extension's toolbar icons and a template
+      status-bar glyph; UI/UX polish pass over every screen
+
+### P6 — Ideas added by Claude (to discuss)
+- [ ] Extension: "zaten indirildi" when the page's video is in the library; one-click with the
+      remembered choice from the in-page offer
+- [ ] Notifications with actions (Finder'da göster, Oynat); a Dock/menu-bar progress ring
+- [ ] Drop a link on the menu-bar icon; ⌥-click a link in Safari to download it at once
+- [ ] Queue: drag to reorder, retry with backoff, "bitince Mac'i uyut"
+- [ ] yt-dlp updated automatically (weekly, in the background, when nothing is downloading)
+- [ ] Disk-space check before a big download; duplicate detection before downloading again
+- [ ] Earlier milestones still open: M5 (chapters/SponsorBlock), M6 (playlists/channels)
 
 ## M5 — Sections and SponsorBlock · M6 — Playlists and channels
 ## M7 — Presets and browser cookies (Safari session for YouTube pulled forward, 2026-10-13) · M8 — Transcode and target size
