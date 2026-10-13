@@ -118,6 +118,8 @@ def build_job(
             if key in subtitles
         ],
         "info": entry.get("fixture_info") if paths.fixture_mode() else None,
+        # Only while the setting is on: turning it off stops it for every later job too.
+        "cookies_from_browser": entry.get("cookies") if settings.safari_login else None,
     }
     return {
         "id": job_id,

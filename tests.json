@@ -721,6 +721,42 @@
           "proof": "implemented (contextMenus, commands._execute_action); needs Berk's live check"
         }
       ]
+    },
+    "M7a": {
+      "title": "Safari session for age-restricted YouTube videos (pulled forward from M7)",
+      "status": "built; live check needs Full Disk Access",
+      "criteria": [
+        {
+          "id": "M7a.1",
+          "text": "Only a YouTube URL failing with AGE_RESTRICTED/LOGIN_REQUIRED is retried once with the session; anything else never uses it",
+          "pass": true,
+          "proof": "tests/test_browser_session.py (retry, ordinary video, other failures, other sites, URL-free classification)"
+        },
+        {
+          "id": "M7a.2",
+          "text": "Workers get only youtube.com cookies, in memory; info.json carries no cookie values; the download uses the session the inspect needed",
+          "pass": true,
+          "proof": "test_a_worker_gets_the_youtube_cookies_and_no_other_site, test_an_info_json_never_keeps_cookie_values, test_the_download_worker_hands_its_session_to_yt_dlp"
+        },
+        {
+          "id": "M7a.3",
+          "text": "The setting (on by default) stops the session in the cache, new jobs and retries",
+          "pass": true,
+          "proof": "test_turning_the_setting_off_stops_the_session_everywhere, test_the_safari_session_setting_round_trips; manager drops it at spawn"
+        },
+        {
+          "id": "M7a.4",
+          "text": "Sistem says whether the session can be used (Full Disk Access, signed in) by cookie names only, with a shortcut to the setting",
+          "pass": true,
+          "proof": "test_status_says_what_is_missing, test_signed_in_is_told_by_cookie_names_only; e2e doctor 'the Safari session row'"
+        },
+        {
+          "id": "M7a.5",
+          "text": "An age-restricted video downloads with Berk's session",
+          "pass": false,
+          "proof": "needs Full Disk Access granted by Berk and a live run"
+        }
+      ]
     }
   }
 }

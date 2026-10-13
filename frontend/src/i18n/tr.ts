@@ -187,6 +187,8 @@ export const tr = {
     } as Record<string, string | ((p: Record<string, unknown>) => string)>,
   },
   queue: {
+    usedSession: 'Safari oturumuyla',
+    usedSessionHelp: 'Bu video giriş istediği için Safari’deki YouTube oturumunla indiriliyor.',
     title: 'İndirmeler',
     emptyTitle: 'Henüz indirme yok',
     emptyBody: 'İncele sekmesinde bir bağlantı açıp İndir’e bastığında işler burada görünür.',
@@ -319,6 +321,9 @@ export const tr = {
       'Uygulama açıkken desteklenen bir bağlantı kopyaladığında incelemeyi önerir. Pano yalnızca içeriği değiştiğinde okunur.',
     notifications: 'Sistem bildirimleri',
     notificationsHelp: 'Pencere arka plandayken bir indirme bitince veya başarısız olunca bildirim gösterir.',
+    safariLogin: 'Giriş isteyen videolarda Safari oturumunu kullan',
+    safariLoginHelp:
+      'Yaş kısıtlı ya da yalnızca üyelere açık bir video önce her zamanki gibi oturumsuz denenir; site giriş isterse Safari’deki YouTube oturumunla bir kez daha denenir. Uygulamanın Tam Disk Erişimi olmalı. yt-dlp’nin uyarısı: hesapla indirmek, hesabın geçici ya da kalıcı kapatılması riskini taşır; bu yüzden oturum yalnızca gereken videolarda kullanılır.',
   },
   studio: {
     title: 'Stüdyo',
@@ -608,13 +613,26 @@ export const tr = {
       yt_dlp: 'yt-dlp',
       js_runtime: 'JavaScript çalıştırıcı',
       ffmpeg: 'FFmpeg',
+      safari_session: 'Safari oturumu',
     },
     checkHelp: {
       yt_dlp: 'Siteleri çözümleyen ve indiren bileşen. YouTube sık değiştiği için güncel tutulmalı.',
       js_runtime:
         'YouTube, format listesini vermeden önce tarayıcıda JavaScript bulmacası çözdürüyor. Bunu çalıştıracak bir motor (deno veya node) olmazsa yt-dlp hata vermez ama bazı kaliteler listede hiç görünmez.',
       ffmpeg: 'Parçaları birleştiren, dönüştüren ve kesen araç.',
+      safari_session:
+        'Yaş kısıtlı ve giriş isteyen videolar için Safari’deki YouTube oturumun. Yalnızca çerezlerin adlarına bakılır (giriş yapılmış mı diye); değerleri hiçbir yerde gösterilmez ya da kaydedilmez.',
     },
+    sessionStates: {
+      off: 'Kapalı: giriş isteyen videolar oturumsuz denenir ve “giriş gerekiyor” der. Ayarlar’dan açılabilir.',
+      unavailable: 'Safari’nin çerez dosyası bulunamadı. Safari’yi bir kez açıp YouTube’a giriş yap.',
+      no_access:
+        'Uygulama Safari oturumunu okuyamıyor: macOS bunun için Tam Disk Erişimi istiyor. Sistem Ayarları > Gizlilik ve Güvenlik > Tam Disk Erişimi’nde VideoDownloader’ı açıp uygulamayı yeniden başlat. (Sunucuyu Terminal’den başlattıysan izin Terminal’e verilmeli.)',
+      signed_out: 'Safari’de YouTube’a giriş yapılmamış. Yaş kısıtlı videolar için Safari’de YouTube’a giriş yap.',
+      signed_in: 'Hazır: Safari’de YouTube’a giriş yapılmış. Yalnızca giriş isteyen videolarda kullanılır.',
+      unknown: 'Safari oturumu okunabiliyor; YouTube’a giriş yapılıp yapılmadığı anlaşılamadı.',
+    } as Record<string, string>,
+    openFullDiskAccess: 'Tam Disk Erişimi ayarlarını aç',
     labels: {
       version: 'Sürüm',
       channel: 'Kanal',
@@ -718,6 +736,18 @@ export const tr = {
     FORBIDDEN: {
       title: 'Site erişimi reddetti',
       body: 'Uygulama bir kez kendiliğinden yeniden denedi. Bu çoğu zaman geçicidir: birkaç dakika sonra “Tekrar dene”. Sürerse Sistem sekmesinden yt-dlp’yi güncelle.',
+    },
+    COOKIES_UNREADABLE: {
+      title: 'Safari oturumu okunamadı',
+      body: 'Bu video giriş istiyor ama uygulama Safari oturumunu okuyamıyor. Sistem Ayarları > Gizlilik ve Güvenlik > Tam Disk Erişimi’nde VideoDownloader’ı açıp uygulamayı yeniden başlat (Sistem ekranında kısayolu var).',
+    },
+    SESSION_NOT_ENOUGH: {
+      title: 'Oturumla da açılmadı',
+      body: 'Video Safari’deki oturumunla denendi ama yine giriş istendi. Safari’de YouTube’a giriş yapılmış mı, hesabın yaşı doğrulanmış mı? Sistem ekranındaki “Safari oturumu” satırına bak.',
+    },
+    SETTINGS_UNAVAILABLE: {
+      title: 'Sistem Ayarları açılamadı',
+      body: 'Sistem Ayarları > Gizlilik ve Güvenlik > Tam Disk Erişimi’ne elle git.',
     },
     INSPECT_EXPIRED: {
       title: 'İnceleme bilgisi eskidi',
@@ -863,6 +893,7 @@ export const tr = {
     },
   },
   warnings: {
+    USED_SAFARI_LOGIN: 'Bu video giriş istediği için Safari’deki YouTube oturumunla açıldı; indirmesi de oturumla yapılır.',
     DRM_PRESENT: 'Bu videonun bazı formatları DRM korumalı ve indirilemez.',
     DRM_MAYBE: 'Bazı formatlar DRM korumalı olabilir; indirme sırasında başarısız olabilirler.',
     SIZES_ARE_ESTIMATES:

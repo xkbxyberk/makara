@@ -194,6 +194,17 @@ Local-only media workstation on yt-dlp + FFmpeg. macOS arm64, single user (Berk)
     the shared session had kept a Cache.db of visited page addresses. The relay refuses
     inspect/quick bodies whose `url` is this Mac or the LAN (`LocalHost.swift`, shared with
     `IncomingURL`; mirrored in `shared.js isLocal`).
+36. **Berk's Safari session** (`app/browser_session.py`, `app/workers/session.py`), his decision
+    2026-10-13, his own account: only an AGE_RESTRICTED/LOGIN_REQUIRED answer *for a YouTube
+    URL* is retried once with it; the worker gets only the `youtube.com` cookies loaded into its
+    in-memory jar (never yt-dlp's `cookiesfrombrowser`, which loads every site's cookies);
+    info.json is scrubbed of the per-format `cookies` field; the job carries
+    `["safari", path]` and shows `used_session`; turning the setting off stops it in the cache,
+    new jobs and retries. Reading the store needs Full Disk Access for VideoDownloader.app
+    (Terminal when the server was started there). `errors.classify` drops URLs first: an
+    address containing "login" once turned an unsupported page into LOGIN_REQUIRED, which
+    would have sent the session to that site. Tests set VD_SAFARI_COOKIES (conftest), so no
+    test ever reads the real store.
 
 ## Rules
 

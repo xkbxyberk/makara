@@ -45,6 +45,8 @@ def public(job: dict[str, Any]) -> dict[str, Any]:
     request = job.get("request") or {}
     out = {k: v for k, v in job.items() if k != "request"}
     out["selection"] = {k: request.get(k) for k in PUBLIC_REQUEST_FIELDS}
+    # Said, not hidden: this download used Berk's account (where and how stays private).
+    out["used_session"] = bool(request.get("cookies_from_browser"))
     return out
 
 
@@ -225,7 +227,11 @@ class JobManager:
         if job_id in self.cancelling:  # a cancel arrived while the process was spawning
             self._terminate(job_id, proc)
         assert proc.stdin and proc.stdout and proc.stderr
-        proc.stdin.write(json.dumps(job["request"]).encode())
+        request = dict(job["request"])
+        if not self.get_settings().safari_login:
+            # Queued (or retried) while the session was allowed, run after it was turned off.
+            request["cookies_from_browser"] = None
+        proc.stdin.write(json.dumps(request).encode())
         await proc.stdin.drain()
         proc.stdin.close()
 

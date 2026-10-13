@@ -338,17 +338,19 @@ async function follow(jobId) {
   const title = state.model.media?.title ?? state.tab.title;
   const bar = h('div');
   const status = h('p', { class: 'message' }, t('queued'));
+  const sessionNote = h('p', { class: 'message', hidden: true }, t('used_session'));
   const showDownloads = h('button', {
     class: 'btn', type: 'button',
     onclick: () => void VD.openApp('videodownloader://show?route=download').then(() => window.close()),
   }, t('show_downloads'));
-  show(h('h1', {}, title), h('div', { class: 'progress' }, bar), status, h('div', { class: 'actions' }, showDownloads));
+  show(h('h1', {}, title), h('div', { class: 'progress' }, bar), status, sessionNote, h('div', { class: 'actions' }, showDownloads));
   // Give up after a while without news (the app quit, or the job was removed there).
   for (let misses = 0; misses < 10; ) {
     const reply = await VD.api('api/jobs');
     const job = reply.ok ? reply.json.find((j) => j.id === jobId) : null;
     misses = job ? 0 : misses + 1;
     if (job) {
+      sessionNote.hidden = !job.used_session;
       const stage = browser.i18n.getMessage(`stage_${job.status === 'running' ? job.stage : job.status}`) || job.stage;
       bar.style.width = `${Math.round((job.progress ?? 0) * 100)}%`;
       if (job.status === 'done') {

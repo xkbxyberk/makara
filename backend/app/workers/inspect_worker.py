@@ -14,7 +14,7 @@ from collections import deque
 from typing import Any
 
 from app import errors
-from app.workers import lifeline
+from app.workers import lifeline, session
 from app.ytdlp import params
 
 
@@ -54,6 +54,8 @@ def run(request: dict[str, Any]) -> dict[str, Any]:
     options = {**params.inspect_params(), "logger": log, "no_warnings": False}
     try:
         with yt_dlp.YoutubeDL(options) as ydl:
+            # YouTube's part of the Safari session, only when the server asks for it.
+            session.apply(ydl, request.get("cookies_from_browser"))
             info = ydl.extract_info(request["url"], download=False)
             if info is None:
                 message = log.errors[-1] if log.errors else "extract_info returned None"

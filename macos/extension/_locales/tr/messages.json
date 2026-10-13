@@ -259,5 +259,17 @@
   },
   "error_FFMPEG_FAILED": {
     "message": "FFmpeg dosyayı oluşturamadı."
+  },
+  "menu_download_page": {
+    "message": "Bu sayfayı VideoDownloader ile indir"
+  },
+  "error_COOKIES_UNREADABLE": {
+    "message": "Bu video giriş istiyor; uygulamanın Safari oturumunu okuyabilmesi için Tam Disk Erişimi gerekiyor (uygulamadaki Sistem ekranına bak)."
+  },
+  "error_SESSION_NOT_ENOUGH": {
+    "message": "Safari’deki oturumunla da açılmadı: YouTube’a giriş yapılmış mı, hesabın yaşı doğrulanmış mı?"
+  },
+  "used_session": {
+    "message": "Giriş istediği için Safari’deki YouTube oturumunla indiriliyor."
   }
 }

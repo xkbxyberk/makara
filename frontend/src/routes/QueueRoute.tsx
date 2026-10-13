@@ -3,7 +3,7 @@ import { tr } from '../i18n/tr';
 import { ApiError, api, type Job } from '../lib/api';
 import { formatBytes, formatDuration } from '../lib/format';
 import type { Connection } from '../lib/jobs';
-import { Badge, EmptyState, LoadingState, Notice, Panel } from '../components/ui';
+import { Badge, EmptyState, LoadingState, Notice, Panel, Term } from '../components/ui';
 import { Icon } from '../components/Icon';
 
 const INDETERMINATE = new Set(['starting', 'preparing', 'postprocessing', 'cancelling']);
@@ -63,6 +63,11 @@ function JobRow({ job }: { job: Job }) {
         />
         <span className="job-title">{job.title ?? job.source_url}</span>
         <Badge>{tr.download.modes[job.mode]}</Badge>
+        {job.used_session && (
+          <Badge tone="warn">
+            <Term label={tr.queue.usedSession} body={tr.queue.usedSessionHelp} />
+          </Badge>
+        )}
         <Badge tone={tone[job.status]}>{tr.queue.statuses[job.status]}</Badge>
         <div className="job-actions">
           {(job.status === 'queued' || job.status === 'running') && (

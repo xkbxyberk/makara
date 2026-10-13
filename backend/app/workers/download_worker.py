@@ -33,7 +33,7 @@ from app import errors, paths
 from app.doctor import listing_has
 from app.ffmpeg import binaries, mux
 from app.ffmpeg.probe import probe
-from app.workers import lifeline
+from app.workers import lifeline, session
 from app.workers.inspect_worker import Collector
 from app.ytdlp import naming, params
 
@@ -263,6 +263,8 @@ def _stream_pass(req: dict[str, Any], work: Path, log: Collector) -> dict[str, A
         ]
     emit({"t": "stage", "stage": "downloading"})
     with yt_dlp.YoutubeDL(options) as ydl:
+        # YouTube's part of the Safari session, only when the inspection needed one.
+        session.apply(ydl, req.get("cookies_from_browser"))
         return _fetch(ydl, req)
 
 
@@ -413,6 +415,8 @@ def _finalize(
     ):
         source = work / name
         if wanted and source.exists():
+            if suffix == ".info.json":
+                _scrub_info_json(source)
             outputs.append((source, suffix))
 
     emit({"t": "stage", "stage": "finalizing"})
@@ -426,6 +430,15 @@ def _finalize(
         naming.release(targets)
         raise
     return [str(t) for t in targets], plan, warnings
+
+
+def _scrub_info_json(path: Path) -> None:
+    """No cookie value ever lands in Berk's media folder (yt-dlp records them per format)."""
+    try:
+        info = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return
+    path.write_text(json.dumps(session.scrub(info), ensure_ascii=False), encoding="utf-8")
 
 
 def _cleanup(req: dict[str, Any], work: Path) -> None:

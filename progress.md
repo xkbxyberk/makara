@@ -263,4 +263,13 @@ afterwards, showed the real choices (2160p … 144p AV1 with sizes). Nothing was
 access log and the page dump (it held his YouTube recommendations) were deleted. Not yet seen
 live: the link menu and ⌃⇧D.
 
-**Next:** N4 — İndirmeler and Sistem in SwiftUI.
+**Berk's feedback on N3** (13 Oct): ⌃⇧D works; the link menu works, but not on YouTube's player
+(YouTube answers the first right-click with its own menu) -- a page/player item added, shown on
+the second right-click. Age-restricted videos need an account: researched (yt-dlp wiki: only
+cookies work, OAuth no longer does; using an account risks a ban). Berk chose his Safari session.
+Built as M7a (CLAUDE.md gotcha 36). The review found the retry could have sent the *whole*
+Safari cookie jar to any site whose error or address said "login"; now YouTube only, only
+youtube.com cookies, URLs ignored when classifying, setting honoured everywhere, info.json
+scrubbed, and jobs say when the session was used.
+
+**Next:** Berk grants Full Disk Access and tries an age-restricted video; then N4.

@@ -33,6 +33,7 @@
       ],
       "audio_codec": null,
       "url": "https://example.test/local-media"
-    }
+    },
+    "used_session": false
   }
 ]

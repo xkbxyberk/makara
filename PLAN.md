@@ -169,7 +169,7 @@ error), its XCUITest scenarios and screenshots, then the embedded web view for i
 - [ ] App installed in `~/Applications`, signed with Developer ID; docs and CLAUDE.md updated
 
 ## M5 — Sections and SponsorBlock · M6 — Playlists and channels
-## M7 — Presets and browser cookies · M8 — Transcode and target size
+## M7 — Presets and browser cookies (Safari session for YouTube pulled forward, 2026-10-13) · M8 — Transcode and target size
 
 Then P2: subscriptions, live recording, local Whisper transcription (ask before any model
 download). Burn-in stays impossible until an FFmpeg build with libass is installed.

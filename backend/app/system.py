@@ -42,6 +42,19 @@ def pick_folder(prompt: str) -> str | None:
     return proc.stdout.strip().rstrip("/") or None
 
 
+# System Settings > Privacy & Security > Full Disk Access (a fixed URL; nothing from a request).
+FULL_DISK_ACCESS = (
+    "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_AllFiles"
+)
+
+
+def open_full_disk_access() -> None:
+    """Open the pane where Berk can let VideoDownloader read the Safari session."""
+    if sys.platform != "darwin" or paths.fixture_mode():
+        raise errors.AppError(code="SETTINGS_UNAVAILABLE")
+    subprocess.run(["open", FULL_DISK_ACCESS], check=False, capture_output=True)
+
+
 def installed_ytdlp() -> dict[str, str]:
     """Read from the installed package metadata, not the imported module: after an update the
     server's already-imported yt_dlp is stale, while every new worker process gets the new one."""

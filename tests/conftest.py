@@ -29,6 +29,8 @@ def isolated_app_dirs(
     base = tmp_path_factory.mktemp("app")
     monkeypatch.setenv("VD_DATA_DIR", str(base / "data"))
     monkeypatch.setenv("VD_DOWNLOAD_DIR", str(base / "downloads"))
+    # Nor read his Safari session: a file that does not exist, unless a test makes its own.
+    monkeypatch.setenv("VD_SAFARI_COOKIES", str(base / "no-safari" / "Cookies.binarycookies"))
     # Nor may a test search Berk's whole Mac through Spotlight.
     import app.library
 

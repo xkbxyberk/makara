@@ -1,5 +1,8 @@
 import { expect, test } from '@playwright/test';
 
+// Settings are one file for the whole server: tests that save them must not interleave.
+test.describe.configure({ mode: 'serial' });
+
 const SHOTS = '../test-results/screenshots';
 
 async function openSettings(page: import('@playwright/test').Page) {
@@ -32,6 +35,17 @@ test('a harmless setting saves and survives a reload', async ({ page }) => {
   await page.getByLabel(/Sistem bildirimleri/).setChecked(before);
   await page.getByRole('button', { name: 'Kaydet' }).click();
   await expect(page.getByText('Kaydedildi.')).toBeVisible();
+});
+
+test('the Safari session for age-restricted videos is offered, on by default', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('navigation').getByRole('button', { name: 'Ayarlar' }).click();
+  const toggle = page.getByLabel(/Giriş isteyen videolarda Safari oturumunu kullan/);
+  await expect(toggle).toBeChecked();
+  // Not saved here: other spec files read the server's one settings file in parallel (the
+  // round trip is tests/test_api.py::test_the_safari_session_setting_round_trips).
+  await toggle.uncheck();
+  await expect(page.getByText('Kaydedilmemiş değişiklikler var.')).toBeVisible();
 });
 
 test('theme switches between system, light and dark', async ({ page }) => {

@@ -64,6 +64,7 @@ class SettingsBody(BaseModel):
     concurrency: int = Field(ge=1, le=6)
     default_mode: Mode
     clipboard_watch: bool = False
+    safari_login: bool = True
     notifications: bool = True
 
 

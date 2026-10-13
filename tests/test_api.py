@@ -26,7 +26,12 @@ def test_health_reports_fixture_mode(client: TestClient) -> None:
 
 def test_doctor_reports_every_dependency(client: TestClient) -> None:
     report = client.get("/api/doctor").json()
-    assert {check["id"] for check in report["checks"]} == {"yt_dlp", "js_runtime", "ffmpeg"}
+    assert {check["id"] for check in report["checks"]} == {
+        "yt_dlp",
+        "js_runtime",
+        "ffmpeg",
+        "safari_session",
+    }
     assert report["status"] in {"ok", "warn", "error"}
     ffmpeg = next(c for c in report["checks"] if c["id"] == "ffmpeg")
     assert "subtitles_filter" in ffmpeg["values"]["capabilities"]
@@ -245,3 +250,18 @@ def test_outside_fixture_mode_there_is_no_extension_route(
 def test_api_answers_are_never_cached(client: TestClient) -> None:
     for path in ["/api/health", "/api/supports?url=https://www.youtube.com/watch?v=x", "/api/jobs"]:
         assert client.get(path).headers["cache-control"] == "no-store", path
+
+
+def test_the_safari_session_setting_round_trips(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("VD_FIXTURE_MODE", "1")
+    monkeypatch.setenv("VD_DATA_DIR", str(tmp_path / "data"))
+    from app.main import create_app
+
+    with TestClient(create_app(), base_url="http://127.0.0.1:8787") as own:
+        settings = own.get("/api/settings").json()
+        assert settings["safari_login"] is True  # Berk's choice: on by default
+        saved = own.put("/api/settings", json={**settings, "safari_login": False}).json()
+        assert saved["safari_login"] is False
+        assert own.get("/api/settings").json()["safari_login"] is False

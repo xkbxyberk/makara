@@ -57,6 +57,32 @@ function UpdateYtdlp({ onDone }: { onDone: () => void }) {
   );
 }
 
+/** What the Safari session means for age-restricted videos, and the one step that fixes it. */
+function SafariSession({ state, fix }: { state: string; fix: string }) {
+  const [failed, setFailed] = useState<string | null>(null);
+  const text = tr.doctor.sessionStates[state];
+  return (
+    <div style={{ marginTop: 'var(--s2)', display: 'flex', flexDirection: 'column', gap: 'var(--s2)' }}>
+      {text && <Notice tone={state === 'signed_in' || state === 'off' || state === 'unknown' ? 'neutral' : 'warn'}>{text}</Notice>}
+      {fix === 'full_disk_access' && (
+        <div>
+          <button
+            type="button"
+            className="btn"
+            onClick={() =>
+              void api.openFullDiskAccess().catch((error: unknown) => setFailed(error instanceof ApiError ? error.code : 'UNKNOWN'))
+            }
+          >
+            <Icon name="gearshape" size={14} />
+            {tr.doctor.openFullDiskAccess}
+          </button>
+        </div>
+      )}
+      {failed && <ErrorState code={failed} raw="" />}
+    </div>
+  );
+}
+
 function CheckRow({ check, onReload }: { check: DoctorCheck; onReload: () => void }) {
   const names = tr.doctor.checks as Record<string, string>;
   const help = tr.doctor.checkHelp as Record<string, string>;
@@ -85,7 +111,7 @@ function CheckRow({ check, onReload }: { check: DoctorCheck; onReload: () => voi
         </div>
         <div className="kv muted mono">
           {Object.entries(values)
-            .filter(([key]) => !['capabilities', 'found', 'missing_optional'].includes(key))
+            .filter(([key]) => !['capabilities', 'found', 'missing_optional', 'state'].includes(key))
             .map(([key, value]) => (
               <span key={key} style={{ display: 'contents' }}>
                 <span className="dim">{labels[key] ?? key}</span>
@@ -106,6 +132,7 @@ function CheckRow({ check, onReload }: { check: DoctorCheck; onReload: () => voi
           </div>
         ))}
         {check.id === 'yt_dlp' && <UpdateYtdlp onDone={onReload} />}
+        {check.id === 'safari_session' && <SafariSession state={String(values.state ?? '')} fix={check.fix.kind} />}
         {check.status !== 'ok' && check.fix.kind === 'command' && (
           <div style={{ marginTop: 'var(--s2)' }}>
             <div className="muted">{tr.doctor.fixHint}</div>

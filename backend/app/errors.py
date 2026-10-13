@@ -12,6 +12,8 @@ from typing import Any
 
 # Ordered: the first pattern that matches wins, so put the specific ones first.
 _PATTERNS: list[tuple[str, str]] = [
+    # Safari's cookie store without Full Disk Access, or an unreadable one.
+    ("COOKIES_UNREADABLE", r"binarycookies|safari cookies database"),
     ("DRM_PROTECTED", r"\bdrm\b|protected by drm|widevine|playready"),
     # YouTube's anti-bot wall says "sign in", but the video is public -- it is the IP that is
     # flagged. Must be tested before LOGIN_REQUIRED.
@@ -60,8 +62,10 @@ class AppError(Exception):
 
 
 def classify(message: str) -> str:
-    """Map a raw error message onto one of the known codes."""
-    text = message.lower()
+    """Map a raw error message onto one of the known codes. URLs are left out first: an
+    address like ".../login?next=/" says nothing about why it failed (and once made an
+    unsupported page look like one that needs an account)."""
+    text = re.sub(r"https?://\S+", " ", message.lower())
     for code, pattern in _PATTERNS:
         if re.search(pattern, text):
             return code

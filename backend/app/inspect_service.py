@@ -14,7 +14,8 @@ import uuid
 from collections import OrderedDict
 from typing import Any
 
-from app import errors, paths
+from app import browser_session, errors, paths
+from app import settings as settings_store
 from app.ytdlp import command, naming, normalize, offers, selection
 from app.ytdlp.params import find_js_runtimes
 
@@ -60,7 +61,9 @@ def has_fixture(url: str) -> bool:
     return any(re.search(pattern, url, re.IGNORECASE) for pattern, _ in _FIXTURE_MATCHERS)
 
 
-async def _run_worker(url: str) -> tuple[dict[str, Any], list[str]]:
+async def _run_worker(
+    url: str, cookies: list[str] | None = None
+) -> tuple[dict[str, Any], list[str]]:
     env = dict(os.environ)
     backend_dir = str(paths.PROJECT_ROOT / "backend")
     env["PYTHONPATH"] = (
@@ -78,7 +81,7 @@ async def _run_worker(url: str) -> tuple[dict[str, Any], list[str]]:
         # Its own process group, so killing it also kills anything it spawned (deno, ffprobe).
         start_new_session=True,
     )
-    payload = json.dumps({"url": url}).encode()
+    payload = json.dumps({"url": url, "cookies_from_browser": cookies}).encode()
     try:
         stdout, stderr = await asyncio.wait_for(
             proc.communicate(payload), timeout=INSPECT_TIMEOUT_SECONDS
@@ -116,10 +119,12 @@ _BY_URL: dict[str, tuple[str, float]] = {}
 REUSE_SECONDS = 15 * 60
 
 
-def remember(model: dict[str, Any], info: dict[str, Any]) -> str:
+def remember(model: dict[str, Any], info: dict[str, Any], cookies: list[str] | None = None) -> str:
     inspect_id = uuid.uuid4().hex[:16]
     _CACHE[inspect_id] = {
         "model": model,
+        # The Safari session, if this video needed one: its download needs it too.
+        "cookies": cookies,
         "url": model["source_url"],
         "template_info": {
             k: info.get(k) for k in naming.TEMPLATE_FIELDS if info.get(k) is not None
@@ -141,6 +146,8 @@ def _reusable(url: str) -> dict[str, Any] | None:
     entry = _CACHE.get(inspect_id)
     if entry is None or time.monotonic() - at > REUSE_SECONDS:
         return None
+    if entry.get("cookies") and not settings_store.load().safari_login:
+        return None  # inspected with the session, which has been turned off since
     _CACHE.move_to_end(inspect_id)
     model: dict[str, Any] = entry["model"]
     return model
@@ -156,15 +163,46 @@ def recall(inspect_id: str) -> dict[str, Any]:
     return entry
 
 
+async def _extract(url: str) -> tuple[dict[str, Any], list[str], list[str] | None]:
+    """Without an account first, always. Only a video that asks for a signed-in account
+    (age-restricted, members-only, private) is tried once more with the Safari session."""
+    try:
+        info, warnings = await _run_worker(url)
+        return info, warnings, None
+    except errors.AppError as exc:
+        session = browser_session.ytdlp_option()
+        # YouTube only: the session is a YouTube one, and a "login" in some other site's
+        # error must never send it anywhere else.
+        if exc.code not in browser_session.AUTH_CODES or session is None:
+            raise
+        if not browser_session.is_youtube_url(url):
+            raise
+        if not settings_store.load().safari_login:
+            raise
+        first = exc.code
+    try:
+        info, warnings = await _run_worker(url, session)
+    except errors.AppError as again:
+        if again.code in browser_session.AUTH_CODES:
+            # Signed in, and still refused: not signed in to YouTube in Safari, or the account
+            # is not age-verified. Say so instead of repeating "sign in".
+            raise errors.AppError(
+                code="SESSION_NOT_ENOUGH", raw=again.raw, detail={"first": first}
+            ) from None
+        raise
+    return info, [*warnings, "USED_SAFARI_LOGIN"], session
+
+
 async def inspect(url: str, *, reuse: bool = False) -> dict[str, Any]:
     url = validate_url(url)
     if reuse and (cached := _reusable(url)) is not None:
         return cached
     warnings: list[str] = []
+    cookies: list[str] | None = None
     if paths.fixture_mode():
         info = _fixture_for(url)
     else:
-        info, warnings = await _run_worker(url)
+        info, warnings, cookies = await _extract(url)
     model = normalize.normalize(info)
     extractor = str(model["media"].get("extractor") or "").lower()
     if extractor.startswith("youtube") and not find_js_runtimes():
@@ -178,5 +216,5 @@ async def inspect(url: str, *, reuse: bool = False) -> dict[str, Any]:
     if model["kind"] == "video":
         model["defaults"] = selection.all_defaults(model)
         model["offers"] = offers.build(model)
-        model["inspect_id"] = remember(model, info)
+        model["inspect_id"] = remember(model, info, cookies)
     return model

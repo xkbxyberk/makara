@@ -73,14 +73,37 @@ function installMenus() {
   browser.contextMenus.removeAll().finally(() => {
     browser.contextMenus.create({ id: 'vd-download', title: t('menu_download'), contexts: ['link'] });
     browser.contextMenus.create({ id: 'vd-inspect', title: t('menu_inspect'), contexts: ['link'] });
+    // On the page itself and on a player. YouTube answers the first right-click on its player
+    // with its own menu; a second right-click there opens Safari's, with this item in it.
+    browser.contextMenus.create({ id: 'vd-page', title: t('menu_download_page'), contexts: ['page', 'video', 'audio', 'frame'] });
   });
 }
 installMenus();
 browser.runtime.onInstalled.addListener(installMenus);
 
+/**
+ * What "download this page" means where Berk right-clicked: a player's own http(s) file if it
+ * has one; else the embedded page (a YouTube player inside another site's frame); else the page.
+ * A blob: stream is something only the page can explain, and yt-dlp works from the page.
+ */
+function pageLink(info, tab) {
+  if ((info.mediaType === 'video' || info.mediaType === 'audio') && VD.isWebPage(info.srcUrl)) return info.srcUrl;
+  if (VD.isWebPage(info.frameUrl) && info.frameUrl !== info.pageUrl) return info.frameUrl;
+  return info.pageUrl ?? tab?.url;
+}
+
+async function flash(tabId, ok) {
+  await browser.action.setBadgeText({ tabId, text: ok ? '✓' : '!' }).catch(() => undefined);
+  setTimeout(() => browser.action.setBadgeText({ tabId, text: '' }).catch(() => undefined), 4000);
+}
+
 browser.contextMenus.onClicked.addListener(async (info, tab) => {
-  const link = info.linkUrl;
-  if (!VD.isWebPage(link)) return; // never this Mac or the local network
+  const link = info.menuItemId === 'vd-page' ? pageLink(info, tab) : info.linkUrl;
+  if (!VD.isWebPage(link)) {
+    // Never this Mac or the local network, nor a non-web frame: say no instead of doing nothing.
+    if (tab?.id !== undefined) await flash(tab.id, false);
+    return;
+  }
   if (info.menuItemId === 'vd-inspect') {
     await VD.openApp(VD.inspectLink(link));
     return;
@@ -91,8 +114,5 @@ browser.contextMenus.onClicked.addListener(async (info, tab) => {
     await VD.openApp(VD.inspectLink(link)); // the app was closed: open it on that link instead
     return;
   }
-  const tabId = tab?.id;
-  if (tabId === undefined) return;
-  await browser.action.setBadgeText({ tabId, text: reply.ok ? '✓' : '!' }).catch(() => undefined);
-  setTimeout(() => browser.action.setBadgeText({ tabId, text: '' }).catch(() => undefined), 4000);
+  if (tab?.id !== undefined) await flash(tab.id, reply.ok);
 });

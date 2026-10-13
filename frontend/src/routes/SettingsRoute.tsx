@@ -284,6 +284,18 @@ export function SettingsRoute({
             </span>
           </label>
 
+          <label className="setting setting-toggle">
+            <input
+              type="checkbox"
+              checked={state.draft.safari_login}
+              onChange={(event) => edit({ safari_login: event.target.checked })}
+            />
+            <span>
+              <strong>{tr.settings.safariLogin}</strong>
+              <span className="dim"> — {tr.settings.safariLoginHelp}</span>
+            </span>
+          </label>
+
           {failure && <ErrorState code={failure.code} raw={failure.raw} />}
           <div className="download-actions">
             {dirty && <span className="muted">{tr.settings.unsaved}</span>}

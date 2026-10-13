@@ -25,6 +25,8 @@ class Settings:
     default_mode: str = "mkv"
     clipboard_watch: bool = False  # opt-in, agreed with Berk
     notifications: bool = True
+    # Retry a video that needs a signed-in account with the Safari session (Berk, 2026-10-13).
+    safari_login: bool = True
 
     def __post_init__(self) -> None:
         if not self.download_dir:

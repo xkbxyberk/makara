@@ -117,6 +117,15 @@ async def post_pick_folder(body: PickFolderBody) -> Any:
         return _error(exc, 501)
 
 
+@router.post("/system/open-full-disk-access")
+async def post_open_full_disk_access() -> Any:
+    try:
+        await asyncio.to_thread(system.open_full_disk_access)
+    except errors.AppError as exc:
+        return _error(exc, 501)
+    return {"ok": True}
+
+
 @router.post("/system/update-ytdlp")
 async def post_update_ytdlp(request: Request) -> Any:
     # `uv sync` swaps yt-dlp's files; a running worker importing an extractor lazily would break.

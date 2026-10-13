@@ -127,6 +127,8 @@ export type JobStatus = 'queued' | 'running' | 'done' | 'failed' | 'cancelled';
 export interface Job {
   id: string;
   kind: string;
+  /** This download used the Safari session (an age-restricted or members-only video). */
+  used_session?: boolean;
   status: JobStatus;
   stage: string;
   title: string | null;
@@ -152,6 +154,7 @@ export interface Settings {
   default_mode: Mode;
   clipboard_watch: boolean;
   notifications: boolean;
+  safari_login: boolean;
   /** Read-only: the app's built-in template, for "Varsayılana dön". */
   default_filename_template?: string;
 }
@@ -422,6 +425,7 @@ export const api = {
   pickFolder: (prompt: string) =>
     request<{ path: string | null }>('/api/system/pick-folder', post({ prompt })),
   updateYtdlp: () => request<UpdateResult>('/api/system/update-ytdlp', post({})),
+  openFullDiskAccess: () => request<{ ok: boolean }>('/api/system/open-full-disk-access', post({})),
   library: (query: LibraryQuery) => {
     const params = new URLSearchParams(
       Object.entries(query).filter(([, value]) => value !== '') as [string, string][],

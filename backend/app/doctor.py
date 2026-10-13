@@ -9,6 +9,8 @@ import importlib.metadata
 import subprocess
 from typing import Any
 
+from app import browser_session
+from app import settings as settings_store
 from app.ffmpeg import binaries
 from app.system import installed_ytdlp
 from app.ytdlp.params import find_js_runtimes
@@ -138,8 +140,32 @@ def _ffmpeg_check() -> dict[str, Any]:
     }
 
 
+def _safari_session_check() -> dict[str, Any]:
+    """Whether a video that needs a signed-in account can use Berk's Safari session."""
+    if not settings_store.load().safari_login:
+        state, status = "off", OK
+    else:
+        session = browser_session.status()
+        if not session["available"]:
+            state, status = "unavailable", WARN
+        elif not session["readable"]:
+            state, status = "no_access", WARN
+        elif session["youtube_signed_in"] is False:
+            state, status = "signed_out", WARN
+        elif session["youtube_signed_in"] is None:
+            state, status = "unknown", OK
+        else:
+            state, status = "signed_in", OK
+    fix = (
+        {"kind": "full_disk_access", "command": ""}
+        if state == "no_access"
+        else {"kind": "none", "command": ""}
+    )
+    return {"id": "safari_session", "status": status, "values": {"state": state}, "fix": fix}
+
+
 def run_doctor() -> dict[str, Any]:
-    checks = [_ytdlp_check(), _js_runtime_check(), _ffmpeg_check()]
+    checks = [_ytdlp_check(), _js_runtime_check(), _ffmpeg_check(), _safari_session_check()]
     worst = (
         ERROR
         if any(c["status"] == ERROR for c in checks)

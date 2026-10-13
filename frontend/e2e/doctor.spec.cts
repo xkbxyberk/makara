@@ -31,6 +31,15 @@ test('the doctor reports every dependency and this build ffmpeg capabilities', a
   }
 });
 
+test('the Safari session row says what age-restricted videos need', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: /Sistem/ }).click();
+  const row = page.locator('.check-row', { hasText: 'Safari oturumu' });
+  // The test server has no Safari session at all (never Berk's): it says how to get one.
+  await expect(row).toContainText('Safari’nin çerez dosyası bulunamadı');
+  await expect(row.getByRole('button', { name: 'Tam Disk Erişimi ayarlarını aç' })).toHaveCount(0);
+});
+
 test('screenshots: doctor in light, dark and at a narrow width', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('vd-theme', 'light'));
   await page.goto('/');
