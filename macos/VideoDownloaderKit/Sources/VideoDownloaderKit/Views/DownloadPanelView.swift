@@ -62,6 +62,9 @@ struct DownloadPanelView: View {
             ForEach(Array(notices.enumerated()), id: \.offset) { _, notice in
                 NoticeRow(text: noticeText(notice), level: notice.level)
             }
+            if let disk = plan.disk, !disk.enough, let needed = disk.needed, let free = disk.free {
+                NoticeRow(text: L("download.diskLow", Format.bytes(needed), Format.bytes(free)), level: "error")
+            }
         }
         if let failure = planner.failure {
             NoticeRow(text: ErrorCopy.title(failure.code) + " " + ErrorCopy.body(failure.code), level: "error")

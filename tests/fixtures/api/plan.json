@@ -5,6 +5,11 @@
     "unreliable": false,
     "missing": 0
   },
+  "disk": {
+    "free": 99741937664,
+    "needed": 923700844,
+    "enough": true
+  },
   "notices": [
     {
       "code": "VIDEO_REENCODE",

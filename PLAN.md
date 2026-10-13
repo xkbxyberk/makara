@@ -263,7 +263,7 @@ Agreed list, in build order (cheap and high-value first):
 - [x] P6a Duplicates: before a download, "Bu video zaten kütüphanende" (same site + video id)
       in İncele, the popup and the page offer, with "Göster" / "Yine de indir"
 - [x] P6b Notifications with actions: "Oynat", "Finder'da göster"; a failed one offers "Tekrar dene"
-- [ ] P6c Disk space: a download whose size is known and does not fit (with a margin) is
+- [x] P6c Disk space: a download whose size is known and does not fit (with a margin) is
       refused before it starts, with how much is free; the panel warns early
 - [ ] P6d Network failures retried by themselves with backoff (30 s, 2 min, 10 min), said in
       the row ("2. deneme 1:40 sonra")

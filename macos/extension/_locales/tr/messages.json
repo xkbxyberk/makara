@@ -331,5 +331,8 @@
   },
   "popup_in_library_body": {
     "message": "Bu videoyu daha önce indirdin."
+  },
+  "error_DISK_SPACE_LOW": {
+    "message": "Diskte yeterli yer yok. Yer açıp tekrar dene."
   }
 }

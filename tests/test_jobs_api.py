@@ -207,6 +207,26 @@ def test_pause_then_resume_continues_the_partial_download(app_env: Any, media_se
     assert resumed, f"resume started over: {MEDIA_REQUESTS}"
 
 
+def test_a_download_that_does_not_fit_on_the_disk_is_refused_before_it_starts(
+    app_env: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import shutil
+
+    from app.jobs import planning
+
+    client = app_env()
+    model = inspect(client)
+    selection = {"inspect_id": model["inspect_id"], "mode": "separate", "video_format_id": "v-vp9"}
+    usage = shutil.disk_usage("/")
+    monkeypatch.setattr(planning.shutil, "disk_usage", lambda _: usage._replace(free=1024))
+    preview = client.post("/api/plan", json=selection).json()
+    assert preview["disk"]["enough"] is False and preview["disk"]["free"] == 1024
+    response = client.post("/api/jobs", json=selection)
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "DISK_SPACE_LOW"
+    assert client.get("/api/jobs").json() == []
+
+
 def test_remove_deletes_the_entry_but_never_the_media(app_env: Any) -> None:
     client = app_env()
     model = inspect(client)

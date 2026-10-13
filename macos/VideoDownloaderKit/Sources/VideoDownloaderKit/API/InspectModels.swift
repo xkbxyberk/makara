@@ -354,7 +354,15 @@ public struct Plan: Decodable, Sendable, Equatable {
         public let params: [String: JSONValue]
     }
 
+    /// Free space on the download folder's volume, and whether this download fits (P6c).
+    public struct Disk: Decodable, Sendable, Equatable {
+        public let free: Double?
+        public let needed: Double?
+        public let enough: Bool
+    }
+
     public let size: Size
+    public let disk: Disk?
     public let notices: [Notice]
     public let blocking: Bool
     public let filename: String?
@@ -363,7 +371,7 @@ public struct Plan: Decodable, Sendable, Equatable {
     public let command: String
 
     private enum CodingKeys: String, CodingKey {
-        case size, notices, blocking, filename, command
+        case size, disk, notices, blocking, filename, command
         case filenameError = "filename_error"
         case downloadDir = "download_dir"
     }
