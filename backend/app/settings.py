@@ -15,6 +15,9 @@ DEFAULT_TEMPLATE = (
     "%(upload_date>%Y-%m-%d|0000-00-00)s - %(title)s [%(id)s].%(ext)s"
 )
 MODES = ("mkv", "compat_mp4", "separate", "audio")
+# How the Safari extension offers the media being played: a small card on the page, or only its
+# toolbar icon (Berk, 2026-10-14: both, chosen here; the card by default).
+EXTENSION_OFFERS = ("page", "icon")
 
 
 @dataclass(slots=True)
@@ -27,6 +30,7 @@ class Settings:
     notifications: bool = True
     # Retry a video that needs a signed-in account with the Safari session (Berk, 2026-10-13).
     safari_login: bool = True
+    extension_offer: str = "page"
 
     def __post_init__(self) -> None:
         if not self.download_dir:
@@ -34,6 +38,8 @@ class Settings:
         self.concurrency = max(1, min(int(self.concurrency), 6))
         if self.default_mode not in MODES:
             self.default_mode = "mkv"
+        if self.extension_offer not in EXTENSION_OFFERS:
+            self.extension_offer = "page"
 
     def as_dict(self) -> dict[str, Any]:
         return asdict(self)

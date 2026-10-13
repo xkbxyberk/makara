@@ -67,6 +67,12 @@ async def post_inspect(request: InspectRequest) -> Any:
     return with_preselection(model, request.rule)
 
 
+@router.get("/extension")
+def get_extension() -> dict[str, Any]:
+    """The one setting the Safari extension reads (through the relay): how to offer a video."""
+    return {"offer": settings_store.load().extension_offer}
+
+
 @router.get("/supports")
 def get_supports(url: str = Query(min_length=1, max_length=2048)) -> dict[str, Any]:
     """Offline: does yt-dlp have an extractor for this page (the generic one aside)?"""

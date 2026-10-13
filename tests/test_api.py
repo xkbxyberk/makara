@@ -248,6 +248,26 @@ def test_api_answers_are_never_cached(client: TestClient) -> None:
         assert client.get(path).headers["cache-control"] == "no-store", path
 
 
+def test_the_extension_reads_how_to_offer_a_video(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("VD_FIXTURE_MODE", "1")
+    monkeypatch.setenv("VD_DATA_DIR", str(tmp_path / "data"))
+    from app.main import create_app
+
+    with TestClient(create_app(), base_url="http://127.0.0.1:8787") as own:
+        # Berk's choice: the card on the page by default; "icon" keeps to the toolbar.
+        assert own.get("/api/extension").json() == {"offer": "page"}
+        settings = own.get("/api/settings").json()
+        assert (
+            own.put("/api/settings", json={**settings, "extension_offer": "icon"}).status_code
+            == 200
+        )
+        assert own.get("/api/extension").json() == {"offer": "icon"}
+        refused = own.put("/api/settings", json={**settings, "extension_offer": "always"})
+        assert refused.status_code == 422
+
+
 def test_the_safari_session_setting_round_trips(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

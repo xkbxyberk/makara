@@ -83,3 +83,14 @@ button.btn:disabled { opacity: 0.5; }
 .progress > div { height: 100%; background: var(--accent); width: 0; transition: width 0.3s ease; }
 .error { color: var(--red); }
 @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 3s; } .progress > div { transition: none; } }
+
+.offer-switch {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 0.5px solid color-mix(in srgb, currentColor 18%, transparent);
+  font-size: 12px;
+  opacity: 0.8;
+}

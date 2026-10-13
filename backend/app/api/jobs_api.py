@@ -66,6 +66,7 @@ class SettingsBody(BaseModel):
     clipboard_watch: bool = False
     safari_login: bool = True
     notifications: bool = True
+    extension_offer: Literal["page", "icon"] = "page"
 
 
 class RevealBody(BaseModel):

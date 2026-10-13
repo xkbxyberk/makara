@@ -271,5 +271,47 @@
   },
   "used_session": {
     "message": "Giriş istediği için Safari’deki YouTube oturumunla indiriliyor."
+  },
+  "offer_title": {
+    "message": "Bu videoyu indir?"
+  },
+  "offer_title_audio": {
+    "message": "Bunu indir?"
+  },
+  "offer_body": {
+    "message": "Bu sitede hatırlanan seçimle ya da varsayılanla kuyruğa eklenir."
+  },
+  "offer_close": {
+    "message": "Kapat"
+  },
+  "offer_download": {
+    "message": "İndir"
+  },
+  "offer_choose": {
+    "message": "Seçenekler…"
+  },
+  "offer_mute": {
+    "message": "Bu sitede sorma"
+  },
+  "offer_adding": {
+    "message": "Kuyruğa ekleniyor…"
+  },
+  "offer_added": {
+    "message": "Kuyruğa eklendi"
+  },
+  "offer_added_body": {
+    "message": "İlerlemeyi VideoDownloader’da görebilirsin."
+  },
+  "offer_show": {
+    "message": "İndirmeleri göster"
+  },
+  "offer_failed": {
+    "message": "Eklenemedi"
+  },
+  "offer_failed_body": {
+    "message": "Uygulamada inceleyip oradan indirebilirsin."
+  },
+  "popup_offer_here": {
+    "message": "$1 sitesinde indirmeyi sayfada öner"
   }
 }

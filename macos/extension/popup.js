@@ -15,6 +15,11 @@ const ROLE_KEYS = { original: 'role_original', default: 'role_default', dub: 'ro
 
 const state = {
   tab: null,
+  // What to download: the post the page's player belongs to (found by content.js), else the page.
+  url: null,
+  // Whether the app offers downloads on the page (Ayarlar), and whether this site is muted.
+  offerMode: null,
+  muted: false,
   rule: null,
   model: null,
   mode: 'mkv',
@@ -45,7 +50,39 @@ function h(tag, attrs = {}, ...children) {
 }
 
 function show(...nodes) {
-  app.replaceChildren(...nodes);
+  app.replaceChildren(...nodes, offerSwitch());
+}
+
+/** "Suggest downloads on this site": undoes the card's "Bu sitede sorma". */
+function offerSwitch() {
+  if (state.offerMode !== 'page' || !VD.siteOf(state.url ?? '')) return '';
+  const box = h('input', {
+    type: 'checkbox',
+    checked: !state.muted,
+    onchange: async (event) => {
+      state.muted = !event.target.checked;
+      const stored = (await browser.storage.local.get('offerMuted'))?.offerMuted ?? {};
+      const site = VD.siteOf(state.url);
+      if (state.muted) stored[site] = true;
+      else delete stored[site];
+      await browser.storage.local.set({ offerMuted: stored });
+    },
+  });
+  return h('label', { class: 'offer-switch' }, box, t('popup_offer_here', VD.siteOf(state.url)));
+}
+
+async function loadOfferState() {
+  const reply = await VD.api('api/extension');
+  state.offerMode = reply.ok ? reply.json?.offer : null;
+  const stored = (await browser.storage.local.get('offerMuted').catch(() => ({})))?.offerMuted ?? {};
+  state.muted = stored[VD.siteOf(state.url ?? '')] === true;
+}
+
+async function targetOf(tab) {
+  const key = `target:${tab.id}`;
+  const stored = await browser.storage.session?.get(key).catch(() => ({}));
+  const target = stored?.[key];
+  return target && VD.isWebPage(target.url) && target.kind !== 'playlist' ? target.url : tab.url;
 }
 
 function message(title, body, ...actions) {
@@ -70,7 +107,7 @@ function languageName(code) {
 }
 
 function openInApp() {
-  void VD.openApp(VD.inspectLink(state.tab.url)).then(() => window.close());
+  void VD.openApp(VD.inspectLink(state.url)).then(() => window.close());
 }
 
 const openInAppButton = () => h('button', { class: 'btn', type: 'button', onclick: openInApp }, t('popup_open_in_app'));
@@ -84,8 +121,10 @@ async function main() {
     message(null, t('popup_not_a_page'));
     return;
   }
+  state.url = await targetOf(tab);
   if (!(await appIsUp())) return;
-  state.rule = await VD.loadRule(tab.url);
+  await loadOfferState();
+  state.rule = await VD.loadRule(state.url);
   await inspect();
 }
 
@@ -105,7 +144,8 @@ async function startApp() {
   for (let i = 0; i < 60; i += 1) {
     await new Promise((resolve) => setTimeout(resolve, 1000));
     if ((await VD.api('api/health')).ok) {
-      state.rule = await VD.loadRule(state.tab.url);
+      await loadOfferState();
+      state.rule = await VD.loadRule(state.url);
       await inspect();
       return;
     }
@@ -119,7 +159,7 @@ async function inspect() {
     h('p', { class: 'message' }, h('span', { class: 'spinner' }), t('popup_inspecting')),
   );
   // `reuse`: reopening the popup on the same page is instant (the app keeps recent inspections).
-  const reply = await VD.api('api/inspect', { method: 'POST', body: { url: state.tab.url, reuse: true, rule: state.rule } });
+  const reply = await VD.api('api/inspect', { method: 'POST', body: { url: state.url, reuse: true, rule: state.rule } });
   if (reply.offline) {
     await appIsUp();
     return;
@@ -315,7 +355,7 @@ async function download() {
   let reply = await VD.api('api/quick', { method: 'POST', body });
   if (reply.status === 410) {
     // The app restarted since the inspect: inspect again, then the same choice.
-    const fresh = await VD.api('api/inspect', { method: 'POST', body: { url: state.tab.url, reuse: false } });
+    const fresh = await VD.api('api/inspect', { method: 'POST', body: { url: state.url, reuse: false } });
     if (fresh.ok) {
       state.model = fresh.json;
       reply = await VD.api('api/quick', { method: 'POST', body: { ...body, inspect_id: fresh.json.inspect_id } });
@@ -330,7 +370,7 @@ async function download() {
     message(null, errorText(reply.json?.error?.code, reply.status), openInAppButton());
     return;
   }
-  if (state.pickedId && state.pickedId === state.offerId) await VD.saveRule(state.tab.url, reply.json.rule);
+  if (state.pickedId && state.pickedId === state.offerId) await VD.saveRule(state.url, reply.json.rule);
   await follow(reply.json.job.id);
 }
 

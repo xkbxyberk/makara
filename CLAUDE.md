@@ -165,7 +165,7 @@ UI and went with it (N8).
     loaded by `macos/extension-tests/shared.test.mjs`), `background.js` (icon + link menu), `content.js` (looks for
     `<video>`/`<audio>`/manifests, tells only the background script), `popup.*`. All app access
     goes through `sendNativeMessage` -> `SafariWebExtensionHandler` -> `Relay.swift`, whose
-    allowlist is the security boundary: GET health/supports/jobs, POST inspect/quick, open
+    allowlist is the security boundary: GET health/supports/jobs/extension, POST inspect/quick, open
     `videodownloader://inspect|show`. Nothing else (Trash, pickers, updater, settings).
     Strings: `_locales/tr/messages.json` (the extension's catalog). The popup e2e
     (`macos/extension-tests/`, Playwright, port 8788) serves the folder at `/__test/extension/` (fixture mode only) and stubs `browser.*` as a transport.
@@ -176,6 +176,18 @@ UI and went with it (N8).
     the shared session had kept a Cache.db of visited page addresses. The relay refuses
     inspect/quick bodies whose `url` is this Mac or the LAN (`LocalHost.swift`, shared with
     `IncomingURL`; mirrored in `shared.js isLocal`).
+    **Beyond YouTube (P1):** a feed's page is not the video. `content.js` picks the player that
+    matters (playing with sound, else the most visible) and lists addresses for it, best first:
+    the post it sits in (the `POSTS` table: X's `/status/` timestamp link in its `<article>`,
+    Instagram, Reddit's `permalink`, TikTok, Facebook, YouTube's grid), the page, canonical,
+    og:url, a plain media file. `VD.permalink` (shared.js, unit-tested) normalises them. The
+    background keeps the first one `/api/supports` knows as the tab's *target* (session
+    storage); the icon and the popup use it. When a big enough player starts playing *with
+    sound* (muted feed autoplay does not count), the background may ask content.js to show the
+    card: only if `GET /api/extension` says `page` (Ayarlar, `extension_offer`), the site is not
+    in `offerMuted` (storage.local; the popup's switch undoes it) and that address was not
+    offered this session. The card lives in a closed shadow root, ignores untrusted clicks and
+    draws its icon inline (a web-accessible image would let pages detect the extension).
 36. **Berk's Safari session** (`app/browser_session.py`, `app/workers/session.py`), his decision
     2026-10-13, his own account: only an AGE_RESTRICTED/LOGIN_REQUIRED answer *for a YouTube
     URL* is retried once with it; the worker gets only the `youtube.com` cookies loaded into its

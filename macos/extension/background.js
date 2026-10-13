@@ -24,6 +24,111 @@ async function setMedia(tabId, found) {
   await (found === null ? sessionStore.remove(key) : sessionStore.set({ [key]: found })).catch(() => undefined);
 }
 
+// ---- small per-tab and per-session records -------------------------------------------------------
+async function sessionGet(key, fallback) {
+  if (!sessionStore) return memory.has(key) ? memory.get(key) : fallback;
+  return (await sessionStore.get(key).catch(() => ({})))?.[key] ?? fallback;
+}
+
+async function sessionSet(key, value) {
+  if (!sessionStore) {
+    if (value === null) memory.delete(key);
+    else memory.set(key, value);
+    return;
+  }
+  await (value === null ? sessionStore.remove(key) : sessionStore.set({ [key]: value })).catch(() => undefined);
+}
+
+/** What the page's player is, as an address the app supports: `{url, kind}` or null. */
+const getTarget = (tabId) => sessionGet(`target:${tabId}`, null);
+const setTarget = (tabId, target) => sessionSet(`target:${tabId}`, target);
+
+// ---- which address the app can download -----------------------------------------------------
+const supportsCache = new Map(); // url -> {at, answer}: a feed reports the same posts again and again
+
+async function supportsOf(url) {
+  const hit = supportsCache.get(url);
+  if (hit && Date.now() - hit.at < 60_000) return hit.answer;
+  const reply = await VD.api('api/supports', { query: { url } });
+  const answer = reply.offline ? null : reply.json;
+  if (answer) {
+    if (supportsCache.size > 300) supportsCache.clear();
+    supportsCache.set(url, { at: Date.now(), answer });
+  }
+  return answer;
+}
+
+/**
+ * The first of the page's candidates (best first, see content.js) that is one video or sound
+ * the app knows: a post's own address beats the feed it is shown in. A list (a channel, an
+ * album) is kept only when nothing better is there. `offline` when the app does not answer.
+ */
+async function resolve(candidates) {
+  let list = null;
+  for (const candidate of (Array.isArray(candidates) ? candidates : []).slice(0, 6)) {
+    const url = typeof candidate?.url === 'string' ? candidate.url : '';
+    if (!VD.isWebPage(url) || url.length > 2048) continue;
+    if (candidate.direct === true) return { url, kind: 'video' };
+    const answer = await supportsOf(url);
+    if (answer === null) return { offline: true };
+    if (!answer.supported) continue;
+    if (answer.kind !== 'playlist') return { url, kind: answer.kind };
+    list ??= { url, kind: 'playlist' };
+  }
+  return list;
+}
+
+// ---- offering the download on the page --------------------------------------------------------
+const MUTED_KEY = 'offerMuted';
+
+/** The app's setting (Ayarlar > Safari): "page" offers on the page, "icon" lights the icon only. */
+let offerSetting = { at: 0, value: 'page' };
+async function offerMode() {
+  if (Date.now() - offerSetting.at < 30_000) return offerSetting.value;
+  const reply = await VD.api('api/extension');
+  const value = reply.ok && reply.json?.offer === 'icon' ? 'icon' : 'page';
+  offerSetting = { at: Date.now(), value };
+  return value;
+}
+
+async function mutedSites() {
+  return (await browser.storage.local.get(MUTED_KEY).catch(() => ({})))?.[MUTED_KEY] ?? {};
+}
+
+async function setMuted(url, muted) {
+  const site = VD.siteOf(url);
+  if (!site) return;
+  const sites = await mutedSites();
+  if (muted) sites[site] = true;
+  else delete sites[site];
+  await browser.storage.local.set({ [MUTED_KEY]: sites }).catch(() => undefined);
+}
+
+/** Each video is offered once a session: dismissed, ignored or downloaded, it is not asked again. */
+async function firstOffer(url) {
+  const offered = await sessionGet('offered', []);
+  if (offered.includes(url)) return false;
+  await sessionSet('offered', [...offered.slice(-499), url]);
+  return true;
+}
+
+async function offerFor(tab, candidates) {
+  const target = await resolve(candidates);
+  if (!target || target.offline || target.kind === 'playlist') return null;
+  await setTarget(tab.id, target);
+  void refresh(tab.id, tab.url);
+  if ((await offerMode()) !== 'page') return null;
+  if ((await mutedSites())[VD.siteOf(tab.url)]) return null;
+  if (!(await firstOffer(target.url))) return null;
+  return { url: target.url };
+}
+
+/** One click: the remembered choice for that site (or today's default), straight to the queue. */
+async function quick(link) {
+  const reply = await VD.api('api/quick', { method: 'POST', body: { url: link, rule: await VD.loadRule(link) } });
+  return { ok: reply.ok === true, offline: reply.offline === true, code: reply.json?.error?.code ?? null };
+}
+
 // ---- the icon --------------------------------------------------------------------------------
 const latest = new Map(); // tab id -> the newest refresh, so a slow old answer cannot win
 
@@ -38,8 +143,10 @@ async function refresh(tabId, url) {
   latest.set(tabId, ticket);
   let state = 'none';
   if (VD.isWebPage(url)) {
-    const reply = await VD.api('api/supports', { query: { url } });
-    state = VD.iconState(reply.offline ? null : reply.json, await getMedia(tabId));
+    // The player's own post first (a feed page itself is not something to download).
+    const target = await getTarget(tabId);
+    const answer = target ? { supported: true, kind: target.kind } : await supportsOf(url);
+    state = VD.iconState(answer, await getMedia(tabId));
   }
   if (latest.get(tabId) !== ticket) return;
   await browser.action.setIcon({ tabId, path: VD.ICONS[state] }).catch(() => undefined);
@@ -47,7 +154,7 @@ async function refresh(tabId, url) {
 }
 
 browser.tabs.onUpdated.addListener(async (tabId, change, tab) => {
-  if (change.url) await setMedia(tabId, null);
+  if (change.url) await Promise.all([setMedia(tabId, null), setTarget(tabId, null)]);
   if (change.url || change.status === 'complete') void refresh(tabId, tab.url);
 });
 browser.tabs.onActivated.addListener(async ({ tabId }) => {
@@ -57,13 +164,37 @@ browser.tabs.onActivated.addListener(async ({ tabId }) => {
 browser.tabs.onRemoved.addListener((tabId) => {
   latest.delete(tabId);
   void setMedia(tabId, null);
+  void setTarget(tabId, null);
 });
 
+/** Messages from content.js (the page's player, the card's buttons) and the popup. */
 browser.runtime.onMessage.addListener((message, sender) => {
-  if (message?.type === 'media' && sender.tab?.id !== undefined) {
-    void setMedia(sender.tab.id, message.found === true).then(() => refresh(sender.tab.id, sender.tab.url));
+  const tab = sender.tab;
+  const url = typeof message?.url === 'string' ? message.url : '';
+  switch (message?.type) {
+    case 'media':
+      if (tab?.id === undefined) return undefined;
+      return (async () => {
+        await setMedia(tab.id, message.found === true);
+        const target = message.found === true ? await resolve(message.candidates) : null;
+        await setTarget(tab.id, target && !target.offline ? target : null);
+        await refresh(tab.id, tab.url);
+      })();
+    case 'playing':
+      return tab?.id === undefined ? undefined : offerFor(tab, message.candidates).then((offer) => ({ offer }));
+    case 'download':
+      return VD.isWebPage(url) ? quick(url) : Promise.resolve({ ok: false });
+    case 'inspect':
+      return VD.isWebPage(url) ? VD.openApp(VD.inspectLink(url)) : Promise.resolve(false);
+    case 'open':
+      return url === 'videodownloader://show?route=download' ? VD.openApp(url) : Promise.resolve(false);
+    case 'dismiss':
+      return Promise.resolve(true); // already recorded as offered
+    case 'mute':
+      return setMuted(url, true);
+    default:
+      return undefined;
   }
-  return undefined;
 });
 
 // ---- right-click on a link ------------------------------------------------------------------
@@ -108,8 +239,7 @@ browser.contextMenus.onClicked.addListener(async (info, tab) => {
     await VD.openApp(VD.inspectLink(link));
     return;
   }
-  // One click: the remembered choice for that site (or today's default), straight to the queue.
-  const reply = await VD.api('api/quick', { method: 'POST', body: { url: link, rule: await VD.loadRule(link) } });
+  const reply = await quick(link);
   if (reply.offline) {
     await VD.openApp(VD.inspectLink(link)); // the app was closed: open it on that link instead
     return;

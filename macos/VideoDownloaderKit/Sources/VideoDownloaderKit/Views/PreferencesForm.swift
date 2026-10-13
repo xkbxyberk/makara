@@ -119,6 +119,20 @@ struct PreferencesForm: View {
                 toggle(L("settings.safariLogin"), help: L("settings.safariLoginHelp"), \.safariLogin, id: "safariLogin")
             }
 
+            Section {
+                Picker(selection: instant(\.extensionOffer)) {
+                    Text(L("settings.extensionOffer.page")).tag("page")
+                    Text(L("settings.extensionOffer.icon")).tag("icon")
+                } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(L("settings.extensionOffer"))
+                        Text(L("settings.extensionOfferHelp")).font(.caption).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .accessibilityIdentifier("settings.extensionOffer")
+            }
+
         }
         .formStyle(.grouped)
         .onChange(of: field) { old, _ in if old != nil { preferences.commitText() } }

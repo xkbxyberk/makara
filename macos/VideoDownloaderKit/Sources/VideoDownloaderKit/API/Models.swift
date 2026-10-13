@@ -15,11 +15,14 @@ public struct AppSettings: Codable, Sendable, Equatable {
     public var clipboardWatch: Bool
     public var notifications: Bool
     public var safariLogin: Bool = true
+    /// The Safari extension: "page" (a card on the page offers the video) or "icon" (only its icon).
+    public var extensionOffer: String = "page"
     /// Read-only: the app's built-in template, for "Varsayılana dön".
     public var defaultFilenameTemplate: String? = nil
 
     private enum CodingKeys: String, CodingKey {
         case downloadDir, filenameTemplate, concurrency, defaultMode, clipboardWatch, notifications, safariLogin
+        case extensionOffer
         case defaultFilenameTemplate
     }
 
@@ -33,6 +36,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         notifications = try c.decode(Bool.self, forKey: .notifications)
         // Newer settings: an older answer without them keeps the defaults.
         safariLogin = try c.decodeIfPresent(Bool.self, forKey: .safariLogin) ?? true
+        extensionOffer = try c.decodeIfPresent(String.self, forKey: .extensionOffer) ?? "page"
         defaultFilenameTemplate = try c.decodeIfPresent(String.self, forKey: .defaultFilenameTemplate)
     }
 
@@ -46,6 +50,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         try c.encode(clipboardWatch, forKey: .clipboardWatch)
         try c.encode(notifications, forKey: .notifications)
         try c.encode(safariLogin, forKey: .safariLogin)
+        try c.encode(extensionOffer, forKey: .extensionOffer)
     }
 }
 

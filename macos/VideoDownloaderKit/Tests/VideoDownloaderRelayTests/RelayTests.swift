@@ -19,6 +19,7 @@ struct RelayTests {
         #expect(body?["url"] as? String == "https://x.test/v")
         #expect(request(["type": "api", "path": "api/jobs"]) != nil)
         #expect(request(["type": "api", "path": "api/health"]) != nil)
+        #expect(request(["type": "api", "path": "api/extension"]) != nil)  // how to offer a video
         #expect(request(["type": "api", "method": "POST", "path": "api/inspect", "body": ["url": "https://x.test/v"]]) != nil)
     }
 
@@ -29,6 +30,7 @@ struct RelayTests {
             ["type": "api", "method": "POST", "path": "api/system/pick-folder", "body": [:]],
             ["type": "api", "method": "DELETE", "path": "api/jobs"],
             ["type": "api", "method": "PUT", "path": "api/settings"],
+            ["type": "api", "path": "api/settings"],  // the extension reads only api/extension
             ["type": "api", "path": "api/../api/settings"],
             ["type": "api", "path": "/api/health"],
             ["type": "api", "path": "api/jobs", "query": ["x": "1"]],

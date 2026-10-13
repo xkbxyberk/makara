@@ -5,7 +5,7 @@
 // see backend/app/ytdlp/offers.py) do. This file only talks to the app, remembers a choice,
 // and formats what the backend says.
 (() => {
-  /** Hosts that are one site for a remembered choice. Mirrors frontend/src/lib/quickRule.ts. */
+  /** Hosts that are one site for a remembered choice. Mirrors `QuickRules.site(of:)` in the app. */
   const ALIASES = { 'youtu.be': 'youtube.com', 'music.youtube.com': 'youtube.com' };
 
   function siteOf(url) {
@@ -47,6 +47,48 @@
     }
   }
 
+  /**
+   * The one address of a post or video, from a link found next to the media on the page: X's
+   * `/status/<id>` without `/video/1` or `/photo/1`, Instagram's `/p|reel/<code>/`, a Reddit
+   * post's `/comments/<id>/`, a TikTok `/@user/video/<id>`, a YouTube `watch?v=` or Short.
+   * Anything else is kept as it is, without its #fragment. null for nothing or a non-web link.
+   */
+  function permalink(href, base) {
+    let url;
+    try {
+      url = new URL(href, base);
+    } catch {
+      return null;
+    }
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
+    const host = url.hostname.toLowerCase().replace(/^(www|m|mobile)\./, '');
+    const path = url.pathname;
+    let match;
+    if (host === 'x.com' || host === 'twitter.com') {
+      match = path.match(/^\/([A-Za-z0-9_]{1,30})\/status\/(\d{1,25})(?:\/|$)/);
+      return match ? `https://x.com/${match[1]}/status/${match[2]}` : null;
+    }
+    if (host === 'instagram.com') {
+      match = path.match(/^(?:\/[A-Za-z0-9_.]{1,30})?\/(p|reels?|tv)\/([A-Za-z0-9_-]{5,40})(?:\/|$)/);
+      return match ? `https://www.instagram.com/${match[1] === 'p' ? 'p' : 'reel'}/${match[2]}/` : null;
+    }
+    if (host === 'reddit.com' || host === 'old.reddit.com' || host === 'new.reddit.com') {
+      match = path.match(/^\/r\/([A-Za-z0-9_]{1,30})\/comments\/([a-z0-9]{1,12})(?:\/|$)/i);
+      return match ? `https://www.reddit.com/r/${match[1]}/comments/${match[2]}/` : null;
+    }
+    if (host === 'tiktok.com') {
+      match = path.match(/^\/@([A-Za-z0-9_.-]{1,40})\/video\/(\d{5,25})(?:\/|$)/);
+      return match ? `https://www.tiktok.com/@${match[1]}/video/${match[2]}` : null;
+    }
+    if (host === 'youtube.com' || host === 'music.youtube.com' || host === 'youtu.be') {
+      const id = host === 'youtu.be' ? path.slice(1) : url.searchParams.get('v') ?? path.match(/^\/shorts\/([^/]+)/)?.[1];
+      if (!id || !/^[A-Za-z0-9_-]{11}$/.test(id)) return null;
+      return path.startsWith('/shorts/') ? `https://www.youtube.com/shorts/${id}` : `https://www.youtube.com/watch?v=${id}`;
+    }
+    url.hash = '';
+    return url.href;
+  }
+
   const positive = (value, max) =>
     value === undefined || value === null || (typeof value === 'number' && Number.isFinite(value) && value > 0 && value <= max);
 
@@ -84,7 +126,7 @@
   const TITLES = { ready: 'title_ready', list: 'title_list', none: 'title_none', offline: 'title_offline' };
 
   const UNITS = ['B', 'KB', 'MB', 'GB', 'TB'];
-  /** Binary units, exactly as the app shows them (frontend/src/lib/format.ts). */
+  /** Binary units, exactly as the app shows them (`Format.bytes`). */
   function formatBytes(bytes) {
     if (bytes === null || bytes === undefined || !Number.isFinite(bytes)) return '';
     if (bytes < 1024) return `${bytes} ${UNITS[0]}`;
@@ -155,7 +197,7 @@
   }
 
   globalThis.VD = {
-    siteOf, isLocal, isWebPage, isRule, iconState, ICONS, TITLES, formatBytes, sizePrefix, formatDuration,
+    siteOf, isLocal, isWebPage, permalink, isRule, iconState, ICONS, TITLES, formatBytes, sizePrefix, formatDuration,
     api, openApp, inspectLink, loadRule, saveRule,
   };
 })();

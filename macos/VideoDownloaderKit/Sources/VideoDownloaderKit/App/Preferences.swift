@@ -101,6 +101,7 @@ public final class Preferences {
         if shown.clipboardWatch == sent.clipboardWatch { shown.clipboardWatch = stored.clipboardWatch }
         if shown.notifications == sent.notifications { shown.notifications = stored.notifications }
         if shown.safariLogin == sent.safariLogin { shown.safariLogin = stored.safariLogin }
+        if shown.extensionOffer == sent.extensionOffer { shown.extensionOffer = stored.extensionOffer }
         shown.defaultFilenameTemplate = stored.defaultFilenameTemplate
     }
 
@@ -112,6 +113,7 @@ public final class Preferences {
         if changed.clipboardWatch != saved.clipboardWatch { shown.clipboardWatch = saved.clipboardWatch }
         if changed.notifications != saved.notifications { shown.notifications = saved.notifications }
         if changed.safariLogin != saved.safariLogin { shown.safariLogin = saved.safariLogin }
+        if changed.extensionOffer != saved.extensionOffer { shown.extensionOffer = saved.extensionOffer }
     }
 
     /// The file name the draft's template gives for the sample video.

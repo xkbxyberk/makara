@@ -53,3 +53,25 @@ test('formats like the app and names the heaviest step', () => {
   assert.equal(VD.formatDuration(3725), '1:02:05');
   assert.equal(VD.inspectLink('https://x.test/a?b=1&c=2'), 'videodownloader://inspect?url=https%3A%2F%2Fx.test%2Fa%3Fb%3D1%26c%3D2');
 });
+
+test('finds the one address of the post a video belongs to', () => {
+  const cases = {
+    'https://x.com/nasa/status/1850123456789012345/video/1': 'https://x.com/nasa/status/1850123456789012345',
+    '/nasa/status/1850123456789012345/photo/1': 'https://x.com/nasa/status/1850123456789012345',
+    'https://twitter.com/nasa/status/185?s=20': 'https://x.com/nasa/status/185',
+    'https://www.instagram.com/reels/C9xYz12AbCd/': 'https://www.instagram.com/reel/C9xYz12AbCd/',
+    'https://www.instagram.com/someone/p/C9xYz12AbCd/?img_index=1': 'https://www.instagram.com/p/C9xYz12AbCd/',
+    'https://old.reddit.com/r/videos/comments/1abcde/a_title/': 'https://www.reddit.com/r/videos/comments/1abcde/',
+    'https://www.tiktok.com/@some.one/video/7421234567890123456?lang=tr': 'https://www.tiktok.com/@some.one/video/7421234567890123456',
+    'https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=PL1&t=42': 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+    'https://youtu.be/dQw4w9WgXcQ?t=1': 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+    'https://m.youtube.com/shorts/dQw4w9WgXcQ': 'https://www.youtube.com/shorts/dQw4w9WgXcQ',
+    'https://vimeo.com/123456#t=30s': 'https://vimeo.com/123456',
+  };
+  for (const [href, expected] of Object.entries(cases)) assert.equal(VD.permalink(href, 'https://x.com/home'), expected, href);
+  // Links that are not a post: X's own pages, a profile, a YouTube page without a video.
+  for (const href of ['https://x.com/home', 'https://x.com/nasa', 'https://www.instagram.com/someone/',
+    'https://www.youtube.com/@channel', 'https://www.youtube.com/watch?v=short', 'javascript:alert(1)', 'blob:https://x.com/1']) {
+    assert.equal(VD.permalink(href, 'https://x.com/home'), null, href);
+  }
+});

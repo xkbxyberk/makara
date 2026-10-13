@@ -15,6 +15,7 @@ public enum Relay {
     static let allowed: [String: Set<String>] = [
         "GET api/health": [],
         "GET api/supports": ["url"],
+        "GET api/extension": [],
         "GET api/jobs": [],
         "POST api/inspect": [],
         "POST api/quick": [],

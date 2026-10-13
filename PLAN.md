@@ -215,15 +215,17 @@ Working mode from now on: development first; no full gate / UI tests / review ag
 Berk asks (session limits).
 
 ### P1 — Safari extension beyond YouTube
-- [ ] Every site yt-dlp supports, not only YouTube: the content script finds the media Berk is
+- [x] Every site yt-dlp supports, not only YouTube: the content script finds the media Berk is
       watching (a playing `<video>`/`<audio>`, MSE/blob players included) and its *permalink*
       (X: the tweet's `/status/` link inside the `<article>`; generic: canonical/og:url, the
       page itself), asks `/api/supports` (offline), and only then offers it
-- [ ] Both, chosen in Settings (Berk, 2026-10-14): by default a small dismissible in-page offer
+- [x] Both, chosen in Settings (Berk, 2026-10-14): by default a small dismissible in-page offer
       ("Bu videoyu indir?" with the quick choice and "İncele"), once per media, mutable per
       site; or the toolbar icon only. The toolbar popup works either way
-- [ ] Site-specific permalink finders kept in one table (X, Instagram, TikTok, Reddit,
+- [x] Site-specific permalink finders kept in one table (X, Instagram, TikTok, Reddit,
       Vimeo, Facebook…), generic fallback for the rest
+- [ ] Berk's live check in Safari (restart Safari after the rebuild): X timeline, a YouTube
+      video, one more site; the card, "Bu sitede sorma", and the "icon only" setting
 
 ### P2 — Download acceleration (IDM-style)
 - [ ] Fragmented formats (HLS/DASH, most sites): yt-dlp's `concurrent_fragment_downloads`
