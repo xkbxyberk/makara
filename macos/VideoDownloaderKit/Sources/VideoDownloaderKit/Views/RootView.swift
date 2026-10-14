@@ -10,6 +10,11 @@ public struct RootView: View {
         switch model.backend.state {
         case .ready:
             MainSplitView(model: model)
+        case .needsSetup:
+            SetupView(model: model)
+        // While the assistant's last step (Python) runs, it stays on screen.
+        case .syncing where model.setup.shown, .starting where model.setup.shown:
+            SetupView(model: model)
         case .failed(let failure):
             BackendFailureView(failure: failure, log: model.backend.logTail(),
                                logFile: model.backend.config.logFile) {

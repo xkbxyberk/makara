@@ -17,6 +17,9 @@ public enum BackendFailure: Equatable, Sendable {
 
 public enum BackendState: Equatable, Sendable {
     case idle
+    /// A release whose tools are not installed yet: the setup assistant asks before anything
+    /// is downloaded.
+    case needsSetup
     case syncing
     case starting
     /// `attached`: a server was already answering on the port (a development server, or one
@@ -72,6 +75,10 @@ public final class BackendController {
         }
         guard let root = config.serverDirectory, let syncDirectory = config.syncDirectory else {
             state = .failed(.noProject)
+            return
+        }
+        if let release = config.release, !RuntimeTools.ready(release) {
+            state = .needsSetup
             return
         }
         rotateLog()

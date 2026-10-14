@@ -1,0 +1,21 @@
+{
+  "version": "2026.10.15",
+  "base": "https://github.com/xkbxyberk/makara-releases/releases/download/runtime-2026.10.15/",
+  "tools": {
+    "ffmpeg": "9.0.2",
+    "deno": "2.9.7",
+    "aria2c": "1.37.0"
+  },
+  "archives": {
+    "arm64": {
+      "file": "makara-runtime-2026.10.15-arm64.zip",
+      "sha256": "6f15df8926187d94518c37a084381730ff22275f6b2b69550d7f30be7965188a",
+      "size": 95914505
+    },
+    "x86_64": {
+      "file": "makara-runtime-2026.10.15-x86_64.zip",
+      "sha256": "f08a2e1b5fd9ec7b021d2fbf86ff6bd657be85e3b74f654496982c50a0faafa9",
+      "size": 110786942
+    }
+  }
+}

@@ -400,6 +400,15 @@ UI and went with it (N8).
     Homebrew's (`paths.bundled_tool`), and the updater uses `VD_UV`/`VD_UV_PROJECT`.
     Tried 15 Oct from a clean runtime: Python and 31 packages installed, server up, in-app
     yt-dlp update ran against the runtime's lock.
+    **The setup assistant** (`SetupView`, `RuntimeSetup`, `Backend/Runtime.swift`): a release
+    whose `runtime/bin/.version` is not the shipped `runtime-manifest.json`'s version stops in
+    `BackendState.needsSetup` and downloads nothing until "Kur". Then the zip for this Mac's
+    processor is fetched (ephemeral URLSession), checked by SHA-256, unpacked with ditto, every
+    tool run once, and swapped in whole; then the backend starts and its sync installs Python.
+    The zips come from `scripts/runtime/build_runtime.sh` (FFmpeg 9.0.2 from
+    ffmpeg.martin-riedl.de, Deno 2.9.7, aria2c 1.37.0 built here with AppleTLS so it links only
+    system libraries; arm64 and x86_64, macOS 14+); its manifest goes into the Kit's
+    Resources. `VD_RUNTIME_BASE_URL` (e.g. `file:///…/build/runtime/`) installs local zips.
 
 ## Rules
 

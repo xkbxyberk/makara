@@ -16,3 +16,4 @@ macos/build/
 xcuserdata/
 .build/
 .swiftpm/
+build/

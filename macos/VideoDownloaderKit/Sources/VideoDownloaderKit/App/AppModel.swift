@@ -38,6 +38,8 @@ public final class AppModel {
     public let preferences: Preferences
     /// Menu bar item, Dock icon, start at login.
     public let shell: Shell
+    /// A release's first start: the tools and Python to install (PLAN P8).
+    public let setup = RuntimeSetup()
     @ObservationIgnored private var events: Task<Void, Never>?
     @ObservationIgnored private var pending: [IncomingURL] = []
     @ObservationIgnored private var askedForNotifications = false
@@ -65,6 +67,7 @@ public final class AppModel {
 
     public func start() async {
         await backend.start()
+        if backend.state == .needsSetup { setup.needed() }
         guard isReady else { return }
         // What arrived while the backend was starting (a link from Safari, a screen) is handled
         // now that it answers.
@@ -75,6 +78,12 @@ public final class AppModel {
         if Bundle.main.bundleIdentifier != nil { notificationActions.install() }
         listen()
         waiting.forEach(handle)
+    }
+
+    /// The setup assistant's button: tools, then the backend (which installs Python).
+    public func installRuntime() async {
+        guard let release = backend.config.release else { return }
+        await setup.install(release) { [weak self] in await self?.retry() }
     }
 
     /// One fresh attempt, never two: the controller is reset, then started once.

@@ -24,6 +24,8 @@ public struct BackendConfig: Sendable, Equatable {
         /// update rewrites its lock).
         public var runtime: URL
         public var uvCache: URL
+        /// The tools to install into `bin` (the app's `runtime-manifest.json`).
+        public var manifest: RuntimeManifest? = nil
 
         public var project: URL { runtime.appending(path: "project") }
         public var venv: URL { runtime.appending(path: "venv") }
@@ -67,7 +69,8 @@ public struct BackendConfig: Sendable, Equatable {
                 release: Release(resources: resources,
                                  shippedProject: resources.appending(path: "backend-project"),
                                  runtime: runtime,
-                                 uvCache: cache))
+                                 uvCache: cache,
+                                 manifest: manifest(environment: environment)))
         }
         return BackendConfig(
             port: port,
@@ -76,6 +79,15 @@ public struct BackendConfig: Sendable, Equatable {
             environment: environment,
             logFile: logFile
         )
+    }
+
+    /// The shipped manifest; `VD_RUNTIME_BASE_URL` points it elsewhere (a trial with local zips).
+    static func manifest(environment: [String: String]) -> RuntimeManifest? {
+        guard var manifest = RuntimeManifest.bundled() else { return nil }
+        if let base = environment["VD_RUNTIME_BASE_URL"], !base.isEmpty {
+            manifest.base = base.hasSuffix("/") ? base : base + "/"
+        }
+        return manifest
     }
 
     static func findUV(environment: [String: String], fileExists: (String) -> Bool, home: URL) -> URL? {
