@@ -145,7 +145,7 @@ struct LibraryView: View {
                     ForEach(["added", "uploaded", "title", "size", "duration"], id: \.self) { Text(L("library.sort.\($0)")).tag($0) }
                 }
             }
-            .labelsVisibility(labels ? .visible : .hidden)
+            .labelsShown(labels)
             .fixedSize()
             Toggle(L("library.onlyMissing"), isOn: Binding(get: { librarian.query.status == "missing" },
                                                           set: { librarian.query.status = $0 ? "missing" : "" }))

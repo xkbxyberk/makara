@@ -240,3 +240,27 @@ struct CopyButton: View {
         }
     }
 }
+
+// ---- newer than the oldest supported macOS (14) ---------------------------------------------
+
+extension View {
+    /// `labelsVisibility` is macOS 15; on 14 the labels are simply shown or hidden.
+    @ViewBuilder func labelsShown(_ shown: Bool) -> some View {
+        if #available(macOS 15, *) {
+            labelsVisibility(shown ? .visible : .hidden)
+        } else if shown {
+            self
+        } else {
+            labelsHidden()
+        }
+    }
+
+    /// The resize arrows over a trim handle (macOS 15); the plain pointer on 14.
+    @ViewBuilder func resizePointer(leading: Bool) -> some View {
+        if #available(macOS 15, *) {
+            pointerStyle(.frameResize(position: leading ? .leading : .trailing))
+        } else {
+            self
+        }
+    }
+}

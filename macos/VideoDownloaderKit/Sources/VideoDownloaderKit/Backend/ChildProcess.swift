@@ -20,7 +20,8 @@ public final class ChildProcess: @unchecked Sendable {
         posix_spawn_file_actions_addopen(&actions, 0, "/dev/null", O_RDONLY, 0)
         posix_spawn_file_actions_addopen(&actions, 1, log.path, O_WRONLY | O_CREAT | O_APPEND, 0o644)
         posix_spawn_file_actions_adddup2(&actions, 1, 2)
-        posix_spawn_file_actions_addchdir(&actions, directory.path)
+        // The `_np` spelling: the standard name exists only from macOS 26.
+        posix_spawn_file_actions_addchdir_np(&actions, directory.path)
 
         var attributes: posix_spawnattr_t? = nil
         posix_spawnattr_init(&attributes)

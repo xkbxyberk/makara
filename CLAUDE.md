@@ -379,6 +379,13 @@ UI and went with it (N8).
     folders named like a job id (12 hex) whose job is gone, or whose job is done, failed or
     cancelled and that were untouched for 14 days; nothing else there is touched.
 
+49. **Oldest supported macOS is 14 Sonoma** (Berk, 15 Oct: "as low as the app allows";
+    Package.swift and every target's `MACOSX_DEPLOYMENT_TARGET`). The floor is `@Observable`.
+    Anything newer goes behind `if #available` with a 14 fallback, as `labelsShown` and
+    `resizePointer` (Common.swift) do; the compiler reports these, so build after adding a
+    newer API. Watch for C APIs renamed late: `posix_spawn_file_actions_addchdir` is macOS 26,
+    the `_np` spelling works everywhere.
+
 ## Rules
 
 - **Never delete, skip, weaken or `xfail` a test to make the suite pass.** Fix the code.

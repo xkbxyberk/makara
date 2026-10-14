@@ -417,7 +417,7 @@ struct TrimTimeline: View {
             .frame(width: handleWidth, height: stripHeight)
             .overlay(Image(systemName: systemImage).font(.body.weight(.heavy)).foregroundStyle(.black.opacity(0.7)))
             .contentShape(.rect)
-            .pointerStyle(.frameResize(position: which == .start ? .leading : .trailing))
+            .resizePointer(leading: which == .start)
     }
 }
 

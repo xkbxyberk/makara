@@ -303,12 +303,17 @@ Berk: share the app with friends who have no Homebrew and no developer tools; re
 developing it himself after formatting this Mac; use his GitHub account; fresh installs use
 "Makara" folders. Research notes and the proposed shape -- **decisions marked (Berk)**.
 
+**Decided (Berk, 2026-10-15):** he has a paid Apple Developer Program membership; Deno is the JS
+runtime; the old catalogue is not migrated (fresh Makara names, no migration code); support the
+oldest macOS the app can run on -- **macOS 14 Sonoma**, set and compiled (see 7).
+
 **What a friend does (the target):** download `Makara.dmg` from the GitHub release page, drag
 Makara to Applications, open it. A first-run guide turns on the Safari extension (Safari >
 Settings > Extensions, then "all websites"), optionally Full Disk Access for the Safari session,
 and start at login. Nothing else to install. Updates arrive in the app.
 
-1. **Apple Developer Program (Berk: $99/year).** The only professional route. Developer ID
+1. **Apple Developer Program (Berk is a member).** Next: create a "Developer ID Application"
+   certificate (Xcode > Settings > Accounts > Manage Certificates) and a notary profile. The only professional route. Developer ID
    signing + notarization are paid-program features; a free Personal Team gets only "Apple
    Development" certificates (the one this Mac has). Without them: Gatekeeper blocks the app
    (macOS 15+ has no right-click > Open; "Open Anyway" in Privacy & Security every time), and the
@@ -322,8 +327,7 @@ and start at login. Nothing else to install. Updates arrive in the app.
    - FFmpeg/ffprobe: static arm64 builds with libass, libwebp, zimg, x264/x265, dav1d,
      SVT-AV1, opus, lame (e.g. ffmpeg.martin-riedl.de release builds, .sha256 per file; or
      build our own in CI). GPL: ship the build's source link/offer with the app.
-   - Deno for YouTube's JS challenges (124 MB here). QuickJS-ng is ~2 MB but slower; measure
-     before choosing (Berk).
+   - Deno for YouTube's JS challenges (124 MB here; Berk chose it over QuickJS-ng).
    - aria2c: Homebrew's links six dylibs; build a static arm64 aria2c in CI (OpenSSL, c-ares,
      libssh2, sqlite static) or ship it with its dylibs rewritten to `@loader_path`.
    - Every Mach-O (python, .so, .dylib, ffmpeg, deno, aria2c) signed with Developer ID and the
@@ -346,10 +350,17 @@ and start at login. Nothing else to install. Updates arrive in the app.
    `VDProjectRoot`, no "proje klasörü bulunamadı" in a release.
 6. **Names for a fresh start** (before friends install anything, ideally now): bundle ids
    `com.berkakbay.Makara` (+ `.Extension`), URL scheme `makara://`, folders `~/Movies/Makara`,
-   `~/Library/Application Support/Makara`, `~/Library/Logs/Makara`. After the format nothing
-   needs migrating; Berk's restored catalogue is the only case (Berk: migrate or start fresh).
-7. **Minimum macOS (Berk):** now 27.0, so Apple silicon only (macOS 27 dropped Intel). Friends
-   on macOS 26 would need the target lowered and Icon Composer / API use checked.
+   `~/Library/Application Support/Makara`, `~/Library/Logs/Makara`. No migration (Berk).
+7. **Minimum macOS: 14.0 (done 15 Oct).** The floor is Observation (`@Observable`, macOS 14);
+   lowering from 27 needed only `posix_spawn_file_actions_addchdir_np` (the plain name is
+   macOS 26) and fallbacks for two macOS 15 modifiers (`labelsShown`, `resizePointer` in
+   Common.swift). Xcode writes `AppIcon.icns` from the Icon Composer file for older systems.
+   Safari must be 18.4+ for a Developer ID extension (available on Sonoma). Not yet run on 14:
+   check in a macOS 14 virtual machine (UTM / Virtualization.framework) before a release.
+   **Intel (open, Berk):** macOS 14-26 also run on Intel Macs. The Swift app builds universal
+   for free; the bundled Python, FFmpeg, Deno and aria2c exist for x86_64 too but double the
+   size: either a universal app (~600 MB) or a second, Intel DMG. Suggested: Apple silicon
+   first, an Intel DMG only if a friend needs it.
 8. **First-run guide** (P7 item, now required): extension state via
    `SFSafariExtensionManager`, `SFSafariApplication.showPreferencesForExtension`, Full Disk
    Access explained and optional, start at login, download folder.

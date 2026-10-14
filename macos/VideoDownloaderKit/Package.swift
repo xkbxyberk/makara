@@ -7,7 +7,7 @@ import PackageDescription
 let package = Package(
     name: "VideoDownloaderKit",
     defaultLocalization: "tr",
-    platforms: [.macOS("27.0")],
+    platforms: [.macOS(.v14)],
     products: [
         .library(name: "VideoDownloaderKit", targets: ["VideoDownloaderKit"]),
         // The Safari extension's native half links only this: small, no UI, no resources.
