@@ -76,7 +76,9 @@ public struct MenuBarView: View {
                 .font(.callout)
                 .lineLimit(1)
                 .truncationMode(.middle)
-            if job.isIndeterminate && job.status == .running {
+            if job.status == .running, job.stage == "downloading", let pieces = job.pieces, !pieces.isEmpty {
+                SegmentBar(pieces: pieces)
+            } else if job.isIndeterminate && job.status == .running {
                 ProgressView().progressViewStyle(.linear)
             } else {
                 ProgressView(value: min(max(job.progress ?? 0, 0), 1)).progressViewStyle(.linear)
@@ -88,6 +90,9 @@ public struct MenuBarView: View {
                     Text("\(Int((progress * 100).rounded()))%")
                 }
                 if job.status == .running, let speed = job.speed, speed > 0 { Text(L("queue.speed", Format.bytes(speed))) }
+                if job.stage == "downloading", let connections = job.connections, connections > 1 {
+                    Text(L("queue.connections", connections))
+                }
             }
             .font(.caption)
             .foregroundStyle(.secondary)

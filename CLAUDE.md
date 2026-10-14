@@ -282,6 +282,15 @@ UI and went with it (N8).
     time. aria2c's `--version` is translated here ("aria2 sürüm 1.37.0"). In fixture mode only
     `VD_ARIA2C` enables it. **Pause** = cancel that ends `paused` and keeps the scratch
     directory (the `.part` and `.aria2` files); resume requeues it. Stüdyo jobs cannot pause.
+    **The segment map** (Berk: "IDM gibi parçalara bölünmüş"): progress events carry `pieces`
+    (48 digits 0-9), `connections` and, for HLS/DASH, `fragments` [done, total]; the job row
+    stores them and İndirmeler/menu bar draw `SegmentBar`. For aria2c the map is read from its
+    control file (`aria2.pieces`, format checked against a real capture in
+    `tests/fixtures/sample.aria2`; `--auto-save-interval=1` keeps it current) and `CN:` from the
+    readout; for fragments it is the counter. Measured 14 Oct on a real YouTube video: 1080p60
+    `299` (https) via aria2c with 8 TCP connections at ~6.4 MB/s; HLS `312` with 8 parallel
+    fragments at ~45 MB/s. YouTube does not always offer the https formats: one extraction
+    (visionos client) gave HLS only, which still downloads in parallel fragments.
 
 42. **Kütüphane's shelves (P3)** are routes (`Route.shelves`: videos, music, edits) showing the
     same `LibraryView`; the route sets `LibraryQuery.category` (not a filter: `isFiltered`

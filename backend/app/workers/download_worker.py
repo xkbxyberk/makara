@@ -54,9 +54,12 @@ class Progress:
     equally would show 33% when the download is nearly finished.
     """
 
-    def __init__(self, format_ids: list[str], expected: dict[str, int | None]) -> None:
+    def __init__(
+        self, format_ids: list[str], expected: dict[str, int | None], parallel: int = 1
+    ) -> None:
         self.order = format_ids
         self.expected = expected
+        self.parallel = parallel  # fragments yt-dlp downloads side by side
         self.done: dict[str, int] = {}
         self.total: dict[str, int] = {}
         self.last_emit = 0.0
@@ -100,8 +103,35 @@ class Progress:
                     "eta": d.get("eta"),
                     "item_index": self.order.index(fid) + 1,
                     "item_count": len(self.order),
+                    **self.segments(d),
                 }
             )
+
+    def segments(self, d: dict[str, Any]) -> dict[str, Any]:
+        """How the current file is being fetched, for İndirmeler's segment map: aria2c's own
+        piece map and open connections, or yt-dlp's fragment counter (HLS/DASH)."""
+        if d.get("status") == "finished":
+            return {"pieces": "9" * aria2.CELLS, "connections": None, "fragments": None}
+        if d.get("vd_pieces") is not None or d.get("vd_connections") is not None:
+            return {
+                "pieces": d.get("vd_pieces"),
+                "connections": d.get("vd_connections"),
+                "fragments": None,
+            }
+        index, count = d.get("fragment_index"), d.get("fragment_count")
+        if isinstance(index, int) and isinstance(count, int) and count > 0:
+            # yt-dlp counts finished fragments; with several in flight they finish nearly in order.
+            filled = index / count
+            cells = "".join(
+                "9"
+                if (c + 1) / aria2.CELLS <= filled
+                else str(min(8, int((filled * aria2.CELLS - c) * 9)))
+                if c / aria2.CELLS < filled
+                else "0"
+                for c in range(aria2.CELLS)
+            )
+            return {"pieces": cells, "connections": self.parallel, "fragments": [index, count]}
+        return {"pieces": None, "connections": 1, "fragments": None}
 
 
 def _pp_hook(d: dict[str, Any]) -> None:
@@ -229,7 +259,12 @@ def _stream_pass(req: dict[str, Any], work: Path, log: Collector) -> dict[str, A
     import yt_dlp
 
     selected = _selected(req)
-    progress = Progress(selected, {k: v for k, v in (req.get("expected_sizes") or {}).items()})
+    network = _network_params(req)
+    progress = Progress(
+        selected,
+        {k: v for k, v in (req.get("expected_sizes") or {}).items()},
+        parallel=int(network.get("concurrent_fragment_downloads") or 1),
+    )
     extras = req.get("extras") or {}
     audio_mode = req["mode"] == "audio"
     subs = [] if audio_mode else list(req.get("subtitle_keys") or [])
@@ -241,7 +276,7 @@ def _stream_pass(req: dict[str, Any], work: Path, log: Collector) -> dict[str, A
     # reports.
     options: dict[str, Any] = {
         **_base_params(work, log),
-        **_network_params(req),
+        **network,
         # "," downloads each format as its own file; muxing is ours, not yt-dlp's merger.
         "format": ",".join(selected),
         "outtmpl": {

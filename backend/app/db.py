@@ -32,17 +32,23 @@ CREATE TABLE IF NOT EXISTS jobs (
     started_at    REAL,
     finished_at   REAL,
     attempts      INTEGER NOT NULL DEFAULT 0,  -- automatic retries so far (P6d)
-    retry_at      REAL                         -- a waiting retry starts then, not before
+    retry_at      REAL,                        -- a waiting retry starts then, not before
+    pieces        TEXT,                        -- the segment map: a digit 0-9 per cell
+    connections   INTEGER,
+    fragments     TEXT                         -- [done, total] for HLS/DASH
 );
 CREATE INDEX IF NOT EXISTS jobs_status ON jobs(status, created_at);
 """
 
-JSON_COLUMNS = ("request", "output_files", "warnings")
+JSON_COLUMNS = ("request", "output_files", "warnings", "fragments")
 # Columns added after the first release, applied to existing databases on start-up.
 MIGRATIONS = {
     "warnings": "ALTER TABLE jobs ADD COLUMN warnings TEXT NOT NULL DEFAULT '[]'",
     "attempts": "ALTER TABLE jobs ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0",
     "retry_at": "ALTER TABLE jobs ADD COLUMN retry_at REAL",
+    "pieces": "ALTER TABLE jobs ADD COLUMN pieces TEXT",
+    "connections": "ALTER TABLE jobs ADD COLUMN connections INTEGER",
+    "fragments": "ALTER TABLE jobs ADD COLUMN fragments TEXT",
 }
 
 

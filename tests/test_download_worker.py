@@ -380,6 +380,9 @@ def test_a_single_file_format_downloads_through_aria2c_with_progress(
     assert len(calls) == 2  # the video and the audio, each its own aria2c run
     assert all("-x" in cmd and cmd[cmd.index("-x") + 1] == "4" for cmd in calls)
     assert any(e["t"] == "progress" for e in events)
+    # The segment map: every progress event says how the file is fetched; the last is complete.
+    maps = [e for e in events if e["t"] == "progress" and e.get("pieces")]
+    assert maps and maps[-1]["pieces"] == "9" * aria2.CELLS
     assert "aria2" not in capfd.readouterr().out.lower()
 
 
@@ -408,3 +411,15 @@ def test_finder_says_where_the_file_came_from(tmp_path: Path, local_info: dict[s
     assert code == 0
     [output] = done_files(events)
     assert finder.where_from(output) == [local_info["webpage_url"]]
+
+
+def test_the_segment_map_comes_from_aria2cs_control_file() -> None:
+    """A real `.aria2` captured mid-download (30 MB, 1 MiB pieces, 8 connections)."""
+    from app.workers import aria2
+
+    cells = aria2.pieces(Path(__file__).parent / "fixtures" / "sample.aria2")
+    assert cells is not None and len(cells) == aria2.CELLS
+    assert set(cells) - set("0123456789") == set()
+    # Pieces 0, 4, 8, ... were done (bitfield 88 89 12 20): finished cells and empty ones both.
+    assert "9" in cells and "0" in cells
+    assert aria2.pieces(Path("/nonexistent.aria2")) is None

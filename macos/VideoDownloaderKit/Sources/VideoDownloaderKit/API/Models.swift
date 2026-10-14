@@ -105,6 +105,11 @@ public struct Job: Decodable, Sendable, Identifiable, Equatable {
     /// Automatic retries so far, and when the waiting one starts (P6d, stage "waiting_retry").
     public var attempts: Int? = nil
     public var retryAt: Double? = nil
+    /// How the current file is fetched (P2): a digit 0–9 per cell of the segment map, the open
+    /// connections, and for HLS/DASH the fragments done and in total.
+    public var pieces: String? = nil
+    public var connections: Int? = nil
+    public var fragments: [Int]? = nil
 
     /// Downloading with a percentage to show; the other running stages only say they run.
     public var isIndeterminate: Bool {

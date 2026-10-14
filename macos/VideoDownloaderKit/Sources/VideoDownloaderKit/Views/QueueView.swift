@@ -206,7 +206,9 @@ struct JobRow: View {
     private var progress: some View {
         VStack(alignment: .leading, spacing: 3) {
             Group {
-                if job.isIndeterminate {
+                if job.status == .running, job.stage == "downloading", let pieces = job.pieces, !pieces.isEmpty {
+                    SegmentBar(pieces: pieces)
+                } else if job.isIndeterminate {
                     ProgressView()
                 } else {
                     ProgressView(value: min(max(job.progress ?? 0, 0), 1))
@@ -231,6 +233,13 @@ struct JobRow: View {
                         Text(L("queue.item", index, count))
                     }
                     if let speed = job.speed, speed > 0 { Text(L("queue.speed", Format.bytes(speed))) }
+                    if job.stage == "downloading", let connections = job.connections, connections > 0 {
+                        Label(L("queue.connections", connections), systemImage: "point.3.connected.trianglepath.dotted")
+                            .help(L("queue.connectionsHelp"))
+                    }
+                    if job.stage == "downloading", let fragments = job.fragments, fragments.count == 2 {
+                        Text(L("queue.fragments", fragments[0], fragments[1]))
+                    }
                     if let eta = job.eta, eta > 0 { Text(L("queue.eta", Format.duration(eta))) }
                 }
             }
@@ -293,5 +302,30 @@ struct JobRow: View {
         Task {
             do { try await action() } catch { failure = APIError.from(error).code }
         }
+    }
+}
+
+/// The file in segments, as download accelerators draw it (P2): each cell is a slice of the
+/// file, filled as far as its bytes are on disk. Several connections show as several regions
+/// filling at once; the data comes from aria2c's own piece map or yt-dlp's fragment counter.
+struct SegmentBar: View {
+    let pieces: String
+
+    var body: some View {
+        Canvas { context, size in
+            let cells = Array(pieces.utf8).map { min(max(Int($0) - 48, 0), 9) }
+            guard !cells.isEmpty else { return }
+            let gap: CGFloat = cells.count > 40 ? 1 : 2
+            let width = (size.width - gap * CGFloat(cells.count - 1)) / CGFloat(cells.count)
+            for (index, level) in cells.enumerated() {
+                let rect = CGRect(x: CGFloat(index) * (width + gap), y: 0, width: width, height: size.height)
+                context.fill(Path(roundedRect: rect, cornerRadius: 1.5), with: .color(.secondary.opacity(0.18)))
+                guard level > 0 else { continue }
+                let filled = CGRect(x: rect.minX, y: 0, width: rect.width * CGFloat(level) / 9, height: size.height)
+                context.fill(Path(roundedRect: filled, cornerRadius: 1.5), with: .color(.accentColor))
+            }
+        }
+        .frame(height: 7)
+        .accessibilityHidden(true)
     }
 }

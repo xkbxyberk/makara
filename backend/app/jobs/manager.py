@@ -364,6 +364,10 @@ class JobManager:
                 eta=event.get("eta"),
                 item_index=event.get("item_index"),
                 item_count=event.get("item_count"),
+                # The segment map (P2): pieces on disk, open connections, fragments done/total.
+                pieces=event.get("pieces"),
+                connections=event.get("connections"),
+                fragments=event.get("fragments"),
             )
         elif kind == "done":
             outcome["files"] = event.get("files") or []
