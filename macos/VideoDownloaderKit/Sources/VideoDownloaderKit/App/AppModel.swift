@@ -67,7 +67,14 @@ public final class AppModel {
 
     public func start() async {
         await backend.start()
-        if backend.state == .needsSetup { setup.needed() }
+        if backend.state == .needsSetup {
+            setup.needed()
+            // Trials of a release (scripts, tests) press "Kur" themselves.
+            if backend.config.environment["VD_SETUP_AUTOINSTALL"] == "1", !setup.running {
+                await installRuntime()
+                return
+            }
+        }
         guard isReady else { return }
         // What arrived while the backend was starting (a link from Safari, a screen) is handled
         // now that it answers.

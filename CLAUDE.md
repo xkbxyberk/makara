@@ -421,6 +421,17 @@ UI and went with it (N8).
     system libraries; arm64 and x86_64, macOS 14+); its manifest goes into the Kit's
     Resources. `VD_RUNTIME_BASE_URL` (e.g. `file:///…/build/runtime/`) installs local zips.
 
+51. **Releasing (P8d): `scripts/release.sh <version> [build]`.** Archives the Release
+    configuration universal with a universal uv (official 0.12.23 builds, SHA-256 pinned,
+    `lipo`), exports with Developer ID (team V88QY49A4T), re-signs `Contents/Helpers/uv` and
+    then the app (inside out, `--preserve-metadata`), checks every binary is universal and
+    Developer ID-signed and that `VDProjectRoot` is empty, notarizes and staples the app and
+    then the ULMO disk image (keychain profile `makara`). `NOTARIZE=0` skips Apple's service
+    for a trial. Pitfall met: `codesign -dv … | grep -q` under `pipefail` fails on SIGPIPE --
+    capture first. Tried 15 Oct: 33 MB DMG; the exported app installed its runtime from local
+    zips (`VD_SETUP_AUTOINSTALL=1` presses "Kur" for trials) and downloaded a real YouTube
+    video (AV1 + Opus + subtitles) with its own Deno, FFmpeg and aria2c.
+
 ## Rules
 
 - **Never delete, skip, weaken or `xfail` a test to make the suite pass.** Fix the code.
