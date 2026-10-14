@@ -468,7 +468,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				INFOPLIST_FILE = "VideoDownloader Extension/Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "VideoDownloader Extension";
+				INFOPLIST_KEY_CFBundleDisplayName = Makara;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -504,7 +504,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				INFOPLIST_FILE = "VideoDownloader Extension/Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "VideoDownloader Extension";
+				INFOPLIST_KEY_CFBundleDisplayName = Makara;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -541,7 +541,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = VideoDownloader/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = VideoDownloader;
+				INFOPLIST_KEY_CFBundleDisplayName = Makara;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
 				INFOPLIST_KEY_NSViewGestureRecognizerIsExclusive = NO;
@@ -557,7 +557,7 @@
 					WebKit,
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.berkakbay.VideoDownloader;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = Makara;
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -581,7 +581,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = VideoDownloader/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = VideoDownloader;
+				INFOPLIST_KEY_CFBundleDisplayName = Makara;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
 				INFOPLIST_KEY_NSViewGestureRecognizerIsExclusive = NO;
@@ -597,7 +597,7 @@
 					WebKit,
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.berkakbay.VideoDownloader;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = Makara;
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;

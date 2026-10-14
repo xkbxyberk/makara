@@ -1,4 +1,4 @@
-# VideoDownloader
+# Makara
 
 yt-dlp ve FFmpeg üzerine kurulu, yalnızca bu Mac'te çalışan kişisel medya iş istasyonu.
 Sunucu sadece `127.0.0.1` üzerinden dinler; hiçbir veri dışarı gönderilmez.
@@ -18,7 +18,7 @@ uv sync                      # Python bağımlılıkları (yt-dlp dahil)
 Mac uygulaması olarak (Finder'dan çift tıklayabilirsin; gerekirse önce uygulamayı derler):
 
 ```bash
-open VideoDownloader.command
+open Makara.command
 ```
 
 Uygulama sunucuyu kendisi başlatır ve kapanırken durdurur. Günlük:

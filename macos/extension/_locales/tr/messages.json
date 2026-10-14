@@ -1,6 +1,6 @@
 {
   "extension_name": {
-    "message": "VideoDownloader"
+    "message": "Makara"
   },
   "extension_description": {
     "message": "Sayfadaki videoyu, videonun kendi kalite ve ses seçenekleriyle tek tıkla indir."
@@ -9,31 +9,31 @@
     "message": "Bu sayfadaki videoyu indir"
   },
   "title_list": {
-    "message": "Bu listeyi VideoDownloader’da aç"
+    "message": "Bu listeyi Makara’da aç"
   },
   "title_none": {
     "message": "Bu sayfada indirilebilir bir şey bulunamadı"
   },
   "title_offline": {
-    "message": "VideoDownloader açık değil"
+    "message": "Makara açık değil"
   },
   "menu_download": {
-    "message": "VideoDownloader ile indir"
+    "message": "Makara ile indir"
   },
   "menu_inspect": {
-    "message": "VideoDownloader’da incele"
+    "message": "Makara’da incele"
   },
   "popup_inspecting": {
     "message": "İnceleniyor…"
   },
   "popup_offline_title": {
-    "message": "VideoDownloader açık değil"
+    "message": "Makara açık değil"
   },
   "popup_offline_body": {
     "message": "İndirmek için uygulama açık olmalı."
   },
   "popup_open_app": {
-    "message": "VideoDownloader’ı aç"
+    "message": "Makara’yı aç"
   },
   "popup_starting": {
     "message": "Uygulama açılıyor…"
@@ -261,7 +261,7 @@
     "message": "FFmpeg dosyayı oluşturamadı."
   },
   "menu_download_page": {
-    "message": "Bu sayfayı VideoDownloader ile indir"
+    "message": "Bu sayfayı Makara ile indir"
   },
   "error_COOKIES_UNREADABLE": {
     "message": "Bu video giriş istiyor; uygulamanın Safari oturumunu okuyabilmesi için Tam Disk Erişimi gerekiyor (uygulamadaki Sistem ekranına bak)."
@@ -300,7 +300,7 @@
     "message": "Kuyruğa eklendi"
   },
   "offer_added_body": {
-    "message": "İlerlemeyi VideoDownloader’da görebilirsin."
+    "message": "İlerlemeyi Makara’da görebilirsin."
   },
   "offer_show": {
     "message": "İndirmeleri göster"

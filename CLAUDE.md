@@ -1,5 +1,11 @@
 # VideoDownloader — notes for a future session
 
+The app is called **Makara** (Berk, 15 Oct): the product (`Makara.app`), its display names and
+every string. Repository, targets, modules, bundle ids (`com.berkakbay.VideoDownloader*`: the
+Safari permission and the login item hang on them), the URL scheme and the data/download
+folders (`~/Movies/VideoDownloader`, `~/Library/Application Support/VideoDownloader`) keep the
+old name on purpose.
+
 Local-only media workstation on yt-dlp + FFmpeg. macOS arm64, single user (Berk).
 **Talk to Berk in Turkish. Code, comments, commits and docs in English.**
 **Every user-facing string lives in the Kit's `Localizable.xcstrings` (gotcha 37); the Safari extension's in `macos/extension/_locales/tr/messages.json`.**
@@ -12,7 +18,7 @@ Local-only media workstation on yt-dlp + FFmpeg. macOS arm64, single user (Berk)
 | Backend tests only | `uv run pytest -q` |
 | Extension tests | `cd macos/extension-tests && node --test shared.test.mjs && npx playwright test` |
 | Backend alone | `PYTHONPATH=backend uv run python -m app.main` |
-| Desktop app (builds if needed) | `open VideoDownloader.command` |
+| Desktop app (builds if needed) | `open Makara.command` |
 | Update yt-dlp | `uv lock --upgrade-package yt-dlp --upgrade-package yt-dlp-ejs && uv sync` (see gotcha 2) |
 | macOS app (build / UI tests) | `xcodebuild -project macos/VideoDownloader/VideoDownloader.xcodeproj -scheme VideoDownloader -derivedDataPath macos/build -allowProvisioningUpdates build` (or `test`) |
 | Swift package tests | `cd macos/VideoDownloaderKit && swift test` |

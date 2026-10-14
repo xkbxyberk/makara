@@ -11,7 +11,7 @@ Turkish is the only UI language shipped; every string lives in the app's `Locali
 
 | Decision | Choice |
 |---|---|
-| Shell (until N2) | pywebview desktop window + double-clickable `VideoDownloader.command`; also reachable in a browser at `http://127.0.0.1:8787` |
+| Shell (until N2) | pywebview desktop window + double-clickable `Makara.command`; also reachable in a browser at `http://127.0.0.1:8787` |
 | Shell (from N2, built) | A native `VideoDownloader.app` (SwiftUI) over the same backend: native sidebar, title bar, menus (Git: ⌘1–⌘5), Settings window (⌘,), Dock badge, notifications, `videodownloader://`. It starts the backend itself and stops it on quit. Every screen and the Settings window are native SwiftUI (N4–N7); the app shows no web page. The browser UI was removed in N8 (2026-10-14). The pywebview window is gone |
 | Safari | A Safari web extension inside the app: detects downloadable media and downloads with one click from the qualities and audio streams that video actually offers. Never downloads on its own |
 | Safari extension (N3) | Toolbar icon: filled on pages yt-dlp supports or that play media, outline otherwise; only the page URL goes to the app on this Mac, offline. Popup: the video's own choices (MKV / MP4 / Sadece ses, size and re-encode per row, audio language, subtitles), the site's last clicked choice preselected, one "İndir", live progress, "Uygulamada incele". When the app is closed it offers to open it. Lists open in the app; DRM and unsupported pages say so. Right-click a link: download with the remembered choice, or inspect in the app. ⌃⇧D opens the popup |

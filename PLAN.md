@@ -10,9 +10,9 @@ The proof for every milestone is the same command: `./scripts/check.sh` exiting 
 - [x] Doctor screen renders every check with a copyable fix; libass/libwebp absence explained
 - [x] macOS-native theme with real dark mode; all strings in `frontend/src/i18n/tr.ts`
 - [x] `scripts/check.sh` runs lint, types, pytest, vitest, build and Playwright
-- [x] `VideoDownloader.command` opens a pywebview window, falling back to the browser
+- [x] `Makara.command` opens a pywebview window, falling back to the browser
 
-Proof: `./scripts/check.sh` · `open VideoDownloader.command`
+Proof: `./scripts/check.sh` · `open Makara.command`
 
 ## M1 — Inspect ✅ done
 

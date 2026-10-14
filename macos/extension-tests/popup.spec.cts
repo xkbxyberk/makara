@@ -147,9 +147,9 @@ test('popup: an untouched default downloads but remembers nothing', async ({ pag
 
 test('popup: when the app is closed it offers to open it, then carries on', async ({ page }) => {
   await openPopup(page, { offline: true });
-  await expect(page.getByText('VideoDownloader açık değil')).toBeVisible();
+  await expect(page.getByText('Makara açık değil')).toBeVisible();
   await page.evaluate(() => ((window as unknown as { __offline: boolean }).__offline = false));
-  await page.getByRole('button', { name: 'VideoDownloader’ı aç' }).click();
+  await page.getByRole('button', { name: 'Makara’yı aç' }).click();
   expect(await page.evaluate(() => (window as unknown as { __opened: string[] }).__opened)).toEqual(['videodownloader://show']);
   await expect(page.getByRole('heading', { name: 'Local test clip' })).toBeVisible({ timeout: 10_000 });
 });

@@ -130,11 +130,11 @@ final class ShellTests: XCTestCase {
     func testSettingsOpenInTheirOwnWindowFromTheAppMenu() throws {
         app.launch()
         native("Henüz bir şey incelemedin")
-        // VideoDownloader > Ayarlar… (the system's own item, which carries ⌘,).
+        // Makara > Ayarlar… (the system's own item, which carries ⌘,).
         let item = app.menuBars.menuItems["Ayarlar…"]
         XCTAssertTrue(item.waitForExistence(timeout: 10))
         item.click()
-        let settings = app.windows["VideoDownloader Ayarları"]
+        let settings = app.windows["Makara Ayarları"]
         XCTAssertTrue(settings.waitForExistence(timeout: 10), "no Settings window")
         XCTAssertTrue(settings.staticTexts["İndirme klasörü"].waitForExistence(timeout: 10))
         XCTAssertFalse(app.webViews.firstMatch.exists, "Ayarlar is native now: no web page is left")

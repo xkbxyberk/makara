@@ -3,7 +3,7 @@
    <BuildAction parallelizeBuildables = "YES" buildImplicitDependencies = "YES">
       <BuildActionEntries>
          <BuildActionEntry buildForTesting = "YES" buildForRunning = "YES" buildForProfiling = "YES" buildForArchiving = "YES" buildForAnalyzing = "YES">
-            <BuildableReference BuildableIdentifier = "primary" BlueprintIdentifier = "C4A29F49307D51CC001BA880" BuildableName = "VideoDownloader.app" BlueprintName = "VideoDownloader" ReferencedContainer = "container:VideoDownloader.xcodeproj">
+            <BuildableReference BuildableIdentifier = "primary" BlueprintIdentifier = "C4A29F49307D51CC001BA880" BuildableName = "Makara.app" BlueprintName = "VideoDownloader" ReferencedContainer = "container:VideoDownloader.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -18,7 +18,7 @@
    </TestAction>
    <LaunchAction buildConfiguration = "Debug" selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB" selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB" launchStyle = "0" useCustomWorkingDirectory = "NO" ignoresPersistentStateOnLaunch = "NO" debugDocumentVersioning = "YES" debugServiceExtension = "internal" allowLocationSimulation = "YES">
       <BuildableProductRunnable runnableDebuggingMode = "0">
-         <BuildableReference BuildableIdentifier = "primary" BlueprintIdentifier = "C4A29F49307D51CC001BA880" BuildableName = "VideoDownloader.app" BlueprintName = "VideoDownloader" ReferencedContainer = "container:VideoDownloader.xcodeproj">
+         <BuildableReference BuildableIdentifier = "primary" BlueprintIdentifier = "C4A29F49307D51CC001BA880" BuildableName = "Makara.app" BlueprintName = "VideoDownloader" ReferencedContainer = "container:VideoDownloader.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>

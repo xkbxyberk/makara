@@ -44,9 +44,9 @@
         },
         {
           "id": "M0.7",
-          "text": "VideoDownloader.command opens a desktop window, falling back to the browser",
+          "text": "Makara.command opens a desktop window, falling back to the browser",
           "pass": true,
-          "proof": "open VideoDownloader.command"
+          "proof": "open Makara.command"
         },
         {
           "id": "M0.8",
@@ -658,7 +658,7 @@
           "id": "N2.6",
           "text": "Every web screen reachable embedded; the pywebview launcher is gone",
           "pass": true,
-          "proof": "e2e embedded.spec.cts; scripts/desktop.py and pywebview removed; VideoDownloader.command builds and opens the app"
+          "proof": "e2e embedded.spec.cts; scripts/desktop.py and pywebview removed; Makara.command builds and opens the app"
         },
         {
           "id": "N2.7",
