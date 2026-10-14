@@ -297,90 +297,85 @@ Added by Claude for later, each worth its own step:
 - [ ] One feedback language: a HUD/toast for every confirmed action ("Kuyruğa eklendi"),
       empty states that always offer the next step, consistent icons and wording
 
-### P8 — Makara for everyone: a release friends can install (brainstorm, 2026-10-15)
+### P8 — Makara for everyone: a public release (2026-10-15)
 
-Berk: share the app with friends who have no Homebrew and no developer tools; reinstall and keep
-developing it himself after formatting this Mac; use his GitHub account; fresh installs use
-"Makara" folders. Research notes and the proposed shape -- **decisions marked (Berk)**.
+Berk: publish the app for anyone (Intel Macs included) who has no Homebrew and no developer
+tools; reinstall and keep developing it himself after formatting this Mac (done: private repo
+`xkbxyberk/makara`, `scripts/bootstrap.sh`, DEVELOPING.md); fresh installs use "Makara" folders.
 
-**Decided (Berk, 2026-10-15):** he has a paid Apple Developer Program membership; Deno is the JS
-runtime; the old catalogue is not migrated (fresh Makara names, no migration code); support the
-oldest macOS the app can run on -- **macOS 14 Sonoma**, set and compiled (see 7).
+**Decided (Berk, 2026-10-15):** paid Apple Developer Program membership; Deno is the JS
+runtime; the old catalogue is not migrated; the oldest macOS the app can run on (**14
+Sonoma**, done); Apple silicon *and* Intel; **the app does not carry the tools -- a first-run
+setup assistant downloads them** (his idea of a tutorial, made automatic: no Terminal, no
+Homebrew, no password).
 
-**What a friend does (the target):** download `Makara.dmg` from the GitHub release page, drag
-Makara to Applications, open it. A first-run guide turns on the Safari extension (Safari >
-Settings > Extensions, then "all websites"), optionally Full Disk Access for the Safari session,
-and start at login. Nothing else to install. Updates arrive in the app.
+**What a user does:** download `Makara.dmg` (~50 MB, one universal DMG) from the GitHub release
+page, drag Makara to Applications, open it. The setup assistant explains each component and
+installs it with one click (~250 MB), then turns to the Safari extension, optional Full Disk
+Access and start at login. Updates arrive in the app.
 
-1. **Apple Developer Program (Berk is a member).** Next: create a "Developer ID Application"
-   certificate (Xcode > Settings > Accounts > Manage Certificates) and a notary profile. The only professional route. Developer ID
-   signing + notarization are paid-program features; a free Personal Team gets only "Apple
-   Development" certificates (the one this Mac has). Without them: Gatekeeper blocks the app
-   (macOS 15+ has no right-click > Open; "Open Anyway" in Privacy & Security every time), and the
-   Safari extension only runs with Develop > "Allow Unsigned Extensions", which Safari resets on
-   every launch. Developer ID-signed, notarized Safari web extensions load normally since Safari
-   18.4 (Apple, developer forums thread 782005). Mac App Store is out: the app is unsandboxed,
-   runs Python and downloads from YouTube (guideline 5.2.3).
-2. **Batteries included -- the app carries every dependency** (no Homebrew, no uv at run time):
-   - Python: a relocatable `python-build-standalone` 3.12 (what uv itself installs) in
-     `Contents/Resources/python`, with the backend and its locked dependencies pre-installed.
-   - FFmpeg/ffprobe: static arm64 builds with libass, libwebp, zimg, x264/x265, dav1d,
-     SVT-AV1, opus, lame (e.g. ffmpeg.martin-riedl.de release builds, .sha256 per file; or
-     build our own in CI). GPL: ship the build's source link/offer with the app.
-   - Deno for YouTube's JS challenges (124 MB here; Berk chose it over QuickJS-ng).
-   - aria2c: Homebrew's links six dylibs; build a static arm64 aria2c in CI (OpenSSL, c-ares,
-     libssh2, sqlite static) or ship it with its dylibs rewritten to `@loader_path`.
-   - Every Mach-O (python, .so, .dylib, ffmpeg, deno, aria2c) signed with Developer ID and the
-     hardened runtime, inside out; Python needs `allow-unsigned-executable-memory`
-     (`disable-library-validation` if a wheel's .so is not re-signed). Then `notarytool submit
-     --wait` and `stapler staple` on the DMG.
-   - Estimated size: app ~350 MB, DMG ~130 MB. Acceptable for this kind of tool.
-3. **yt-dlp updates without uv:** the bundled packages are read-only (signed). Updates go to
-   `~/Library/Application Support/Makara/yt-dlp/` (the wheel from PyPI, hash-checked, pure
-   Python so no signing), placed first on `sys.path`; the weekly auto-update (P6e) and the
-   Doctor button switch to this in the release build. Development keeps uv.lock (gotcha 2).
-4. **App updates: Sparkle 2** (the standard outside the App Store): an EdDSA-signed appcast
-   (appcast.xml on GitHub Pages or a release asset), "check for updates" in the menu and the
-   menu bar panel. It is a new outside endpoint, so it asks once (Berk: on by default?).
-   Optional later: a Homebrew cask in his own tap for friends who use brew.
-5. **Two build flavours from one tree.** Development (today): the backend from the checkout,
-   `.venv`, Homebrew tools. Release: `BackendConfig` finds `Contents/Resources/python` and
-   `Contents/Resources/bin/{ffmpeg,ffprobe,deno,aria2c}`; `app/ffmpeg/binaries.py`, the deno
-   lookup and `accel.py` prefer `VD_BIN_DIR` (set by the app) over Homebrew paths. No
-   `VDProjectRoot`, no "proje klasörü bulunamadı" in a release.
-6. **Names for a fresh start** (before friends install anything, ideally now): bundle ids
-   `com.berkakbay.Makara` (+ `.Extension`), URL scheme `makara://`, folders `~/Movies/Makara`,
-   `~/Library/Application Support/Makara`, `~/Library/Logs/Makara`. No migration (Berk).
-7. **Minimum macOS: 14.0 (done 15 Oct).** The floor is Observation (`@Observable`, macOS 14);
-   lowering from 27 needed only `posix_spawn_file_actions_addchdir_np` (the plain name is
-   macOS 26) and fallbacks for two macOS 15 modifiers (`labelsShown`, `resizePointer` in
-   Common.swift). Xcode writes `AppIcon.icns` from the Icon Composer file for older systems.
-   Safari must be 18.4+ for a Developer ID extension (available on Sonoma). Not yet run on 14:
-   check in a macOS 14 virtual machine (UTM / Virtualization.framework) before a release.
-   **Intel (open, Berk):** macOS 14-26 also run on Intel Macs. The Swift app builds universal
-   for free; the bundled Python, FFmpeg, Deno and aria2c exist for x86_64 too but double the
-   size: either a universal app (~600 MB) or a second, Intel DMG. Suggested: Apple silicon
-   first, an Intel DMG only if a friend needs it.
-8. **First-run guide** (P7 item, now required): extension state via
+1. **Signing (Berk is a member).** Next: a "Developer ID Application" certificate (Xcode >
+   Settings > Accounts > Manage Certificates) and a notary profile (`notarytool
+   store-credentials`). Without them Gatekeeper blocks the app (macOS 15+ has no right-click >
+   Open) and the Safari extension needs Develop > "Allow Unsigned Extensions", reset on every
+   Safari launch. Developer ID-signed, notarized Safari web extensions load normally since
+   Safari 18.4 (Apple, developer forums thread 782005). Mac App Store is out: unsandboxed,
+   runs Python, downloads from YouTube (guideline 5.2.3).
+2. **What ships in the app:** the Swift app and extension (universal), the backend's source
+   and `uv.lock`, and a universal `uv` binary (lipo of the arm64 and x86_64 releases), signed
+   with Developer ID and the hardened runtime, notarized and stapled. Nothing else.
+3. **The setup assistant installs into `~/Library/Application Support/Makara/runtime/`**, for
+   the Mac's own architecture:
+   - Python + backend dependencies: the bundled `uv` runs `uv sync --frozen` against the
+     shipped `uv.lock` into `runtime/venv` (uv fetches a python-build-standalone 3.12 and
+     every wheel, each checked against the lock's hashes) -- exactly how development works.
+   - FFmpeg/ffprobe (static, with libass, libwebp, zimg, x264/x265, dav1d, SVT-AV1, opus,
+     lame), Deno, aria2c (static): from **our own GitHub release** `runtime-<date>` with arm64
+     and x86_64 archives, pinned by SHA-256 in the app (a manifest compiled in), so nothing
+     depends on a third-party site staying up. Sources: ffmpeg.martin-riedl.de release builds
+     (or our own CI build), Deno's official release, aria2c built static in CI. GPL: the same
+     release carries the source links/archives for FFmpeg and aria2.
+   - Each step shows what the tool is for, a progress bar, and resumes after a failure (no
+     network, full disk, hash mismatch: the file is deleted, never run). A Mac with Homebrew's
+     ffmpeg/deno/aria2c can use those instead ("zaten kurulu, onu kullan"), as the Doctor's
+     detection already allows.
+   - Downloads made by the app carry no quarantine flag; the tools run as child processes, so
+     the app's own signature and notarization are what Gatekeeper checks.
+4. **Updates of the tools without a new app:** yt-dlp via `uv` into the same venv (the weekly
+   P6e update and the Doctor button, as in development); FFmpeg/Deno/aria2c when a new app
+   version pins a newer runtime manifest, or from the Doctor ("bileşenleri güncelle").
+5. **App updates: Sparkle 2**: an EdDSA-signed appcast (GitHub Pages or a release asset),
+   "Güncellemeleri denetle" in the app menu and the menu bar panel. A new outside endpoint, so
+   it asks once.
+6. **Two flavours from one tree.** Development (today): backend from the checkout, `.venv`,
+   Homebrew tools, `VDProjectRoot`. Release: `BackendConfig` uses the bundled backend source,
+   `runtime/venv/bin/python` and `runtime/bin/`; `app/ffmpeg/binaries.py`, the deno lookup and
+   `accel.py` prefer `VD_BIN_DIR` (set by the app) over Homebrew paths. The "proje klasörü
+   bulunamadı" state becomes "kurulum gerekli", which opens the assistant.
+7. **Names for a fresh start:** bundle ids `com.berkakbay.Makara` (+ `.Extension`), URL scheme
+   `makara://`, folders `~/Movies/Makara`, `~/Library/Application Support/Makara`,
+   `~/Library/Logs/Makara`. No migration (Berk).
+8. **Minimum macOS: 14.0 (done 15 Oct, dd29ee2).** The floor is Observation (`@Observable`);
+   see CLAUDE.md gotcha 49. Safari must be 18.4+ (available on Sonoma). Not yet run on 14 or
+   on Intel: check in macOS 14 virtual machines (UTM) before a release; an Intel test needs a
+   real Intel Mac or a cloud one (Apple silicon cannot virtualize x86 macOS).
+9. **The rest of the first-run guide** (P7 item): Safari extension state via
    `SFSafariExtensionManager`, `SFSafariApplication.showPreferencesForExtension`, Full Disk
    Access explained and optional, start at login, download folder.
-9. **Release pipeline:** `scripts/release.sh` (local, on Berk's Mac: notary credentials in the
-   keychain via `notarytool store-credentials`) builds, fetches pinned dependency binaries by
-   hash, signs, notarizes, staples, makes the DMG, signs the appcast; `gh release create`
-   uploads. GitHub Actions (macOS runners) could do the same later, with the Developer ID .p12
-   and an App Store Connect API key as secrets.
-10. **Privacy and licences for a public build:** still local only, no telemetry; crash reports
-    stay on the Mac. A LICENSE for Makara itself (Berk), and a "Lisanslar" page listing yt-dlp
-    (Unlicense), FFmpeg (GPL, source link), Deno (MIT), aria2 (GPLv2), Python (PSF). The legal
-    note friends see: downloading must respect each site's terms; no DRM circumvention (as
-    already built).
+10. **Release pipeline:** `scripts/release.sh` on Berk's Mac: universal Release build, sign,
+    notarize, staple, DMG, Sparkle appcast, `gh release create`. A separate
+    `scripts/runtime.sh` (or a GitHub Actions workflow on macOS runners for both
+    architectures) builds/fetches, checks and uploads the runtime release and writes its
+    manifest.
+11. **Privacy and licences:** still local only, no telemetry; the only new endpoints are
+    GitHub (runtime and app updates) and PyPI/python-build-standalone through uv, all at the
+    user's click or with their consent. A LICENSE for Makara (Berk), and a "Lisanslar" page:
+    yt-dlp (Unlicense), FFmpeg (GPL, source link), Deno (MIT), aria2 (GPLv2), Python (PSF),
+    uv (MIT/Apache). Downloading must respect each site's terms; no DRM circumvention.
 
-**Development after the format (GitHub):** a private repository `makara` on Berk's account.
-On the new Mac: Xcode (sign in with the Apple ID: automatic signing recreates the development
-certificate), Homebrew, then `scripts/bootstrap.sh` (to write): `brew bundle` from a `Brewfile`
-(uv, deno, ffmpeg-full, aria2, node, gh), `gh auth login`, `uv sync`, `npm ci` + Playwright in
-`macos/extension-tests`, first build. `DEVELOPING.md` describes it. Not in git and backed up by
-hand: Berk's media and catalogue, Claude's memory folder for this project.
+**Order after the format:** (a) release flavour of `BackendConfig` + `VD_BIN_DIR` lookups,
+(b) runtime manifest and the setup assistant, (c) Makara names (ids, scheme, folders),
+(d) Developer ID signing, DMG, notarization, (e) Sparkle, (f) rest of the first-run guide.
 
 ## M5 — Sections and SponsorBlock · M6 — Playlists and channels
 ## M7 — Presets and browser cookies (Safari session for YouTube pulled forward, 2026-10-13) · M8 — Transcode and target size
