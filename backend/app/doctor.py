@@ -153,10 +153,10 @@ def _safari_session_check() -> dict[str, Any]:
             state, status = "unavailable", WARN
         elif not session["readable"]:
             state, status = "no_access", WARN
-        elif session["youtube_signed_in"] is False:
-            state, status = "signed_out", WARN
         elif session["youtube_signed_in"] is None:
             state, status = "unknown", OK
+        elif not any((session.get("signed_in") or {}).values()):
+            state, status = "signed_out", WARN
         else:
             state, status = "signed_in", OK
     fix = (
@@ -164,7 +164,16 @@ def _safari_session_check() -> dict[str, Any]:
         if state == "no_access"
         else {"kind": "none", "command": ""}
     )
-    return {"id": "safari_session", "status": status, "values": {"state": state}, "fix": fix}
+    values: dict[str, Any] = {"state": state}
+    if state == "signed_in":
+        # Which of the session sites Berk is signed in to (names of sites, nothing more).
+        signed_in = session.get("signed_in") or {}
+        values["sites"] = [
+            browser_session.SITE_NAMES[site]
+            for site in browser_session.SITES
+            if signed_in.get(site)
+        ]
+    return {"id": "safari_session", "status": status, "values": values, "fix": fix}
 
 
 def _aria2c_check() -> dict[str, Any]:

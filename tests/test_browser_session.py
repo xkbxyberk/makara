@@ -53,13 +53,13 @@ def test_an_age_restricted_video_is_retried_once_with_the_session(
 ) -> None:
     calls = fake_worker(monkeypatch, [errors.AppError(code="AGE_RESTRICTED"), info()])
     model = asyncio.run(inspect_service.inspect(URL))
-    assert calls == [None, ["safari", str(session)]]
+    assert calls == [None, ["safari", str(session), "youtube"]]
     assert "USED_SAFARI_LOGIN" in model["warnings"]
     # Its download needs the session too: it extracts again (CLAUDE.md gotcha 20).
     entry = inspect_service.recall(model["inspect_id"])
     selection = {"mode": "mkv", **model["defaults"]["mkv"]}
     job = planning.build_job(entry, selection, settings_store.Settings())
-    assert job["request"]["cookies_from_browser"] == ["safari", str(session)]
+    assert job["request"]["cookies_from_browser"] == ["safari", str(session), "youtube"]
 
 
 def test_an_ordinary_video_never_carries_the_session(
@@ -183,7 +183,10 @@ def test_signed_in_is_told_by_cookie_names_only(
     import yt_dlp.cookies
 
     monkeypatch.setattr(yt_dlp.cookies, "parse_safari_cookies", lambda data: cookies)
-    assert doctor._safari_session_check()["values"] == {"state": state}
+    expected: dict[str, Any] = {"state": state}
+    if state == "signed_in":
+        expected["sites"] = ["YouTube"]  # which session sites are signed in, nothing more
+    assert doctor._safari_session_check()["values"] == expected
 
 
 def test_the_doctor_says_off_when_the_setting_is_off(session: Path) -> None:
@@ -217,13 +220,16 @@ def test_macos_refusing_the_file_is_classified_too() -> None:
     assert errors.classify(message) == "COOKIES_UNREADABLE"
 
 
-def test_only_youtube_urls_are_ever_retried_with_the_session(
+def test_only_the_session_sites_are_ever_retried_with_the_session(
     session: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """YouTube (2026-10-13), Reddit, Instagram and X (Berk, 2026-10-14): each with its own
+    cookies only. Any other site, or a look-alike host, never gets the session."""
     for url in [
-        "https://www.instagram.com/p/x/",
         "https://vimeo.com/1",
         "https://bank.example/login",
+        "https://instagram.com.evil.example/p/x/",
+        "https://notreddit.com/r/x/comments/1/",
     ]:
         calls = fake_worker(monkeypatch, [errors.AppError(code="LOGIN_REQUIRED")])
         with pytest.raises(errors.AppError):
@@ -237,6 +243,21 @@ def test_only_youtube_urls_are_ever_retried_with_the_session(
         assert browser_session.is_youtube_url(url), url
     assert not browser_session.is_youtube_url("https://notyoutube.com/watch?v=x")
     assert not browser_session.is_youtube_url("https://youtube.com.evil.example/")
+    for url, site in [
+        ("https://www.reddit.com/r/videos/comments/abc/x/", "reddit"),
+        ("https://v.redd.it/abc", "reddit"),
+        ("https://www.instagram.com/reel/C9x/", "instagram"),
+        ("https://x.com/nasa/status/1", "x"),
+        ("https://mobile.twitter.com/nasa/status/1", "x"),
+    ]:
+        assert browser_session.site_of(url) == site, url
+        first: list[Any] = [] if site == "reddit" else [errors.AppError(code="LOGIN_REQUIRED")]
+        calls = fake_worker(monkeypatch, [*first, info()])
+        asyncio.run(inspect_service.inspect(url))
+        if site == "reddit":  # no anonymous answers there any more: the session goes first
+            assert calls == [["safari", str(session), site]], url
+        else:
+            assert calls[0] is None and calls[1] == ["safari", str(session), site], url
 
 
 @pytest.mark.parametrize(
@@ -298,6 +319,45 @@ def test_a_worker_gets_the_youtube_cookies_and_no_other_site(
         session.apply(FakeYDL(), ["chrome", str(store)])
 
 
+def test_each_site_gets_its_own_cookies_and_no_other_sites(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.workers import session
+
+    store = tmp_path / "store.db"
+    store.write_bytes(b"x")
+    jar = [
+        cookie("SAPISID", ".youtube.com"),
+        cookie("reddit_session", ".reddit.com"),
+        cookie("sessionid", ".instagram.com"),
+        cookie("auth_token", ".x.com"),
+        cookie("auth_token", ".twitter.com"),
+        cookie("auth", "notreddit.com"),
+        cookie("auth", "x.com.evil.example"),
+    ]
+    monkeypatch.setattr("yt_dlp.cookies.parse_safari_cookies", lambda data: jar)
+    for site, domains in [
+        ("reddit", [".reddit.com"]),
+        ("instagram", [".instagram.com"]),
+        ("x", [".twitter.com", ".x.com"]),
+        ("youtube", [".youtube.com"]),
+    ]:
+        ydl = FakeYDL()
+        session.apply(ydl, ["safari", str(store), site])
+        assert sorted(c.domain for c in ydl.cookiejar) == domains, site
+    with pytest.raises(errors.AppError):
+        session.apply(FakeYDL(), ["safari", str(store), "bank"])
+    # The doctor says which sites are signed in, from cookie names alone.
+    store.write_bytes(b"cook")
+    monkeypatch.setenv("VD_SAFARI_COOKIES", str(store))
+    assert browser_session.status()["signed_in"] == {
+        "youtube": True,
+        "reddit": True,
+        "instagram": True,
+        "x": True,
+    }
+
+
 def test_an_info_json_never_keeps_cookie_values() -> None:
     from app.workers import session
 
@@ -334,3 +394,26 @@ def test_the_download_worker_hands_its_session_to_yt_dlp(
     with pytest.raises(errors.AppError):
         download_worker._stream_pass(request, tmp_path, inspect_worker.Collector())
     assert seen == [["safari", "/x"]]
+
+
+def test_reddit_goes_signed_in_first_only_while_the_setting_is_on(
+    session: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    url = "https://www.reddit.com/r/videos/comments/abc/x/"
+    settings_store.save(settings_store.Settings(safari_login=False))
+    calls = fake_worker(monkeypatch, [info()])
+    asyncio.run(inspect_service.inspect(url))
+    assert calls == [None]
+
+
+def test_a_sites_server_error_is_tried_once_more(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(inspect_service, "SERVER_ERROR_RETRY_SECONDS", 0)
+    hiccup = errors.AppError(code="NETWORK", raw="HTTP Error 500: Internal Server Error")
+    calls = fake_worker(monkeypatch, [hiccup, info()])
+    asyncio.run(inspect_service.inspect("https://vimeo.com/1"))
+    assert calls == [None, None]
+    # Other network failures are not retried here (the job queue retries downloads itself).
+    calls = fake_worker(monkeypatch, [errors.AppError(code="NETWORK", raw="timed out"), info()])
+    with pytest.raises(errors.AppError):
+        asyncio.run(inspect_service.inspect("https://vimeo.com/2"))
+    assert calls == [None]

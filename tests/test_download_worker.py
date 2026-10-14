@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import io
 import json
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -447,3 +448,34 @@ def test_a_server_that_refuses_aria2c_still_gets_the_download(
     assert code == 0, [e for e in events if e["t"] == "error"]
     assert done_files(events)
     assert "retrying" in [e["stage"] for e in events if e["t"] == "stage"]
+
+
+@pytest.mark.parametrize(
+    ("cover", "skipped"),
+    [
+        ("misnamed", False),  # a JPEG served as .png, as Reddit does: converted by its content
+        ("broken", True),  # not an image at all: the video is kept, without a cover
+    ],
+)
+def test_a_bad_cover_never_costs_the_download(
+    tmp_path: Path, local_info: dict[str, Any], test_media: Path, cover: str, skipped: bool
+) -> None:
+    name = f"cover-{cover}.png"
+    if cover == "misnamed":
+        shutil.copy2(test_media / "thumb.jpg", test_media / name)
+    else:
+        (test_media / name).write_bytes(b"<html>not an image</html>")
+    base = local_info["thumbnails"][0]["url"].rsplit("/", 1)[0]
+    info = {
+        **local_info,
+        "thumbnail": f"{base}/{name}",
+        "thumbnails": [{"id": "0", "url": f"{base}/{name}"}],
+    }
+    code, events = run_job(
+        tmp_path, info, mode="compat_mp4", video_format_id="v-h264", audio_format_ids=["a-en-m4a"]
+    )
+    assert code == 0, [e for e in events if e["t"] == "error"]
+    [output] = done_files(events)
+    warnings = next(e for e in events if e["t"] == "done")["warnings"]
+    assert ({"code": "THUMBNAIL_SKIPPED"} in warnings) is skipped
+    assert bool(cover_art(output)) is not skipped

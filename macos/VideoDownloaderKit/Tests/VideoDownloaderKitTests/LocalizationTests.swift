@@ -49,7 +49,7 @@ struct LocalizationTests {
         for code in ["UNKNOWN", "NETWORK", "JOB_NOT_REMOVABLE", "JOBS_RUNNING", "AGE_RESTRICTED", "SESSION_NOT_ENOUGH"] {
             keys += ["error.\(code).title", "error.\(code).body"]
         }
-        keys.append("queue.warning.SUBTITLE_SKIPPED")
+        keys += ["queue.warning.SUBTITLE_SKIPPED", "queue.warning.THUMBNAIL_SKIPPED"]
         // Kütüphane's shelves (P3).
         for shelf in Route.shelves.compactMap(\.libraryCategory) {
             keys += ["library.shelfEmpty.\(shelf)", "library.shelfEmptyBody.\(shelf)"]

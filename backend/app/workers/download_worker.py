@@ -202,6 +202,35 @@ def _base_params(work: Path, log: Collector) -> dict[str, Any]:
     return options
 
 
+def _covers(ydl: Any) -> Any:
+    """yt-dlp's thumbnail convertor, made safe. It opens the image by its *extension*
+    (`-f image2`), and Reddit serves JPEGs named .png, so the conversion failed -- before the
+    download, which then threw the finished video away (found 14 Oct). Here FFmpeg probes the
+    content, and a cover that still cannot be converted is dropped with a warning
+    (THUMBNAIL_SKIPPED): never a reason to fail the download itself."""
+    from yt_dlp.postprocessor.ffmpeg import FFmpegThumbnailsConvertorPP as FFmpegThumbnailsConvertor
+    from yt_dlp.utils import PostProcessingError, replace_extension
+
+    class SafeCovers(FFmpegThumbnailsConvertor):
+        def convert_thumbnail(self, thumbnail_filename: str, target_ext: str) -> str:
+            converted = replace_extension(thumbnail_filename, target_ext)
+            self.real_run_ffmpeg(
+                [(thumbnail_filename, [])], [(converted, self._options(target_ext))]
+            )
+            return str(converted)
+
+        def run(self, info: dict[str, Any]) -> Any:
+            try:
+                return super().run(info)
+            except PostProcessingError as exc:
+                self.report_warning(f"cover skipped: {exc}")
+                info["thumbnails"] = []  # nothing to embed or keep; the video goes on
+                info["vd_cover_skipped"] = True
+                return [], info
+
+    return SafeCovers(ydl, format="jpg")
+
+
 def _network_params(req: dict[str, Any]) -> dict[str, Any]:
     """Connections and the speed cap the manager handed over (see app/accel.py)."""
     net = req.get("network") or {}
@@ -309,12 +338,10 @@ def _stream_pass(req: dict[str, Any], work: Path, log: Collector) -> dict[str, A
         "writethumbnail": want_thumb,
         "writedescription": bool(extras.get("description")),
         "writeinfojson": bool(extras.get("info_json")),
-        "postprocessors": (
-            [{"key": "FFmpegThumbnailsConvertor", "format": "jpg", "when": "before_dl"}]
-            if want_thumb
-            else []
-        ),
+        # The cover is converted by `_covers()` below, not yt-dlp's own convertor.
+        "postprocessors": [],
     }
+    want_cover = want_thumb
     if req["mode"] == "audio":
         extras = req.get("extras") or {}
         codec = req.get("audio_codec") or "mp3"
@@ -322,12 +349,8 @@ def _stream_pass(req: dict[str, Any], work: Path, log: Collector) -> dict[str, A
         keep_thumbnail = bool(extras.get("thumbnail_file"))
         options["format"] = selected[0]
         options["writethumbnail"] = cover or keep_thumbnail
+        want_cover = cover or keep_thumbnail
         options["postprocessors"] = [
-            *(
-                [{"key": "FFmpegThumbnailsConvertor", "format": "jpg", "when": "before_dl"}]
-                if cover or keep_thumbnail
-                else []
-            ),
             {
                 "key": "FFmpegExtractAudio",
                 "preferredcodec": codec,
@@ -344,6 +367,8 @@ def _stream_pass(req: dict[str, Any], work: Path, log: Collector) -> dict[str, A
         ]
     emit({"t": "stage", "stage": "downloading"})
     with yt_dlp.YoutubeDL(options) as ydl:
+        if want_cover:
+            ydl.add_post_processor(_covers(ydl), when="before_dl")
         # YouTube's part of the Safari session, only when the inspection needed one.
         session.apply(ydl, req.get("cookies_from_browser"))
         return _fetch(ydl, req)
@@ -421,6 +446,9 @@ def _finalize(
         else:
             subtitle_files.append((key, usable))
     thumb = next(iter(sorted(work.glob("thumb*.jpg"))), None)
+    downloads = [info, *(info.get("requested_downloads") or [])]
+    if any(d.get("vd_cover_skipped") for d in downloads if isinstance(d, dict)):
+        warnings.append({"code": "THUMBNAIL_SKIPPED"})
 
     if mode in ("mkv", "compat_mp4"):
         container = "mkv" if mode == "mkv" else "mp4"

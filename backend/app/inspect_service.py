@@ -163,25 +163,53 @@ def recall(inspect_id: str) -> dict[str, Any]:
     return entry
 
 
-async def _extract(url: str) -> tuple[dict[str, Any], list[str], list[str] | None]:
-    """Without an account first, always. Only a video that asks for a signed-in account
-    (age-restricted, members-only, private) is tried once more with the Safari session."""
+SERVER_ERROR = re.compile(r"HTTP Error 5\d\d")
+SERVER_ERROR_RETRY_SECONDS = 2.0
+
+
+async def _run_worker_once_more(
+    url: str, cookies: list[str] | None = None
+) -> tuple[dict[str, Any], list[str]]:
+    """A site's server error (HTTP 5xx) is often gone a moment later -- Reddit answers 500s
+    now and then (14 Oct): one more try before Berk sees an error."""
     try:
-        info, warnings = await _run_worker(url)
+        return await _run_worker(url, cookies)
+    except errors.AppError as exc:
+        if exc.code != "NETWORK" or not SERVER_ERROR.search(exc.raw or ""):
+            raise
+    await asyncio.sleep(SERVER_ERROR_RETRY_SECONDS)
+    return await _run_worker(url, cookies)
+
+
+async def _extract(url: str) -> tuple[dict[str, Any], list[str], list[str] | None]:
+    """Without an account first. Only a video that asks for a signed-in account
+    (age-restricted, members-only, private) is tried once more with the Safari session --
+    except on a site that no longer answers signed-out visitors at all (Reddit), where the
+    session goes first."""
+    site = browser_session.site_of(url)
+    if site and browser_session.SITES[site].session_first and settings_store.load().safari_login:
+        session = browser_session.ytdlp_option(site)
+        if session is not None:
+            info, warnings = await _run_worker_once_more(url, session)
+            return info, [*warnings, "USED_SAFARI_LOGIN"], session
+    try:
+        info, warnings = await _run_worker_once_more(url)
         return info, warnings, None
     except errors.AppError as exc:
-        session = browser_session.ytdlp_option()
-        # YouTube only: the session is a YouTube one, and a "login" in some other site's
-        # error must never send it anywhere else.
-        if exc.code not in browser_session.AUTH_CODES or session is None:
-            raise
-        if not browser_session.is_youtube_url(url):
+        # Only the sites Berk signed in to for this (browser_session.SITES), each with its own
+        # cookies alone: a "login" in some other site's error must never send a session there.
+        session = browser_session.ytdlp_option(site) if site else None
+        if (
+            session is None
+            or site is None
+            or exc.code not in browser_session.SITES[site].retry_codes
+        ):
             raise
         if not settings_store.load().safari_login:
             raise
         first = exc.code
     try:
-        info, warnings = await _run_worker(url, session)
+        info, warnings = await _run_worker_once_more(url, session)
     except errors.AppError as again:
         if again.code in browser_session.AUTH_CODES:
             # Signed in, and still refused: not signed in to YouTube in Safari, or the account

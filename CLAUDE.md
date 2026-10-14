@@ -193,17 +193,30 @@ UI and went with it (N8).
     draws its icon inline (a web-accessible image would let pages detect the extension) and
     takes every colour from tokens on `.card` redefined in the dark block: plain rules after a
     `prefers-color-scheme` block override it (that left grey-on-dark text, 14 Oct).
-36. **Berk's Safari session** (`app/browser_session.py`, `app/workers/session.py`), his decision
-    2026-10-13, his own account: only an AGE_RESTRICTED/LOGIN_REQUIRED answer *for a YouTube
-    URL* is retried once with it; the worker gets only the `youtube.com` cookies loaded into its
-    in-memory jar (never yt-dlp's `cookiesfrombrowser`, which loads every site's cookies);
-    info.json is scrubbed of the per-format `cookies` field; the job carries
-    `["safari", path]` and shows `used_session`; turning the setting off stops it in the cache,
-    new jobs and retries. Reading the store needs Full Disk Access for VideoDownloader.app
-    (Terminal when the server was started there). `errors.classify` drops URLs first: an
-    address containing "login" once turned an unsupported page into LOGIN_REQUIRED, which
-    would have sent the session to that site. Tests set VD_SAFARI_COOKIES (conftest), so no
-    test ever reads the real store.
+36. **Berk's Safari session** (`app/browser_session.py`, `app/workers/session.py`): YouTube
+    (his decision 2026-10-13), Reddit, Instagram and X (2026-10-14, he signed in for it), each
+    a `Site` in `SITES`. A job carries `["safari", path, site]` and its worker loads only that
+    site's cookies (`cookie_belongs`, exact host or subdomain; never yt-dlp's
+    `cookiesfrombrowser`, which loads every site's) into its in-memory jar; never aria2c (gotcha
+    41). Signed-out first, then once with the session when the answer is in the site's
+    `retry_codes`: YouTube only AGE_RESTRICTED/LOGIN_REQUIRED; Reddit/Instagram/X also
+    FORBIDDEN/VIDEO_UNAVAILABLE/UNKNOWN, because they hide things from signed-out visitors
+    behind those (X: a sensitive post "has no video"). **Reddit is `session_first`**: its API
+    no longer answers signed-out visitors (401, "authentication required", random 500s).
+    yt-dlp sets `over18=1` itself, so NSFW posts open once signed in; "gated" subreddits (drug
+    and similar interstitials, e.g. r/ketamine) still answer 403 signed in: an opt-in per
+    account that yt-dlp's `_options` cookie no longer achieves. Verified 14 Oct through a
+    separate app instance (`open -n … --env VD_PORT=8790 --env VD_DATA_DIR=… --env
+    VD_DOWNLOAD_DIR=<scratch>`; this shell has no Full Disk Access, the app does): Reddit SFW and
+    NSFW, X 18+ and an Instagram reel downloaded. A site's HTTP 5xx during inspect is tried once
+    more after 2 s (`_run_worker_once_more`). info.json is scrubbed of per-format `cookies`;
+    turning the setting off stops it in the cache, new jobs and retries. `errors.classify`
+    drops URLs first: an address containing "login" once turned an unsupported page into
+    LOGIN_REQUIRED. Tests set VD_SAFARI_COOKIES (conftest), so no test reads the real store.
+    **Covers**: yt-dlp's thumbnail convertor opens images by extension (`-f image2`) and Reddit
+    serves JPEGs named .png; the failure came before the download and threw the finished video
+    away. `download_worker._covers` probes by content and drops a cover it cannot convert
+    (THUMBNAIL_SKIPPED warning); it replaces `FFmpegThumbnailsConvertor` in both modes.
 37. **Native screens** (every screen since N7) live in `VideoDownloaderKit/Views/`. They reach the backend
     through `APIClient`. Backend codes and states are worded from the catalog
     (`error.<CODE>.title/body`, `queue.status.*`, `doctor.*`); a new backend code needs both

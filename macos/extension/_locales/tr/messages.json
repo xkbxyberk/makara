@@ -267,10 +267,10 @@
     "message": "Bu video giriş istiyor; uygulamanın Safari oturumunu okuyabilmesi için Tam Disk Erişimi gerekiyor (uygulamadaki Sistem ekranına bak)."
   },
   "error_SESSION_NOT_ENOUGH": {
-    "message": "Safari’deki oturumunla da açılmadı: YouTube’a giriş yapılmış mı, hesabın yaşı doğrulanmış mı?"
+    "message": "Safari’deki oturumunla da açılmadı: o siteye giriş yapılmış mı, hesap bu içeriği görebiliyor mu?"
   },
   "used_session": {
-    "message": "Giriş istediği için Safari’deki YouTube oturumunla indiriliyor."
+    "message": "Giriş istediği için Safari’deki oturumunla indiriliyor."
   },
   "offer_title": {
     "message": "Bu videoyu indir?"

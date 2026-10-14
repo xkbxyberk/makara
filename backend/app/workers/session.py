@@ -1,9 +1,10 @@
-"""Hand a worker's YoutubeDL the YouTube part of Berk's Safari session -- and nothing else.
+"""Hand a worker's YoutubeDL one site's part of Berk's Safari session -- and nothing else.
 
 yt-dlp's own `cookiesfrombrowser` loads the *whole* Safari cookie jar (every site, every value)
-and sends whatever matches the URLs it fetches. Here the jar is read, only `youtube.com`
-cookies are kept, and they go straight into this YoutubeDL's in-memory jar: no file, no other
-site's session. A store that cannot be read (no Full Disk Access) is COOKIES_UNREADABLE.
+and sends whatever matches the URLs it fetches. Here the jar is read, only the job's site's
+cookies are kept (youtube.com, or reddit.com, instagram.com, x.com/twitter.com: see
+`browser_session.SITES`), and they go straight into this YoutubeDL's in-memory jar: no file, no
+other site's session. A store that cannot be read (no Full Disk Access) is COOKIES_UNREADABLE.
 """
 
 from __future__ import annotations
@@ -11,22 +12,19 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from app import errors
-
-
-def _is_youtube(domain: str) -> bool:
-    host = domain.lstrip(".").lower()
-    return host == "youtube.com" or host.endswith(".youtube.com")
+from app import browser_session, errors
 
 
 def apply(ydl: Any, spec: list[str] | None) -> int:
-    """Load the session described by `spec` (["safari", path]) into `ydl`. Returns how many
-    cookies were added; 0 and nothing done when there is no spec."""
+    """Load the session described by `spec` (["safari", path, site]; jobs queued before
+    2026-10-14 have no site and are YouTube's) into `ydl`. Returns how many cookies were added;
+    0 and nothing done when there is no spec."""
     if not spec:
         return 0
     kind, path = spec[0], spec[1] if len(spec) > 1 else ""
-    if kind != "safari" or not path:
-        raise errors.AppError(code="COOKIES_UNREADABLE", raw=f"unknown session {kind!r}")
+    site = spec[2] if len(spec) > 2 else "youtube"
+    if kind != "safari" or not path or site not in browser_session.SITES:
+        raise errors.AppError(code="COOKIES_UNREADABLE", raw=f"unknown session {kind!r} {site!r}")
     try:
         data = Path(path).read_bytes()
     except OSError as exc:  # macOS refusing it without Full Disk Access, or it is gone
@@ -41,7 +39,7 @@ def apply(ydl: Any, spec: list[str] | None) -> int:
         raise errors.AppError(code="COOKIES_UNREADABLE", raw=type(exc).__name__) from None
     added = 0
     for cookie in jar:
-        if _is_youtube(cookie.domain):
+        if browser_session.cookie_belongs(cookie.domain, site):
             ydl.cookiejar.set_cookie(cookie)
             added += 1
     return added
