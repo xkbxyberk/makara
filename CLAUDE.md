@@ -291,6 +291,12 @@ UI and went with it (N8).
     `299` (https) via aria2c with 8 TCP connections at ~6.4 MB/s; HLS `312` with 8 parallel
     fragments at ~45 MB/s. YouTube does not always offer the https formats: one extraction
     (visionos client) gave HLS only, which still downloads in parallel fragments.
+    **Every site, not only YouTube**: the network params apply to every extractor; probed 14 Oct:
+    archive.org (https) -> aria2c, SoundCloud and Dailymotion (m3u8_native) -> parallel
+    fragments. yt-dlp keeps FFmpeg for live streams and formats an extractor forces to `m3u8`
+    (X Spaces); those stay single-stream on purpose. A host that refuses several connections
+    makes aria2c exit non-zero ("aria2c exited with code N"): the worker then reruns the pass
+    once without aria2c (`_without_aria2c`), resuming what it has.
 
 42. **Kütüphane's shelves (P3)** are routes (`Route.shelves`: videos, music, edits) showing the
     same `LibraryView`; the route sets `LibraryQuery.category` (not a filter: `isFiltered`

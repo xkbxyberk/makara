@@ -423,3 +423,27 @@ def test_the_segment_map_comes_from_aria2cs_control_file() -> None:
     # Pieces 0, 4, 8, ... were done (bitfield 88 89 12 20): finished cells and empty ones both.
     assert "9" in cells and "0" in cells
     assert aria2.pieces(Path("/nonexistent.aria2")) is None
+
+
+def test_a_server_that_refuses_aria2c_still_gets_the_download(
+    tmp_path: Path, local_info: dict[str, Any]
+) -> None:
+    """Some hosts refuse several connections to one file: when aria2c fails, the same pass
+    runs once more with yt-dlp's own downloader, and the job still finishes."""
+    fake = tmp_path / "aria2c"
+    # Answers the availability check (`aria2c -v`), then fails every download.
+    fake.write_text(
+        '#!/bin/sh\n[ "$1" = "-v" ] && { echo "aria2 version 1.37.0"; exit 0; }\nexit 22\n'
+    )
+    fake.chmod(0o755)
+    code, events = run_job(
+        tmp_path,
+        local_info,
+        mode="compat_mp4",
+        video_format_id="v-h264",
+        audio_format_ids=["a-en-m4a"],
+        network={"connections": 4, "rate_limit": None, "aria2c": str(fake)},
+    )
+    assert code == 0, [e for e in events if e["t"] == "error"]
+    assert done_files(events)
+    assert "retrying" in [e["stage"] for e in events if e["t"] == "stage"]

@@ -235,14 +235,27 @@ def _network_params(req: dict[str, Any]) -> dict[str, Any]:
 
 
 FORBIDDEN_RETRY_DELAY = 3.0
+# yt-dlp's words when the external downloader gave up ("aria2c exited with code 22").
+ARIA2C_FAILED = re.compile(r"aria2c exited with code", re.IGNORECASE)
+
+
+def _without_aria2c(req: dict[str, Any]) -> dict[str, Any]:
+    return {**req, "network": {**(req.get("network") or {}), "aria2c": None}}
 
 
 def _stream_pass_with_retry(req: dict[str, Any], work: Path, log: Collector) -> dict[str, Any]:
     """YouTube occasionally answers a freshly signed stream URL with 403 for a short while.
-    One fresh extraction a moment later usually succeeds, and the .part file resumes."""
+    One fresh extraction a moment later usually succeeds, and the .part file resumes.
+
+    And some servers refuse several connections to one file (P2 on every site, not only
+    YouTube): when aria2c is what failed, the same pass runs once with yt-dlp's own
+    downloader, which uses one connection (fragments still go in parallel)."""
     try:
         return _stream_pass(req, work, log)
     except Exception as exc:
+        if (req.get("network") or {}).get("aria2c") and ARIA2C_FAILED.search(str(exc)):
+            emit({"t": "stage", "stage": "retrying"})
+            return _stream_pass_with_retry(_without_aria2c(req), work, log)
         if errors.classify(str(exc)) != "FORBIDDEN":
             raise
         emit({"t": "stage", "stage": "retrying"})
