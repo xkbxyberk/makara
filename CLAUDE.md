@@ -14,6 +14,7 @@ Local-only media workstation on yt-dlp + FFmpeg. macOS arm64, single user (Berk)
 
 | What | Command |
 |---|---|
+| Fresh Mac to a working checkout | `./scripts/bootstrap.sh` (see DEVELOPING.md) |
 | The gate (lint, types, pytest, extension tests, Swift, app build, UI tests) | `./scripts/check.sh` |
 | Backend tests only | `uv run pytest -q` |
 | Extension tests | `cd macos/extension-tests && node --test shared.test.mjs && npx playwright test` |
