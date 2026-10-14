@@ -109,7 +109,7 @@ PARENT_CHECK_SECONDS = 1.0
 
 
 def _watch_parent() -> asyncio.Task[None] | None:
-    """Started by VideoDownloader.app (`VD_PARENT_PID`), the server must not outlive it: if the
+    """Started by Makara.app (`VD_PARENT_PID`), the server must not outlive it: if the
     app crashes or is killed, this process is re-parented, notices, and shuts down cleanly --
     which stops every worker -- instead of holding the port and the queue forever."""
     raw = os.environ.get("VD_PARENT_PID")
@@ -129,7 +129,7 @@ def _watch_parent() -> asyncio.Task[None] | None:
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="VideoDownloader", docs_url=None, redoc_url=None, lifespan=lifespan)
+    app = FastAPI(title="Makara", docs_url=None, redoc_url=None, lifespan=lifespan)
     # A DNS-rebinding page resolves its own hostname to 127.0.0.1; the Host header gives it away.
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=ALLOWED_HOSTS)
     app.middleware("http")(reject_cross_site)
@@ -189,7 +189,7 @@ def main() -> None:
             if manager is not None:
                 manager.announce_shutdown()
 
-    print(f"VideoDownloader listening on http://{HOST}:{PORT}/", file=sys.stderr, flush=True)
+    print(f"Makara listening on http://{HOST}:{PORT}/", file=sys.stderr, flush=True)
     # An open event stream (a browser tab, the app's web view) only ends when the manager
     # shuts down -- which happens after uvicorn stops waiting for open connections. Without a
     # limit, SIGTERM never got that far: the app waited, then had to SIGKILL, and running

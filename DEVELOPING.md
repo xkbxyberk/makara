@@ -16,13 +16,14 @@
 4. **Everything else:** `./scripts/bootstrap.sh` installs the `Brewfile` (uv, deno, ffmpeg-full,
    aria2, node, gh), runs `uv sync`, prepares the extension tests and builds the app.
 5. **First start:** `open Makara.command`. Then:
-   - Safari > Settings > Extensions: turn on Makara and allow it on all websites (restart Safari
+   - Safari > Settings > Extensions: turn on Makara Dev and allow it on all websites (restart Safari
      after every rebuild of the extension).
-   - System Settings > Privacy & Security > Full Disk Access: Makara, if downloads should use the
+   - System Settings > Privacy & Security > Full Disk Access: Makara Dev, if downloads should use the
      Safari session (CLAUDE.md gotcha 36).
    - Sign in to YouTube, Reddit, Instagram and X in Safari again.
 6. **Check it:** `./scripts/check.sh` (the full gate; it opens the app window for UI tests).
 
-Not in git, restore from a backup if wanted: the downloads (`~/Movies/VideoDownloader`), the
-catalogue and settings (`~/Library/Application Support/VideoDownloader`), and Claude's notes for
-this project (`~/.claude/projects/-Users-akbay-VideoDownloader/`).
+A development build is "Makara Dev" (its own bundle id, port 8777, `makara-dev://` links and
+`~/Movies/Makara Dev`, `~/Library/Application Support/Makara Dev`), so it runs beside an
+installed Makara without touching its library. Not in git, restore from a backup if wanted:
+Claude's notes for this project (`~/.claude/projects/-Users-akbay-VideoDownloader/`).

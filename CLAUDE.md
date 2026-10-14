@@ -1,12 +1,23 @@
 # VideoDownloader — notes for a future session
 
-The app is called **Makara** (Berk, 15 Oct): the product (`Makara.app`), its display names and
-every string. Repository, targets, modules, bundle ids (`com.berkakbay.VideoDownloader*`: the
-Safari permission and the login item hang on them), the URL scheme and the data/download
-folders (`~/Movies/VideoDownloader`, `~/Library/Application Support/VideoDownloader`) keep the
-old name on purpose.
+The app is called **Makara** (Berk, 15 Oct). Only the repository folder, the Xcode targets and
+the Swift modules keep the old name. Two flavours run side by side (project build settings
+`VD_*`, P8c):
 
-Local-only media workstation on yt-dlp + FFmpeg. macOS arm64, single user (Berk).
+| | Release (anyone) | Debug (development) |
+|---|---|---|
+| bundle id | `com.berkakbay.Makara` (+ `.Extension`) | `com.berkakbay.Makara.dev` (+ `.Extension`) |
+| name | Makara | Makara Dev |
+| port | 8787 | 8777 |
+| link scheme | `makara://` | `makara-dev://` |
+| folders | `~/Movies/Makara`, `~/Library/{Application Support,Logs,Caches}/Makara` | the same with `Makara Dev` |
+| backend | carried in the app, runtime installed by the setup assistant (gotcha 50) | the checkout |
+
+The extension's JavaScript always writes `makara://`; its native half opens the link with its own
+app's scheme and asks its own app's port (`VDURLScheme`/`VDPort` in the appex Info.plist).
+
+Local-only media workstation on yt-dlp + FFmpeg. macOS 14+, Apple silicon and Intel; public
+release planned (PLAN P8), developed by Berk.
 **Talk to Berk in Turkish. Code, comments, commits and docs in English.**
 **Every user-facing string lives in the Kit's `Localizable.xcstrings` (gotcha 37); the Safari extension's in `macos/extension/_locales/tr/messages.json`.**
 
@@ -195,7 +206,7 @@ UI and went with it (N8).
     in `offerMuted` (storage.local; the popup's switch undoes it) and that address was not
     offered this session. The background first tries `browser.action.openPopup()` (Berk wants the
     extension's own menu); it counts only if popup.js reports `popup-open` within 0.9 s, else
-    content.js shows the card: top right under the toolbar with a notch, headed "VideoDownloader"
+    content.js shows the card: top right under the toolbar with a notch, headed "Makara"
     so it reads as the extension's. It lives in a closed shadow root, ignores untrusted clicks,
     draws its icon inline (a web-accessible image would let pages detect the extension) and
     takes every colour from tokens on `.card` redefined in the dark block: plain rules after a

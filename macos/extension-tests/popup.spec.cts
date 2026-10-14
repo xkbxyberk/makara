@@ -109,7 +109,7 @@ test('popup: the video\'s own choices, one click, progress to done, the choice r
 
   await page.getByRole('button', { name: 'İndirmeler’de göster' }).click();
   expect(await page.evaluate(() => (window as unknown as { __opened: string[] }).__opened)).toContain(
-    'videodownloader://show?route=download',
+    'makara://show?route=download',
   );
 });
 
@@ -150,7 +150,7 @@ test('popup: when the app is closed it offers to open it, then carries on', asyn
   await expect(page.getByText('Makara açık değil')).toBeVisible();
   await page.evaluate(() => ((window as unknown as { __offline: boolean }).__offline = false));
   await page.getByRole('button', { name: 'Makara’yı aç' }).click();
-  expect(await page.evaluate(() => (window as unknown as { __opened: string[] }).__opened)).toEqual(['videodownloader://show']);
+  expect(await page.evaluate(() => (window as unknown as { __opened: string[] }).__opened)).toEqual(['makara://show']);
   await expect(page.getByRole('heading', { name: 'Local test clip' })).toBeVisible({ timeout: 10_000 });
 });
 
@@ -159,7 +159,7 @@ test('popup: a list opens in the app; an unknown site and a non-web tab are expl
   await expect(page.getByText('Bu bir liste')).toBeVisible();
   await page.getByRole('button', { name: 'Uygulamada incele' }).click();
   expect(await page.evaluate(() => (window as unknown as { __opened: string[] }).__opened)).toEqual([
-    'videodownloader://inspect?url=https%3A%2F%2Fwww.youtube.com%2Fplaylist%3Flist%3DPL123',
+    'makara://inspect?url=https%3A%2F%2Fwww.youtube.com%2Fplaylist%3Flist%3DPL123',
   ]);
 
   const second = await browser.newPage();

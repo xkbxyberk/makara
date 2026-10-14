@@ -181,7 +181,7 @@
           title.textContent = t('offer_added');
           status.textContent = t('offer_added_body');
           actions.replaceChildren(button(t('offer_show'), '', () => {
-            void send({ type: 'open', url: 'videodownloader://show?route=download' });
+            void send({ type: 'open', url: 'makara://show?route=download' });
             remove();
           }));
           hideTimer = setTimeout(remove, 5000);
@@ -196,7 +196,7 @@
       });
       const choose = offer.downloaded
         ? button(t('offer_show_library'), 'primary', () => {
-          void send({ type: 'open', url: 'videodownloader://show?route=library' });
+          void send({ type: 'open', url: 'makara://show?route=library' });
           remove();
         })
         : button(t('offer_choose'), '', () => {

@@ -1,7 +1,7 @@
 import Foundation
 import VideoDownloaderRelay
 
-/// Something handed to the app from outside: `videodownloader://inspect?url=…`, a web link
+/// Something handed to the app from outside: `makara://inspect?url=…`, a web link
 /// dropped on the Dock icon or the window, or a `.webloc` file.
 ///
 /// Inspecting starts without a click (the backend contacts the site), so only public http(s)
@@ -11,13 +11,14 @@ public enum IncomingURL: Equatable, Sendable {
     case inspect(URL)
     case show(Route?)
 
-    public static let scheme = "videodownloader"
+    /// The release's scheme and the development build's (each registers only its own).
+    public static let schemes: Set<String> = ["makara", "makara-dev"]
 
     public static func parse(_ url: URL, readFile: (URL) -> Data? = { try? Data(contentsOf: $0) }) -> IncomingURL? {
         switch url.scheme?.lowercased() {
         case "http", "https":
             return webPage(url).map(IncomingURL.inspect)
-        case scheme:
+        case let scheme? where schemes.contains(scheme):
             let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
             switch url.host()?.lowercased() {
             case "inspect":

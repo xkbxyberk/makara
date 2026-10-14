@@ -5,8 +5,8 @@ import VideoDownloaderRelay
 
 /// The extension's native half. The extension's JavaScript never talks to the backend itself:
 /// it sends a message here, and this sandboxed handler (outgoing connections only) performs
-/// one of the few requests `Relay` allows against 127.0.0.1, or opens a `videodownloader://`
-/// link, and answers with the result.
+/// one of the few requests `Relay` allows against 127.0.0.1, or opens a `makara://` link in
+/// its own app, and answers with the result.
 final class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
     /// No cache, no cookies, nothing on disk: these requests carry the addresses of the pages
     /// Berk visits, and the shared session would keep them in a Cache.db (review finding).
@@ -22,7 +22,7 @@ final class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
         let item = context.inputItems.first as? NSExtensionItem
         let message = item?.userInfo?[SFExtensionMessageKey] as? [String: Any] ?? [:]
 
-        switch Relay.action(for: message) {
+        switch Relay.action(for: message, port: Self.port, scheme: Self.scheme) {
         case .failure(let refusal):
             Self.complete(context, with: ["ok": false, "refused": refusal.rawValue])
         case .success(.open(let url)):
@@ -34,6 +34,11 @@ final class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
             }.resume()
         }
     }
+
+    /// Its own app's port and link scheme: a development build runs beside the release.
+    private static let port = (Bundle.main.object(forInfoDictionaryKey: "VDPort") as? String).flatMap(Int.init)
+        ?? Relay.defaultPort
+    private static let scheme = Bundle.main.object(forInfoDictionaryKey: "VDURLScheme") as? String ?? Relay.linkScheme
 
     private static func complete(_ context: NSExtensionContext, with reply: [String: Any]) {
         let response = NSExtensionItem()

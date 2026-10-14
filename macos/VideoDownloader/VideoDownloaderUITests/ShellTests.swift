@@ -498,7 +498,7 @@ final class ShellTests: XCTestCase {
         native("Henüz bir şey incelemedin")
         sidebar("Sistem").click()
         native("JavaScript çalıştırıcı")
-        let link = URL(string: "videodownloader://inspect?url=https%3A%2F%2Fexample.test%2Flocal-media")!
+        let link = URL(string: "makara://inspect?url=https%3A%2F%2Fexample.test%2Flocal-media")!
         NSWorkspace.shared.open(link)
         native("Local test clip")
         XCTAssertTrue(app.windows["İncele"].waitForExistence(timeout: 10), "the sidebar did not follow to İncele")
@@ -508,14 +508,14 @@ final class ShellTests: XCTestCase {
     /// A closed app opened by a link (a Safari click, a Dock drop): the link arrives before the
     /// backend and the page exist, and must still be inspected (it used to be lost).
     func testALinkHandedOverAtLaunchIsInspectedOnceThePageIsReady() {
-        app.launchEnvironment["VD_OPEN_AT_LAUNCH"] = "videodownloader://inspect?url=https%3A%2F%2Fexample.test%2Flocal-media"
+        app.launchEnvironment["VD_OPEN_AT_LAUNCH"] = "makara://inspect?url=https%3A%2F%2Fexample.test%2Flocal-media"
         app.launch()
         native("Local test clip")
         XCTAssertTrue(app.windows["İncele"].exists)
     }
 
     func testAScreenAskedForAtLaunchIsTheOneShown() {
-        app.launchEnvironment["VD_OPEN_AT_LAUNCH"] = "videodownloader://show?route=doctor"
+        app.launchEnvironment["VD_OPEN_AT_LAUNCH"] = "makara://show?route=doctor"
         app.launch()
         native("JavaScript çalıştırıcı")
         XCTAssertTrue(app.windows["Sistem"].waitForExistence(timeout: 10), "the page pulled the window back")
@@ -530,7 +530,7 @@ final class ShellTests: XCTestCase {
         let plist = try PropertyListSerialization.data(fromPropertyList: ["URL": "https://example.test/local-media"],
                                                        format: .xml, options: 0)
         try plist.write(to: webloc)
-        let appURL = try XCTUnwrap(NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.berkakbay.VideoDownloader"))
+        let appURL = try XCTUnwrap(NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.berkakbay.Makara.dev"))
         let opened = expectation(description: "handed to the app")
         NSWorkspace.shared.open([webloc], withApplicationAt: appURL, configuration: NSWorkspace.OpenConfiguration()) { _, _ in
             opened.fulfill()

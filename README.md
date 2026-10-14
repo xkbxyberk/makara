@@ -22,7 +22,7 @@ open Makara.command
 ```
 
 Uygulama sunucuyu kendisi başlatır ve kapanırken durdurur. Günlük:
-`~/Library/Logs/VideoDownloader/backend.log`. Bağlantıları `videodownloader://inspect?url=…`
+`~/Library/Logs/Makara Dev/backend.log` (geliştirme sürümü). Bağlantıları `makara-dev://inspect?url=…`
 ile, Dock simgesine sürükleyerek ya da pencereye bırakarak da inceletebilirsin. Ayarlar ⌘, ile
 açılır.
 

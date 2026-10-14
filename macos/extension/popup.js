@@ -336,7 +336,7 @@ function renderChoices() {
       ? h('p', { class: 'note' }, h('strong', {}, t('popup_in_library')), ' ', t('popup_in_library_body'),
         ' ', h('button', {
           class: 'link', type: 'button',
-          onclick: () => void VD.openApp('videodownloader://show?route=library').then(() => window.close()),
+          onclick: () => void VD.openApp('makara://show?route=library').then(() => window.close()),
         }, t('offer_show_library')))
       : null,
     h('div', { class: 'rows', role: 'radiogroup' }, ...rowsFor(state.mode).map(rowView)),
@@ -391,7 +391,7 @@ async function follow(jobId) {
   const sessionNote = h('p', { class: 'message', hidden: true }, t('used_session'));
   const showDownloads = h('button', {
     class: 'btn', type: 'button',
-    onclick: () => void VD.openApp('videodownloader://show?route=download').then(() => window.close()),
+    onclick: () => void VD.openApp('makara://show?route=download').then(() => window.close()),
   }, t('show_downloads'));
   show(h('h1', {}, title), h('div', { class: 'progress' }, bar), status, sessionNote, h('div', { class: 'actions' }, showDownloads));
   // Give up after a while without news (the app quit, or the job was removed there).

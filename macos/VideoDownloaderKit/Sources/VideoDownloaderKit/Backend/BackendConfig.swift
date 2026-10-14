@@ -13,6 +13,9 @@ public struct BackendConfig: Sendable, Equatable {
     public var environment: [String: String]
     public var logFile: URL
     public var release: Release?
+    /// The folder name under ~/Library and ~/Movies: "Makara", or "Makara Dev" for a development
+    /// build, so the two never share a library (Info.plist `VDAppFolder`).
+    public var appFolder = "Makara"
 
     /// The release flavour's places.
     public struct Release: Sendable, Equatable {
@@ -43,24 +46,27 @@ public struct BackendConfig: Sendable, Equatable {
     public static func resolve(
         environment: [String: String] = ProcessInfo.processInfo.environment,
         infoPlistRoot: String? = Bundle.main.object(forInfoDictionaryKey: "VDProjectRoot") as? String,
+        infoPlistPort: String? = Bundle.main.object(forInfoDictionaryKey: "VDPort") as? String,
+        appFolder: String = Bundle.main.object(forInfoDictionaryKey: "VDAppFolder") as? String ?? "Makara",
         bundle: URL = Bundle.main.bundleURL,
         fileExists: (String) -> Bool = { FileManager.default.isExecutableFile(atPath: $0) || FileManager.default.fileExists(atPath: $0) },
         home: URL = FileManager.default.homeDirectoryForCurrentUser
     ) -> BackendConfig {
-        let port = environment["VD_PORT"].flatMap(Int.init) ?? defaultPort
+        let port = environment["VD_PORT"].flatMap(Int.init) ?? infoPlistPort.flatMap(Int.init) ?? defaultPort
+        let library = home.appending(path: "Library")
         let rootPath = (environment["VD_PROJECT_ROOT"] ?? infoPlistRoot).flatMap { $0.isEmpty ? nil : $0 }
         let root = rootPath
             .map { URL(fileURLWithPath: $0).standardizedFileURL }
             .flatMap { fileExists($0.appending(path: "backend/app/main.py").path) ? $0 : nil }
         // Tests point this elsewhere: they never write into Berk's ~/Library.
         let logFile = environment["VD_LOG_FILE"].map { URL(fileURLWithPath: $0) }
-            ?? home.appending(path: "Library/Logs/VideoDownloader/backend.log")
+            ?? library.appending(path: "Logs/\(appFolder)/backend.log")
         let resources = bundle.appending(path: "Contents/Resources")
         if root == nil, fileExists(resources.appending(path: "backend/app/main.py").path) {
             // Tests and trial runs name their own runtime, and the uv cache goes beside it.
             let override = environment["VD_RUNTIME_DIR"].map { URL(fileURLWithPath: $0) }
-            let runtime = override ?? home.appending(path: "Library/Application Support/Makara/runtime")
-            let cache = override?.appending(path: "uv-cache") ?? home.appending(path: "Library/Caches/Makara/uv")
+            let runtime = override ?? library.appending(path: "Application Support/\(appFolder)/runtime")
+            let cache = override?.appending(path: "uv-cache") ?? library.appending(path: "Caches/\(appFolder)/uv")
             let helper = bundle.appending(path: "Contents/Helpers/uv")
             return BackendConfig(
                 port: port, projectRoot: nil,
@@ -70,14 +76,16 @@ public struct BackendConfig: Sendable, Equatable {
                                  shippedProject: resources.appending(path: "backend-project"),
                                  runtime: runtime,
                                  uvCache: cache,
-                                 manifest: manifest(environment: environment)))
+                                 manifest: manifest(environment: environment)),
+                appFolder: appFolder)
         }
         return BackendConfig(
             port: port,
             projectRoot: root,
             uv: findUV(environment: environment, fileExists: fileExists, home: home),
             environment: environment,
-            logFile: logFile
+            logFile: logFile,
+            appFolder: appFolder
         )
     }
 
@@ -133,6 +141,7 @@ public struct BackendConfig: Sendable, Equatable {
             if let uv { env["VD_UV"] = uv.path }
         }
         env["VD_PORT"] = String(port)
+        env["VD_APP_FOLDER"] = appFolder
         env["VD_PARENT_PID"] = String(parentPID)
         env["PYTHONUNBUFFERED"] = "1"
         return env

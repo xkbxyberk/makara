@@ -4,22 +4,29 @@
 <dict>
 	<key>SFSafariWebExtensionConverterVersion</key>
 	<string>27.0</string>
-	<!-- The checkout this app runs its backend from (see BackendConfig). -->
 	<!-- Turkish only: the system's own menus (Ayarlar…, Çık) follow. -->
 	<key>CFBundleLocalizations</key>
 	<array>
 		<string>tr</string>
 	</array>
+	<!-- The checkout this app runs its backend from (Debug only; see BackendConfig). -->
 	<key>VDProjectRoot</key>
 	<string>$(VD_PROJECT_ROOT)</string>
+	<!-- Release and development differ (project build settings): they can run side by side. -->
+	<key>CFBundleName</key>
+	<string>$(VD_DISPLAY_NAME)</string>
+	<key>VDPort</key>
+	<string>$(VD_PORT_DEFAULT)</string>
+	<key>VDAppFolder</key>
+	<string>$(VD_APP_FOLDER)</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
 			<key>CFBundleURLName</key>
-			<string>com.berkakbay.VideoDownloader</string>
+			<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>videodownloader</string>
+				<string>$(VD_URL_SCHEME)</string>
 			</array>
 		</dict>
 	</array>

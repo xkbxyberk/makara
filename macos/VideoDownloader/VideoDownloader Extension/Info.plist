@@ -2,6 +2,11 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!-- The app this extension belongs to: its backend's port and its link scheme. -->
+	<key>VDPort</key>
+	<string>$(VD_PORT_DEFAULT)</string>
+	<key>VDURLScheme</key>
+	<string>$(VD_URL_SCHEME)</string>
 	<key>NSExtension</key>
 	<dict>
 		<key>NSExtensionPointIdentifier</key>

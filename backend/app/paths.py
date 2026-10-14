@@ -18,8 +18,11 @@ EXTENSION_DIR = PROJECT_ROOT / "macos" / "extension"
 # Homebrew's prefix: /opt/homebrew on Apple silicon, /usr/local on Intel.
 HOMEBREW = Path("/opt/homebrew") if platform.machine() == "arm64" else Path("/usr/local")
 
-APP_SUPPORT_DIR = Path.home() / "Library" / "Application Support" / "VideoDownloader"
-DEFAULT_DOWNLOAD_DIR = Path.home() / "Movies" / "VideoDownloader"
+# "Makara", or "Makara Dev" for a development build of the app (which passes VD_APP_FOLDER),
+# so the two never share a library or a download folder.
+APP_FOLDER = os.environ.get("VD_APP_FOLDER") or "Makara"
+APP_SUPPORT_DIR = Path.home() / "Library" / "Application Support" / APP_FOLDER
+DEFAULT_DOWNLOAD_DIR = Path.home() / "Movies" / APP_FOLDER
 
 
 def data_dir() -> Path:

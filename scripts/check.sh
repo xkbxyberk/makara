@@ -15,7 +15,7 @@ step "extension (shared.js)"; (cd macos/extension-tests && node --test shared.te
 step "extension (popup e2e)"; (cd macos/extension-tests && npx playwright test)
 step "server log is clean"
 # A request can fail inside the server while every UI assertion still passes; don't let it hide.
-if ! grep -q "VideoDownloader listening" test-results/e2e-server.log; then
+if ! grep -q "Makara listening" test-results/e2e-server.log; then
   echo "The e2e server log was not captured, so it cannot be checked." >&2
   exit 1
 fi

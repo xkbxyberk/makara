@@ -51,7 +51,7 @@ test('formats like the app and names the heaviest step', () => {
   assert.equal(VD.formatBytes(null), '');
   assert.equal(VD.formatDuration(1541), '25:41');
   assert.equal(VD.formatDuration(3725), '1:02:05');
-  assert.equal(VD.inspectLink('https://x.test/a?b=1&c=2'), 'videodownloader://inspect?url=https%3A%2F%2Fx.test%2Fa%3Fb%3D1%26c%3D2');
+  assert.equal(VD.inspectLink('https://x.test/a?b=1&c=2'), 'makara://inspect?url=https%3A%2F%2Fx.test%2Fa%3Fb%3D1%26c%3D2');
 });
 
 test('finds the one address of the post a video belongs to', () => {

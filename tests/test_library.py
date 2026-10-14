@@ -379,7 +379,7 @@ def test_spotlight_candidates_from_the_trash_or_hidden_folders_are_ignored() -> 
     home = Path.home()
     assert _hidden_or_ours(home / ".Trash" / "clip.mp4")
     assert _hidden_or_ours(Path("/Volumes/Disk/.Trashes/501/clip.mp4"))
-    assert _hidden_or_ours(home / "Movies" / "VideoDownloader" / ".vd-work" / "x" / "clip.mp4")
+    assert _hidden_or_ours(home / "Movies" / "Makara" / ".vd-work" / "x" / "clip.mp4")
     assert _hidden_or_ours(paths.data_dir() / "simulated-trash" / "clip.mp4")
     assert _hidden_or_ours(Path("/Volumes/TM/Backups.backupdb/mac/clip.mp4"))
     assert not _hidden_or_ours(home / "Movies" / "clip.mp4")

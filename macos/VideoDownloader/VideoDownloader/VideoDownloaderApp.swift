@@ -3,7 +3,8 @@ import SafariServices
 import SwiftUI
 import VideoDownloaderKit
 
-let extensionBundleIdentifier = "com.berkakbay.VideoDownloader.Extension"
+/// `com.berkakbay.Makara.Extension`, or `.Makara.dev.Extension` for a development build.
+let extensionBundleIdentifier = (Bundle.main.bundleIdentifier ?? "com.berkakbay.Makara") + ".Extension"
 
 @main
 struct VideoDownloaderApp: App {
@@ -97,7 +98,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// `videodownloader://…`, a link dropped on the Dock icon, a .webloc opened with the app.
+    /// `makara://…`, a link dropped on the Dock icon, a .webloc opened with the app.
     func application(_ application: NSApplication, open urls: [URL]) {
         for url in urls {
             if let incoming = IncomingURL.parse(url) { model.handle(incoming) }

@@ -214,7 +214,7 @@ browser.runtime.onMessage.addListener((message, sender) => {
     case 'inspect':
       return VD.isWebPage(url) ? VD.openApp(VD.inspectLink(url)) : Promise.resolve(false);
     case 'open':
-      return ['videodownloader://show?route=download', 'videodownloader://show?route=library'].includes(url)
+      return ['makara://show?route=download', 'makara://show?route=library'].includes(url)
         ? VD.openApp(url)
         : Promise.resolve(false);
     case 'dismiss':

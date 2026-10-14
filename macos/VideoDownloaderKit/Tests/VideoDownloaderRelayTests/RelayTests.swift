@@ -51,12 +51,22 @@ struct RelayTests {
     }
 
     @Test func onlyTheAppsOwnLinksOpen() {
-        #expect(Relay.action(for: ["type": "open", "url": "videodownloader://inspect?url=https%3A%2F%2Fx.test"]) ==
-            .success(.open(URL(string: "videodownloader://inspect?url=https%3A%2F%2Fx.test")!)))
-        #expect(Relay.action(for: ["type": "open", "url": "videodownloader://show?route=download"]) != .failure(.notAllowed))
-        for raw in ["https://evil.example/", "file:///Applications/Calculator.app", "videodownloader://format", "x-apple.systempreferences:"] {
+        #expect(Relay.action(for: ["type": "open", "url": "makara://inspect?url=https%3A%2F%2Fx.test"]) ==
+            .success(.open(URL(string: "makara://inspect?url=https%3A%2F%2Fx.test")!)))
+        #expect(Relay.action(for: ["type": "open", "url": "makara://show?route=download"]) != .failure(.notAllowed))
+        for raw in ["https://evil.example/", "file:///Applications/Calculator.app", "makara://format", "x-apple.systempreferences:"] {
             #expect(Relay.action(for: ["type": "open", "url": raw]) == .failure(.notAllowed), "\(raw)")
         }
+    }
+
+    /// A development build's extension opens its own app, never the release (and vice versa).
+    @Test func linksOpenInTheExtensionsOwnApp() {
+        #expect(Relay.action(for: ["type": "open", "url": "makara://show?route=library"], scheme: "makara-dev") ==
+            .success(.open(URL(string: "makara-dev://show?route=library")!)))
+        // The JavaScript only ever writes makara://; another scheme from it is refused.
+        #expect(Relay.action(for: ["type": "open", "url": "makara-dev://show"], scheme: "makara-dev") == .failure(.notAllowed))
+        #expect(Relay.action(for: ["type": "api", "path": "api/health"], port: 8777) ==
+            .success(.http(URLRequest(url: URL(string: "http://127.0.0.1:8777/api/health")!))))
     }
 
     @Test func repliesSayWhetherTheAppAnswered() {

@@ -167,7 +167,7 @@
   }
 
   /** Bring the app forward (or start it), optionally on a link or a screen. */
-  async function openApp(link = 'videodownloader://show') {
+  async function openApp(link = 'makara://show') {
     try {
       return (await browser.runtime.sendNativeMessage('application.id', { type: 'open', url: link }))?.ok === true;
     } catch {
@@ -176,7 +176,7 @@
   }
 
   function inspectLink(url) {
-    return `videodownloader://inspect?url=${encodeURIComponent(url)}`;
+    return `makara://inspect?url=${encodeURIComponent(url)}`;
   }
 
   // ---- remembered choices, per site, in the extension's own storage ----------------------

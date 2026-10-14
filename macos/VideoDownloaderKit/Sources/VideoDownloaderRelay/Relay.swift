@@ -7,8 +7,12 @@ import Foundation
 /// bug in the extension (or a page that somehow reached it) therefore cannot reach the library,
 /// the file pickers, the Trash or the yt-dlp updater -- only inspecting and queuing downloads.
 public enum Relay {
-    /// The app's backend. The extension cannot know a test port; tests drive the relay directly.
+    /// The release's backend; a development build's extension names its own port (its
+    /// Info.plist `VDPort`). The extension cannot know a test port; tests drive the relay directly.
     public static let defaultPort = 8787
+    /// What the extension's JavaScript writes; the native half opens it with its own app's
+    /// scheme (`VDURLScheme`: `makara`, or `makara-dev` for a development build).
+    public static let linkScheme = "makara"
     static let maxBody = 64 * 1024
 
     /// (method, path) pairs that may be relayed, and the query keys each may carry.
@@ -23,7 +27,7 @@ public enum Relay {
 
     public enum Action: Equatable {
         case http(URLRequest)
-        /// Open a `videodownloader://` link: brings the app forward (or starts it).
+        /// Open a `makara://` link in this extension's app: brings it forward (or starts it).
         case open(URL)
     }
 
@@ -34,13 +38,16 @@ public enum Relay {
         case localAddress = "RELAY_LOCAL_ADDRESS"
     }
 
-    public static func action(for message: [String: Any], port: Int = defaultPort) -> Result<Action, Refusal> {
+    public static func action(for message: [String: Any], port: Int = defaultPort,
+                              scheme: String = linkScheme) -> Result<Action, Refusal> {
         switch message["type"] as? String {
         case "open":
-            guard let raw = message["url"] as? String, let url = URL(string: raw),
-                  url.scheme == "videodownloader", ["inspect", "show"].contains(url.host() ?? "") else {
+            guard let raw = message["url"] as? String, var components = URLComponents(string: raw),
+                  components.scheme == linkScheme, ["inspect", "show"].contains(components.host ?? "") else {
                 return .failure(.notAllowed)
             }
+            components.scheme = scheme
+            guard let url = components.url else { return .failure(.notAllowed) }
             return .success(.open(url))
         case "api":
             return httpAction(message, port: port)

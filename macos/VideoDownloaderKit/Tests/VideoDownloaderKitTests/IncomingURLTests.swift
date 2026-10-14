@@ -9,24 +9,27 @@ struct IncomingURLTests {
     }
 
     @Test func theURLSchemeCarriesAnEncodedLink() {
-        let url = URL(string: "videodownloader://inspect?url=https%3A%2F%2Fvimeo.com%2F76979871%3Fa%3D1%26b%3D2")!
+        let url = URL(string: "makara://inspect?url=https%3A%2F%2Fvimeo.com%2F76979871%3Fa%3D1%26b%3D2")!
         #expect(IncomingURL.parse(url) == .inspect(URL(string: "https://vimeo.com/76979871?a=1&b=2")!))
     }
 
     @Test func theSchemeNeverInspectsANonWebLink() {
-        for raw in ["videodownloader://inspect?url=file%3A%2F%2F%2Fetc%2Fpasswd",
-                    "videodownloader://inspect?url=javascript%3Aalert(1)",
-                    "videodownloader://inspect",
-                    "videodownloader://format-disk"] {
+        for raw in ["makara://inspect?url=file%3A%2F%2F%2Fetc%2Fpasswd",
+                    "makara://inspect?url=javascript%3Aalert(1)",
+                    "makara://inspect",
+                    "makara://format-disk"] {
             #expect(IncomingURL.parse(URL(string: raw)!) == nil, "\(raw)")
         }
         #expect(IncomingURL.parse(URL(string: "ftp://example.com/x")!) == nil)
     }
 
     @Test func showOpensAScreen() {
-        #expect(IncomingURL.parse(URL(string: "videodownloader://show?route=library")!) == .show(.library))
-        #expect(IncomingURL.parse(URL(string: "videodownloader://show")!) == .show(nil))
-        #expect(IncomingURL.parse(URL(string: "videodownloader://show?route=nonsense")!) == .show(nil))
+        #expect(IncomingURL.parse(URL(string: "makara://show?route=library")!) == .show(.library))
+        #expect(IncomingURL.parse(URL(string: "makara://show")!) == .show(nil))
+        #expect(IncomingURL.parse(URL(string: "makara://show?route=nonsense")!) == .show(nil))
+        // A development build registers makara-dev:// (it runs beside the release).
+        #expect(IncomingURL.parse(URL(string: "makara-dev://show?route=library")!) == .show(.library))
+        #expect(IncomingURL.parse(URL(string: "videodownloader://show")!) == nil)
     }
 
     @Test func aWeblocFileIsReadForItsLink() throws {
@@ -45,7 +48,7 @@ struct IncomingURLSafetyTests {
                     "http://10.0.0.5/", "http://172.20.1.1/", "http://169.254.169.254/latest", "http://[::1]/",
                     "http://router.local/", "http://intranet/", "http://100.64.0.1/", "http://0.0.0.0/"] {
             #expect(IncomingURL.parse(URL(string: raw)!) == nil, "\(raw)")
-            let wrapped = "videodownloader://inspect?url=" + raw.addingPercentEncoding(withAllowedCharacters: .alphanumerics)!
+            let wrapped = "makara://inspect?url=" + raw.addingPercentEncoding(withAllowedCharacters: .alphanumerics)!
             #expect(IncomingURL.parse(URL(string: wrapped)!) == nil, "\(wrapped)")
         }
         #expect(IncomingURL.parse(URL(string: "https://172.32.0.1/")!) != nil)  // just outside 172.16/12
