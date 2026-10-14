@@ -124,6 +124,36 @@ def test_ffmpeg_full_is_preferred_when_installed(
     assert binaries.find("ffmpeg") == plain
 
 
+def test_the_tools_the_setup_assistant_installed_come_first(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The release app installs ffmpeg, ffprobe, deno and aria2c into VD_BIN_DIR: they win over
+    Homebrew's, and FFmpeg still never mixes two builds."""
+    from app import accel
+    from app.ffmpeg import binaries
+    from app.ytdlp import params
+
+    monkeypatch.delenv("VD_FIXTURE_MODE", raising=False)
+    bin_dir = tmp_path / "runtime-bin"
+    bin_dir.mkdir()
+    for name in ("ffmpeg", "deno", "aria2c"):
+        (bin_dir / name).write_text("#!/bin/sh\necho 1.0\n")
+        (bin_dir / name).chmod(0o755)
+    monkeypatch.setenv("VD_BIN_DIR", str(bin_dir))
+
+    assert binaries.find("ffmpeg") != str(bin_dir / "ffmpeg")  # no ffprobe beside it yet
+    (bin_dir / "ffprobe").write_text("#!/bin/sh\n")
+    (bin_dir / "ffprobe").chmod(0o755)
+    assert binaries.find("ffmpeg") == str(bin_dir / "ffmpeg")
+    assert binaries.find("ffprobe") == str(bin_dir / "ffprobe")
+    assert binaries.is_full(binaries.ffmpeg())
+    assert params.find_js_runtimes()[0].path == str(bin_dir / "deno")
+    assert accel.aria2c() == str(bin_dir / "aria2c")
+
+    monkeypatch.delenv("VD_BIN_DIR")
+    assert binaries.find("ffmpeg") != str(bin_dir / "ffmpeg")
+
+
 def test_doctor_points_at_ffmpeg_full_when_the_plain_build_lacks_libass(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

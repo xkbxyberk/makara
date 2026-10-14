@@ -70,33 +70,36 @@ public final class BackendController {
         case .free:
             break
         }
-        guard let root = config.projectRoot else {
+        guard let root = config.serverDirectory, let syncDirectory = config.syncDirectory else {
             state = .failed(.noProject)
             return
         }
         rotateLog()
         let environment = config.serverEnvironment(parentPID: getpid())
-        let python = config.python.flatMap { FileManager.default.isExecutableFile(atPath: $0.path) ? $0 : nil }
+        let existing = runnablePython()
         // `uv sync --frozen`: the venv exactly as uv.lock says (an in-app yt-dlp update changes
-        // the lock), never re-locking. If it fails but a venv exists, start with that.
+        // the lock), never re-locking. If it fails but a venv exists, start with that. In a
+        // release this is also what installs Python and every package the first time.
         if let uv = config.uv {
             state = .syncing
             do {
-                let sync = try ChildProcess.spawn(executable: uv, arguments: ["sync", "--frozen"], directory: root,
+                try config.prepareRuntimeProject()
+                let sync = try ChildProcess.spawn(executable: uv, arguments: config.syncArguments, directory: syncDirectory,
                                                   environment: environment, log: config.logFile)
                 let code = await sync.waitForExit()
-                if code != 0, python == nil {
+                if code != 0, existing == nil {
                     state = .failed(.syncFailed(code))
                     return
                 }
             } catch {
-                if python == nil {
+                if existing == nil {
                     state = .failed(.spawnFailed(Self.errno(of: error)))
                     return
                 }
             }
         }
-        guard let python else {
+        // Looked up again: the first sync of a release is what creates the venv.
+        guard let python = runnablePython() else {
             state = .failed(.noPython)
             return
         }
@@ -190,6 +193,10 @@ public final class BackendController {
         let ok = (response as? HTTPURLResponse)?.statusCode == 200
             && (try? JSON.decoder.decode(Health.self, from: data)) != nil
         return ok ? .ours : .foreign
+    }
+
+    private func runnablePython() -> URL? {
+        config.python.flatMap { FileManager.default.isExecutableFile(atPath: $0.path) ? $0 : nil }
     }
 
     private static func errno(of error: Error) -> Int32 {

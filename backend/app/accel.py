@@ -10,13 +10,12 @@ from __future__ import annotations
 
 import os
 import shutil
-from pathlib import Path
 from typing import Any
 
 from app import paths
 from app.settings import Settings
 
-HOMEBREW_ARIA2C = Path("/opt/homebrew/bin/aria2c")
+HOMEBREW_ARIA2C = paths.HOMEBREW / "bin" / "aria2c"
 
 
 def aria2c() -> str | None:
@@ -25,6 +24,8 @@ def aria2c() -> str | None:
     if paths.fixture_mode():
         configured = os.environ.get("VD_ARIA2C")
         return configured if configured and os.access(configured, os.X_OK) else None
+    if bundled := paths.bundled_tool("aria2c"):
+        return bundled
     if HOMEBREW_ARIA2C.is_file() and os.access(HOMEBREW_ARIA2C, os.X_OK):
         return str(HOMEBREW_ARIA2C)
     return shutil.which("aria2c")

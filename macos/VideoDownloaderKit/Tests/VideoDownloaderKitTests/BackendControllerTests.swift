@@ -45,6 +45,21 @@ struct BackendControllerTests {
         #expect(calls == ["sync --frozen", "sync --frozen"])  // one per attempt, never two
     }
 
+    /// A release's first start has no venv until uv sync made it: the server must still start.
+    @Test func theVenvTheFirstSyncCreatesIsUsed() async throws {
+        let project = try fakeProject()
+        let python = project.root.appending(path: ".venv/bin/python")
+        try """
+            #!/bin/sh
+            mkdir -p \(python.deletingLastPathComponent().path)
+            printf '#!/bin/sh\\nexit 3\\n' > \(python.path)
+            chmod 755 \(python.path)
+            """.write(to: project.uv, atomically: true, encoding: .utf8)
+        let backend = BackendController(config: config(port: port(), root: project.root, uv: project.uv))
+        await backend.start()
+        #expect(backend.state == .failed(.exited(3)))  // it ran the new interpreter, not "no Python"
+    }
+
     @Test func aSecondStartWhileOneRunsDoesNothing() async throws {
         let project = try fakeProject()
         let backend = BackendController(config: config(port: port(), root: project.root, uv: project.uv))

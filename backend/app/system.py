@@ -8,12 +8,14 @@ from __future__ import annotations
 
 import asyncio
 import importlib.metadata
+import os
 import re
 import shutil
 import subprocess
 import sys
 import threading
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 from app import errors, paths
@@ -52,12 +54,17 @@ def update_ytdlp_argv() -> list[list[str]]:
 
     A plain `uv pip install -U` would be silently reverted: `uv run` syncs the environment to
     uv.lock on every launch. yt-dlp-ejs is upgraded together because yt-dlp pins it exactly.
+    The release app names its own uv (`VD_UV`) and lock (`VD_UV_PROJECT`, a writable copy) and
+    has no dev tools to install.
     """
-    uv = shutil.which("uv") or "uv"
-    return [
-        [uv, "lock", "--upgrade-package", "yt-dlp", "--upgrade-package", "yt-dlp-ejs"],
-        [uv, "sync"],
-    ]
+    uv = os.environ.get("VD_UV") or shutil.which("uv") or "uv"
+    sync = [uv, "sync", "--no-dev"] if _release_project() else [uv, "sync"]
+    return [[uv, "lock", "--upgrade-package", "yt-dlp", "--upgrade-package", "yt-dlp-ejs"], sync]
+
+
+def _release_project() -> Path | None:
+    project = os.environ.get("VD_UV_PROJECT")
+    return Path(project) if project else None
 
 
 def update_ytdlp() -> dict[str, Any]:
@@ -80,7 +87,7 @@ def _update_ytdlp() -> dict[str, Any]:
                 argv,
                 capture_output=True,
                 text=True,
-                cwd=paths.PROJECT_ROOT,
+                cwd=_release_project() or paths.PROJECT_ROOT,
                 timeout=600,
                 check=False,
             )

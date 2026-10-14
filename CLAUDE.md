@@ -386,6 +386,21 @@ UI and went with it (N8).
     newer API. Watch for C APIs renamed late: `posix_spawn_file_actions_addchdir` is macOS 26,
     the `_np` spelling works everywhere.
 
+50. **Two flavours of the app (P8).** Debug builds write `VDProjectRoot` (build setting
+    `VD_PROJECT_ROOT`) and run the checkout as before. Without it (Release, or
+    `VD_PROJECT_ROOT=` in the environment) the app runs the backend it carries: the build phase
+    `scripts/bundle_backend.sh` copies `backend/app` to `Contents/Resources/backend`, the
+    project files to `Resources/backend-project` and a signed uv to `Contents/Helpers/uv`;
+    `BackendConfig.release` points uv at `~/Library/Application Support/Makara/runtime`
+    (`project/` = a writable copy of the lock, replaced when the app ships another one;
+    `venv/`, `python/`, `bin/` for the setup assistant's tools; `VD_RUNTIME_DIR` moves it all,
+    uv cache included, for trials). The first `uv sync` there installs Python 3.13
+    (`.python-version`; **never set `UV_NO_CONFIG`**: it makes uv ignore that file and take
+    the newest Python) and every package. The backend prefers `VD_BIN_DIR` tools over
+    Homebrew's (`paths.bundled_tool`), and the updater uses `VD_UV`/`VD_UV_PROJECT`.
+    Tried 15 Oct from a clean runtime: Python and 31 packages installed, server up, in-app
+    yt-dlp update ran against the runtime's lock.
+
 ## Rules
 
 - **Never delete, skip, weaken or `xfail` a test to make the suite pass.** Fix the code.

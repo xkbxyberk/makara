@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -118,6 +119,26 @@ def test_the_updater_upgrades_the_lock_file_not_just_the_venv() -> None:
     lock, sync = system.update_ytdlp_argv()
     assert lock[1:] == ["lock", "--upgrade-package", "yt-dlp", "--upgrade-package", "yt-dlp-ejs"]
     assert sync[1:] == ["sync"]
+
+
+def test_the_release_app_updates_its_own_lock_with_its_own_uv(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """In a release the lock is a writable copy outside the signed app, and no dev tools."""
+    monkeypatch.setenv("VD_UV", "/Applications/Makara.app/Contents/Helpers/uv")
+    monkeypatch.setenv("VD_UV_PROJECT", str(tmp_path / "project"))
+    lock, sync = system.update_ytdlp_argv()
+    assert lock[0] == sync[0] == "/Applications/Makara.app/Contents/Helpers/uv"
+    assert sync[1:] == ["sync", "--no-dev"]
+    seen: list[Any] = []
+
+    def run(argv: list[str], **kwargs: Any) -> Any:
+        seen.append(kwargs["cwd"])
+        return subprocess.CompletedProcess(argv, 0, "", "")
+
+    monkeypatch.setattr(system.subprocess, "run", run)
+    system.update_ytdlp()
+    assert seen == [tmp_path / "project"] * 2
 
 
 def test_settings_round_trip_including_the_clipboard_opt_in(app_env: Any) -> None:

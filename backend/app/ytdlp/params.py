@@ -14,6 +14,8 @@ import subprocess
 from dataclasses import dataclass
 from typing import Any
 
+from app import paths
+
 # Highest priority first, matching yt-dlp's own ordering.
 RUNTIME_ORDER = ("deno", "node", "quickjs", "bun")
 _VERSION_ARG = {"deno": "--version", "node": "--version", "bun": "--version", "quickjs": "--help"}
@@ -28,10 +30,11 @@ class JsRuntime:
 
 
 def find_js_runtimes() -> list[JsRuntime]:
-    """Every supported JS runtime on PATH, best first."""
+    """Every supported JS runtime, best first: the app's own (`VD_BIN_DIR`), else on PATH."""
     found: list[JsRuntime] = []
     for name in RUNTIME_ORDER:
-        path = shutil.which(_EXECUTABLE.get(name, name))
+        executable = _EXECUTABLE.get(name, name)
+        path = paths.bundled_tool(executable) or shutil.which(executable)
         if not path:
             continue
         found.append(JsRuntime(name=name, path=path, version=_probe_version(path, name)))
