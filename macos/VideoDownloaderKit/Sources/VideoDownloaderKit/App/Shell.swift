@@ -53,13 +53,39 @@ public final class Shell {
         applyDock()
     }
 
-    /// The Dock icon follows the setting; without it the app is an "accessory", like a menu bar
-    /// utility, and its windows still open on top.
+    /// The Dock icon follows the setting. Without it the app is an "accessory", like a menu bar
+    /// utility, but only while none of its windows is open: an accessory app has no menus in the
+    /// menu bar (so no Ayarlar, no ⌘Q) and is not in ⌘Tab, which left Berk with a window he
+    /// could not reach Ayarlar from. So while the main window or Ayarlar is open the app is a
+    /// regular one, and goes back to the menu bar when the last of them closes.
     public func applyDock() {
-        let policy: NSApplication.ActivationPolicy = showInDock ? .regular : .accessory
+        observeWindows()
+        let policy: NSApplication.ActivationPolicy = showInDock || Self.hasOpenWindow ? .regular : .accessory
         guard NSApp.activationPolicy() != policy else { return }
         NSApp.setActivationPolicy(policy)
-        if policy == .accessory { NSApp.activate() }  // keep the window that changed it in front
+        if policy == .regular { NSApp.activate() }  // so the menu bar shows this app's menus
+    }
+
+    /// The app's own windows: titled, on screen; not the menu bar panel, alerts or open panels.
+    private static var hasOpenWindow: Bool {
+        NSApp.windows.contains { $0.isVisible && $0.styleMask.contains(.titled) && !($0 is NSPanel) }
+    }
+
+    @ObservationIgnored private var observing = false
+
+    private func observeWindows() {
+        guard !observing else { return }
+        observing = true
+        let center = NotificationCenter.default
+        for name in [NSWindow.didBecomeKeyNotification, NSWindow.didBecomeMainNotification] {
+            center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.applyDock() }
+            }
+        }
+        // A closing window is still visible when this is posted: look again once it is gone.
+        center.addObserver(forName: NSWindow.willCloseNotification, object: nil, queue: .main) { [weak self] _ in
+            DispatchQueue.main.async { MainActor.assumeIsolated { self?.applyDock() } }
+        }
     }
 
     // ---- start at login ---------------------------------------------------------------------

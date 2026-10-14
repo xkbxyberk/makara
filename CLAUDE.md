@@ -323,7 +323,11 @@ UI and went with it (N8).
     `MenuBarExtra(isInserted:)` in the app target, `.window` style (`MenuBarView`). With it on,
     closing the window does not quit (`applicationShouldTerminateAfterLastWindowClosed`): the
     extension needs the backend. Never both hidden: no Dock icon requires the menu bar item
-    (`.accessory` activation policy; opening the window then needs `NSApp.activate()`). Start
+    (`.accessory` activation policy; opening the window then needs `NSApp.activate()`). An
+    accessory app has no menus in the menu bar and is not in ⌘Tab, so with the Dock icon off
+    the app is `.regular` while any of its titled windows is open (`Shell.applyDock`, run on
+    window key/close) and an accessory only once the last one closes; the menu bar panel has
+    Ayarlar… (⌘,) and Quit (⌘Q). Berk could not reach Ayarlar otherwise (15 Oct). Start
     at login is `SMAppService.mainApp` (its status is the truth; `.requiresApproval` sends Berk
     to Login Items) and registers the app *at its current path*: register again after moving
     it to ~/Applications. A login-item launch closes the window (`Shell.launchedAsLoginItem`,

@@ -2,10 +2,11 @@ import AppKit
 import SwiftUI
 
 /// The menu bar item's panel (P4): what is downloading, the copied link, pause or resume
-/// everything, the window, and Quit. It lives as long as the app, window or not.
+/// everything, the window, Ayarlar, and Quit. It lives as long as the app, window or not.
 public struct MenuBarView: View {
     let model: AppModel
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.openSettings) private var openSettings
 
     public init(model: AppModel) { self.model = model }
 
@@ -54,7 +55,16 @@ public struct MenuBarView: View {
                 item(L("menubar.open"), "macwindow") { show() }
             }
             Divider()
-            item(L("menubar.quit"), "power") { NSApp.terminate(nil) }
+            VStack(alignment: .leading, spacing: 2) {
+                // The way to Ayarlar when the app has no Dock icon and no window (Berk, 15 Oct).
+                item(L("menubar.settings"), "gearshape", shortcut: "⌘,") {
+                    openSettings()
+                    NSApp.activate()
+                }
+                .keyboardShortcut(",", modifiers: .command)
+                item(L("menubar.quit"), "power", shortcut: "⌘Q") { NSApp.terminate(nil) }
+                    .keyboardShortcut("q", modifiers: .command)
+            }
         }
         .padding(12)
         .frame(width: 320)
@@ -100,9 +110,16 @@ public struct MenuBarView: View {
         }
     }
 
-    private func item(_ title: String, _ symbol: String, action: @escaping () -> Void) -> some View {
+    private func item(_ title: String, _ symbol: String, shortcut: String? = nil,
+                      action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Label(title, systemImage: symbol).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
+            HStack {
+                Label(title, systemImage: symbol)
+                Spacer()
+                if let shortcut { Text(shortcut).opacity(0.55) }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
         }
         .buttonStyle(MenuRowStyle())
     }
