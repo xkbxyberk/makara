@@ -1,6 +1,15 @@
 import AppKit
 import Observation
+import SafariServices
 import ServiceManagement
+
+/// Checking for a newer Makara (Sparkle). Only the release app has it: its app target installs
+/// one into `Shell`; development builds and tests never check.
+@MainActor
+public protocol AppUpdates: AnyObject {
+    var checksAutomatically: Bool { get set }
+    func checkNow()
+}
 
 /// How the app lives on this Mac (P4, Berk 2026-10-14): a menu bar item (on by default), the
 /// Dock icon, and starting at login so the Safari extension finds the app running. Kept on this
@@ -13,6 +22,53 @@ public final class Shell {
     public private(set) var loginStatus: SMAppService.Status = .notRegistered
     /// Why the last start-at-login change failed, as the system said it.
     public private(set) var loginError: String?
+
+    /// The release's updater, and whether it checks by itself (Sparkle asks once, then this).
+    @ObservationIgnored private var updates: (any AppUpdates)?
+    public private(set) var canUpdate = false
+    public private(set) var checksForUpdates = false
+
+    public func install(updates: any AppUpdates) {
+        self.updates = updates
+        canUpdate = true
+        checksForUpdates = updates.checksAutomatically
+    }
+
+    public func setChecksForUpdates(_ on: Bool) {
+        updates?.checksAutomatically = on
+        checksForUpdates = updates?.checksAutomatically ?? false
+    }
+
+    public func checkForUpdates() {
+        updates?.checkNow()
+        NSApp.activate()  // Sparkle's window, in front even without a Dock icon
+    }
+
+    // ---- the Safari extension (first-run guide, P8f) ------------------------------------------
+
+    /// Whether Safari has this app's extension on: nil while unknown (or under tests, which
+    /// never ask Safari). A strip in the window says how to turn it on until it is.
+    public private(set) var extensionEnabled: Bool?
+    public var extensionHintDismissed = false
+
+    private var extensionIdentifier: String? {
+        guard ProcessInfo.processInfo.environment["VD_DATA_DIR"] == nil,
+              let app = Bundle.main.bundleIdentifier else { return nil }
+        return app + ".Extension"  // com.berkakbay.Makara(.dev).Extension
+    }
+
+    public func refreshExtension() {
+        guard let extensionIdentifier else { return }
+        SFSafariExtensionManager.getStateOfSafariExtension(withIdentifier: extensionIdentifier) { state, error in
+            let enabled = error == nil ? state?.isEnabled : nil
+            Task { @MainActor in self.extensionEnabled = enabled }
+        }
+    }
+
+    public func openExtensionSettings() {
+        guard let extensionIdentifier else { return }
+        SFSafariApplication.showPreferencesForExtension(withIdentifier: extensionIdentifier) { _ in }
+    }
 
     /// Whether the one-time "start at login?" question was asked.
     public private(set) var askedAboutLogin = false

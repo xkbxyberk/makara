@@ -56,6 +56,9 @@ public struct MenuBarView: View {
             }
             Divider()
             VStack(alignment: .leading, spacing: 2) {
+                if model.shell.canUpdate {
+                    item(L("updates.check"), "arrow.triangle.2.circlepath") { model.shell.checkForUpdates() }
+                }
                 // The way to Ayarlar when the app has no Dock icon and no window (Berk, 15 Oct).
                 item(L("menubar.settings"), "gearshape", shortcut: "⌘,") {
                     openSettings()

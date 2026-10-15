@@ -20,6 +20,7 @@
 		C4A29F83307D51CD001BA880 /* popup.css in Resources */ = {isa = PBXBuildFile; fileRef = C4A29F7C307D51CD001BA880 /* popup.css */; };
 		C4A29F84307D51CD001BA880 /* _locales in Resources */ = {isa = PBXBuildFile; fileRef = C4A29F7D307D51CD001BA880 /* _locales */; };
 		3C9B9A6498B8BD62DA0E15D3 /* VideoDownloaderKit in Frameworks */ = {isa = PBXBuildFile; productRef = DCCFF2F0D7B6E282DDD4D891 /* VideoDownloaderKit */; };
+		7C1E3A9D4F6B8C0E2A3D5F7B /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 6B0D2F8C3E5A7B9D1F2C4E6A /* Sparkle */; };
 		6839D1BE8F6423F277430DC3 /* VideoDownloaderRelay in Frameworks */ = {isa = PBXBuildFile; productRef = 687DFAC141C84C6901A1D8D4 /* VideoDownloaderRelay */; };
 		3880CE2F21795CB8D0B919FD /* shared.js in Resources */ = {isa = PBXBuildFile; fileRef = 6938C226B5E38A91ABAD620E /* shared.js */; };
 		BCD0249050EA82630816CA26 /* content.js in Resources */ = {isa = PBXBuildFile; fileRef = 2374FA9F8DB3B97E4FCC6B81 /* content.js */; };
@@ -88,6 +89,7 @@
 			isa = PBXFrameworksBuildPhase;
 			files = (
 				3C9B9A6498B8BD62DA0E15D3 /* VideoDownloaderKit in Frameworks */,
+				7C1E3A9D4F6B8C0E2A3D5F7B /* Sparkle in Frameworks */,
 			);
 		};
 		C4A29F62307D51CD001BA880 /* Frameworks */ = {
@@ -183,6 +185,7 @@
 			name = VideoDownloader;
 			packageProductDependencies = (
 				DCCFF2F0D7B6E282DDD4D891 /* VideoDownloaderKit */,
+				6B0D2F8C3E5A7B9D1F2C4E6A /* Sparkle */,
 			);
 			productName = VideoDownloader;
 			productReference = C4A29F4A307D51CC001BA880 /* VideoDownloader.app */;
@@ -259,6 +262,7 @@
 			mainGroup = C4A29F41307D51CC001BA880;
 			packageReferences = (
 				12146016C176F9FC968C8C69 /* XCLocalSwiftPackageReference "../VideoDownloaderKit" */,
+				5A9C1E7B2D4F6A8C0E1B3D5F /* XCRemoteSwiftPackageReference "Sparkle" */,
 			);
 			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;
@@ -367,6 +371,7 @@
 				VD_APP_FOLDER = "Makara Dev";
 				VD_BUNDLE_ID = com.berkakbay.Makara.dev;
 				VD_DISPLAY_NAME = "Makara Dev";
+				VD_FEED_URL = "";
 				VD_PORT_DEFAULT = 8777;
 				VD_URL_SCHEME = "makara-dev";
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -435,6 +440,7 @@
 				VD_APP_FOLDER = Makara;
 				VD_BUNDLE_ID = com.berkakbay.Makara;
 				VD_DISPLAY_NAME = Makara;
+				VD_FEED_URL = "https://github.com/xkbxyberk/makara-releases/releases/latest/download/appcast.xml";
 				VD_PORT_DEFAULT = 8787;
 				VD_URL_SCHEME = makara;
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -723,6 +729,17 @@
 		};
 /* End XCLocalSwiftPackageReference section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		5A9C1E7B2D4F6A8C0E1B3D5F /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = exactVersion;
+				version = 2.10.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
 		DCCFF2F0D7B6E282DDD4D891 /* VideoDownloaderKit */ = {
 			isa = XCSwiftPackageProductDependency;
@@ -732,6 +749,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 12146016C176F9FC968C8C69 /* XCLocalSwiftPackageReference "../VideoDownloaderKit" */;
 			productName = VideoDownloaderRelay;
+		};
+		6B0D2F8C3E5A7B9D1F2C4E6A /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5A9C1E7B2D4F6A8C0E1B3D5F /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

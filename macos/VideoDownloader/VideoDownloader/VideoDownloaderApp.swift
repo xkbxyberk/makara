@@ -1,5 +1,6 @@
 import AppKit
 import SafariServices
+import Sparkle
 import SwiftUI
 import VideoDownloaderKit
 
@@ -51,6 +52,27 @@ struct MenuBarLabel: View {
     }
 }
 
+/// Sparkle behind the Kit's `AppUpdates`: the release checks the appcast on GitHub (Info.plist
+/// `SUFeedURL`, signed with `SUPublicEDKey`). Sparkle asks once whether to check by itself.
+@MainActor
+final class SparkleUpdates: AppUpdates {
+    private let controller = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil,
+                                                          userDriverDelegate: nil)
+
+    var checksAutomatically: Bool {
+        get { controller.updater.automaticallyChecksForUpdates }
+        set { controller.updater.automaticallyChecksForUpdates = newValue }
+    }
+
+    func checkNow() { controller.checkForUpdates(nil) }
+
+    /// A release with a feed: never a development build, a trial of one, or a test.
+    static var wanted: Bool {
+        guard let feed = Bundle.main.object(forInfoDictionaryKey: "SUFeedURL") as? String else { return false }
+        return !feed.isEmpty && ProcessInfo.processInfo.environment["VD_DATA_DIR"] == nil
+    }
+}
+
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let model = AppModel()
@@ -70,6 +92,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         model.shell.applyDock()
+        if SparkleUpdates.wanted { model.shell.install(updates: SparkleUpdates()) }
         // Started by the login item: stay in the menu bar, no window (when there is a menu bar
         // item to come back through).
         if Shell.launchedAsLoginItem, model.shell.menuBarIcon {

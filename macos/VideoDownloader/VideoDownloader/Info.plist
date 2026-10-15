@@ -19,6 +19,11 @@
 	<string>$(VD_PORT_DEFAULT)</string>
 	<key>VDAppFolder</key>
 	<string>$(VD_APP_FOLDER)</string>
+	<!-- Updates (Sparkle): the release's appcast, empty in development builds. -->
+	<key>SUFeedURL</key>
+	<string>$(VD_FEED_URL)</string>
+	<key>SUPublicEDKey</key>
+	<string>0tsu6+slHqnI/09yzWxuIshafR6RlFFaGFyzXfNqnUE=</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

@@ -220,6 +220,10 @@ struct ShellSection: View {
             row(L("settings.showInDock"), L("settings.showInDockHelp"), id: "showInDock",
                 Binding(get: { shell.showInDock }, set: { shell.setShowInDock($0) }))
                 .disabled(!shell.menuBarIcon)
+            if shell.canUpdate {
+                row(L("settings.autoUpdate"), L("settings.autoUpdateHelp"), id: "autoUpdate",
+                    Binding(get: { shell.checksForUpdates }, set: { shell.setChecksForUpdates($0) }))
+            }
         }
         // Approved or revoked in System Settings meanwhile.
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in

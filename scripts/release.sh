@@ -1,17 +1,20 @@
 #!/bin/bash
 # Makara's public release (PLAN P8): a universal, Developer ID-signed, notarized Makara.dmg.
 #
-#   scripts/release.sh 1.0 [build]        version shown to users, build number (default 1)
+#   scripts/release.sh 1.0 [build]        version shown to users, build number (default: the
+#                                         date and time, so every release counts higher)
 #   NOTARIZE=0 scripts/release.sh 1.0     everything but Apple's notary service (a trial)
 #
 # Needs: Xcode signed in to team V88QY49A4T with a "Developer ID Application" certificate, and
 # (to notarize) a keychain profile made once with
 #   xcrun notarytool store-credentials makara --apple-id <Apple ID> --team-id V88QY49A4T
-# Writes build/release/Makara-<version>.dmg and its SHA-256. Uploading is a separate step.
+# and the Sparkle key made once with build/sparkle/bin/generate_keys --account makara.
+# Writes build/release/Makara-<version>.dmg, its SHA-256 and appcast.xml (Sparkle's feed, signed
+# with that key). Publishing is scripts/publish.sh.
 set -euo pipefail
 
 VERSION="${1:?usage: scripts/release.sh <version> [build]}"
-BUILD="${2:-1}"
+BUILD="${2:-$(date +%Y%m%d%H%M)}"
 NOTARIZE="${NOTARIZE:-1}"
 TEAM=V88QY49A4T
 IDENTITY="Developer ID Application: Berk Akbay ($TEAM)"
@@ -19,6 +22,9 @@ PROFILE=makara
 UV_VERSION=0.12.23
 UV_SHA_arm64=50487ae565ccd96e499056b4674d438f4c53170202617b4c759defe0c6a1b544
 UV_SHA_x86_64=960da44cb4b73685206ddd250b19e0a117fa41095710c1038f081f5cb613efb4
+SPARKLE_VERSION=2.10.0  # the package version in the Xcode project too
+SPARKLE_SHA=c2bf58aa8387266ac179357b1415d6f2635f044da8be41042af32425dae6da0c
+RELEASES=https://github.com/xkbxyberk/makara-releases/releases
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT="$ROOT/build/release"
@@ -103,6 +109,30 @@ if [ "$NOTARIZE" = 1 ]; then
 else
   echo "(not notarized: Gatekeeper will refuse this one on another Mac)"
 fi
+
+step "Sparkle feed"
+curl -sSfL -o sparkle.tar.xz "https://github.com/sparkle-project/Sparkle/releases/download/$SPARKLE_VERSION/Sparkle-$SPARKLE_VERSION.tar.xz"
+echo "$SPARKLE_SHA  sparkle.tar.xz" | shasum -a 256 -c --quiet -
+mkdir -p sparkle && tar -xf sparkle.tar.xz -C sparkle
+signature=$(sparkle/bin/sign_update --account makara "$DMG")  # sparkle:edSignature="…" length="…"
+cat > "$OUT/appcast.xml" <<XML
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+  <channel>
+    <title>Makara</title>
+    <item>
+      <title>Makara $VERSION</title>
+      <pubDate>$(LC_ALL=C date -u "+%a, %d %b %Y %H:%M:%S +0000")</pubDate>
+      <sparkle:version>$BUILD</sparkle:version>
+      <sparkle:shortVersionString>$VERSION</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <sparkle:releaseNotesLink>$RELEASES/tag/v$VERSION</sparkle:releaseNotesLink>
+      <enclosure url="$RELEASES/download/v$VERSION/Makara-$VERSION.dmg" $signature type="application/octet-stream"/>
+    </item>
+  </channel>
+</rss>
+XML
+echo "$VERSION" > "$OUT/version"
 
 shasum -a 256 "$DMG" | tee "$DMG.sha256"
 du -h "$DMG"

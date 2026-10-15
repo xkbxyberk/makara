@@ -60,6 +60,7 @@ struct MainSplitView: View {
                 .navigationTitle(model.route.title)
                 .safeAreaInset(edge: .top, spacing: 0) {
                     VStack(spacing: 0) {
+                        extensionBanner
                         catalogueBanner
                         clipboardBanner
                     }
@@ -99,6 +100,32 @@ struct MainSplitView: View {
     }
 
     /// A finished download could not be catalogued: say so on every screen (the file is safe).
+    /// The Safari extension is off: how to turn it on (Safari > Ayarlar > Uzantılar). Checked
+    /// again whenever the app comes back to the front, so it goes once Berk has done it.
+    @ViewBuilder private var extensionBanner: some View {
+        Group {
+            if model.shell.extensionEnabled == false, !model.shell.extensionHintDismissed {
+                HStack(spacing: 10) {
+                    Image(systemName: "safari").foregroundStyle(Color.accentColor)
+                    Text(L("extension.off")).lineLimit(2)  // never fixedSize here (gotcha 39)
+                    Spacer()
+                    Button(L("extension.openSettings")) { model.shell.openExtensionSettings() }
+                        .buttonStyle(.borderedProminent)
+                    Button(L("clipboard.dismiss")) { model.shell.extensionHintDismissed = true }
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(.bar)
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("extension.off")
+            }
+        }
+        .onAppear { model.shell.refreshExtension() }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            model.shell.refreshExtension()
+        }
+    }
+
     @ViewBuilder private var catalogueBanner: some View {
         if model.catalogueFailed {
             HStack(spacing: 10) {
@@ -254,6 +281,11 @@ public struct AppCommands: Commands {
 
     public var body: some Commands {
         SidebarCommands()
+        CommandGroup(after: .appInfo) {
+            if model.shell.canUpdate {
+                Button(L("updates.check")) { model.shell.checkForUpdates() }
+            }
+        }
         CommandGroup(after: .newItem) {
             Button(L("menu.inspectClipboard")) { model.inspectClipboard() }
                 .keyboardShortcut("v", modifiers: [.command, .shift])
