@@ -373,9 +373,13 @@ Access and start at login. Updates arrive in the app.
     yt-dlp (Unlicense), FFmpeg (GPL, source link), Deno (MIT), aria2 (GPLv2), Python (PSF),
     uv (MIT/Apache). Downloading must respect each site's terms; no DRM circumvention.
 
-**Order after the format:** (a) release flavour of `BackendConfig` + `VD_BIN_DIR` lookups,
-(b) runtime manifest and the setup assistant, (c) Makara names (ids, scheme, folders),
-(d) Developer ID signing, DMG, notarization, (e) Sparkle, (f) rest of the first-run guide.
+**Order (Berk chose to finish it before the format):** (a) release flavour ✅ 4f1ebf8,
+(b) runtime and setup assistant ✅ 07390d5 (runtime-2026.10.15 published), (c) Makara names and
+a side-by-side development build ✅ db1c335, (d) Developer ID, notarization, DMG ✅ 73c1034,
+(e) Sparkle ✅ and (f) the Safari extension strip ✅ 48c638f. **Makara 1.0 published 15 Oct** on
+xkbxyberk/makara-releases. Still open: a look at the setup assistant and the strip on screen,
+a run on macOS 14 and on an Intel Mac, a "Lisanslar" page in the app, Full Disk Access in the
+first-run guide.
 
 ## M5 — Sections and SponsorBlock · M6 — Playlists and channels
 ## M7 — Presets and browser cookies (Safari session for YouTube pulled forward, 2026-10-13) · M8 — Transcode and target size

@@ -430,7 +430,13 @@ UI and went with it (N8).
     for a trial. Pitfall met: `codesign -dv … | grep -q` under `pipefail` fails on SIGPIPE --
     capture first. Tried 15 Oct: 33 MB DMG; the exported app installed its runtime from local
     zips (`VD_SETUP_AUTOINSTALL=1` presses "Kur" for trials) and downloaded a real YouTube
-    video (AV1 + Opus + subtitles) with its own Deno, FFmpeg and aria2c.
+    video (AV1 + Opus + subtitles) with its own Deno, FFmpeg and aria2c. `scripts/publish.sh`
+    then makes release `v<version>` on the public **xkbxyberk/makara-releases** (the source repo
+    stays private) with the DMG and `appcast.xml`; Sparkle 2.10.0 in the release reads
+    `releases/latest/download/appcast.xml`, so runtime releases are published `--latest=false`.
+    The appcast is signed with the EdDSA key in Berk's keychain (account `makara`); losing it
+    strands every installed copy (DEVELOPING.md, "Releasing from a new Mac"). Makara 1.0
+    published 15 Oct (build 202610150302).
 
 ## Rules
 
