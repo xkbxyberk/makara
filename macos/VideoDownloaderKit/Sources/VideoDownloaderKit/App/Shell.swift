@@ -59,15 +59,17 @@ public final class Shell {
 
     public func refreshExtension() {
         guard let extensionIdentifier else { return }
-        SFSafariExtensionManager.getStateOfSafariExtension(withIdentifier: extensionIdentifier) { state, error in
-            let enabled = error == nil ? state?.isEnabled : nil
-            Task { @MainActor in self.extensionEnabled = enabled }
+        // The async form, never the callback (gotcha 52).
+        Task {
+            let state = try? await SFSafariExtensionManager.stateOfSafariExtension(withIdentifier: extensionIdentifier)
+            extensionEnabled = state?.isEnabled
         }
     }
 
     public func openExtensionSettings() {
         guard let extensionIdentifier else { return }
-        SFSafariApplication.showPreferencesForExtension(withIdentifier: extensionIdentifier) { _ in }
+        // No handler: a closure written here would be main-actor isolated (gotcha 52).
+        SFSafariApplication.showPreferencesForExtension(withIdentifier: extensionIdentifier, completionHandler: nil)
     }
 
     /// Whether the one-time "start at login?" question was asked.
