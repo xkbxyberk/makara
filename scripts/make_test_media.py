@@ -42,8 +42,13 @@ SUBS = {
 }
 
 
+# The Brewfile's ffmpeg-full stays off PATH, and this also runs outside pytest (Playwright).
+FFMPEG_FULL = Path("/opt/homebrew/opt/ffmpeg-full/bin/ffmpeg")
+
+
 def ffmpeg(*args: str) -> None:
-    argv = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", *args]
+    binary = str(FFMPEG_FULL) if FFMPEG_FULL.exists() else "ffmpeg"
+    argv = [binary, "-hide_banner", "-loglevel", "error", "-y", *args]
     subprocess.run(argv, check=True)
 
 
