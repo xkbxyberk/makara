@@ -129,8 +129,9 @@ public final class PreviewPlayer {
         self.position = target
         guard player.currentItem != nil else { return }
         seeking = true
+        // AVPlayer promises no queue for this handler, so no `assumeIsolated` (gotcha 52).
         player.seek(to: grid.middle(target), toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] _ in
-            MainActor.assumeIsolated { self?.seeking = false }
+            Task { @MainActor in self?.seeking = false }
         }
     }
 

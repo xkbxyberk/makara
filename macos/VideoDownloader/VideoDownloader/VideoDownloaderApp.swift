@@ -82,8 +82,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // `--print-extension-state`: report whether Safari has the extension enabled, then quit.
         // Only the containing app may ask Safari this, so scripts and tests go through here.
         if CommandLine.arguments.contains("--print-extension-state") {
-            SFSafariExtensionManager.getStateOfSafariExtension(withIdentifier: extensionBundleIdentifier) { state, error in
-                let line = error.map { "error: \($0.localizedDescription)" } ?? "enabled: \(state?.isEnabled ?? false)"
+            Task {  // the async form, never the callback (gotcha 52)
+                let line: String
+                do {
+                    let state = try await SFSafariExtensionManager.stateOfSafariExtension(withIdentifier: extensionBundleIdentifier)
+                    line = "enabled: \(state.isEnabled)"
+                } catch {
+                    line = "error: \(error.localizedDescription)"
+                }
                 FileHandle.standardOutput.write(Data((line + "\n").utf8))
                 // Nothing was started in this mode: leave at once (a normal terminate goes through
                 // the backend shutdown below, and waited for good when another copy was running).
