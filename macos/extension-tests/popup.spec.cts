@@ -33,6 +33,7 @@ async function openPopup(page: Page, { url = LOCAL, title = 'Local test clip', r
       w.__offline = offline;
       w.browser = {
         runtime: {
+          sendMessage: async () => undefined,  // "the menu is up", for the background page
           sendNativeMessage: async (_id: string, msg: { type: string; url?: string; path?: string; method?: string; query?: Record<string, string>; body?: unknown }) => {
             sent.push(msg);
             if (msg.type === 'open') {
