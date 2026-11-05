@@ -31,6 +31,12 @@ fi
 gh release create "v$VERSION" --repo xkbxyberk/makara-releases --title "Makara $VERSION" \
   --notes-file "$NOTES" --latest "$DMG" "$DMG.sha256" "$OUT/appcast.xml"
 
-# The feed installed copies read, as they read it.
-curl -sSfL https://github.com/xkbxyberk/makara-releases/releases/latest/download/appcast.xml \
-  | grep -q "Makara-$VERSION.dmg" || { echo "the feed does not offer $VERSION" >&2; exit 1; }
+# The feed installed copies read, as they read it. GitHub took 25 s to serve a new one. Captured,
+# not piped into grep -q: pipefail would fail on SIGPIPE.
+for _ in {1..24}; do
+  feed=$(curl -sSfL https://github.com/xkbxyberk/makara-releases/releases/latest/download/appcast.xml 2>/dev/null || true)
+  [[ "$feed" == *"Makara-$VERSION.dmg"* ]] && exit 0
+  sleep 5
+done
+echo "the feed does not offer $VERSION" >&2
+exit 1

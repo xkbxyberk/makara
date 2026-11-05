@@ -458,7 +458,15 @@ UI and went with it (N8).
     copies of 1.0 cannot update themselves. `publish.sh` now refuses an app whose runtime zips
     are not online byte for byte, `release.sh` one whose `SUPublicEDKey` is not the keychain's.
     Trial with local zips: `open --env VD_RUNTIME_BASE_URL=file:///…/build/runtime/
-    --env VD_SETUP_AUTOINSTALL=1 /Applications/Makara.app`.
+    --env VD_SETUP_AUTOINSTALL=1 /Applications/Makara.app`. Makara 1.0.1 published 5 Nov (build
+    202611051906), tried from the public DMG on a Mac with no Makara data: setup from GitHub, a
+    real YouTube download. `gh release create` met two HTTP 500s that day; then make the draft,
+    upload and publish step by step (`gh api`, `gh release upload`).
+55. **Run the UI tests from a real folder.** LaunchServices keeps no URL scheme for an app under
+    `/private/tmp`, so `testTheURLSchemeInspectsALink` fails there with macOS's "no app" dialog.
+    A file the sandboxed runner writes is quarantined and it cannot undo that: its "are you sure"
+    dialog holds up the runner's next links and covers the window, so `clip.webloc` ships in the
+    test bundle.
 
 ## Rules
 
