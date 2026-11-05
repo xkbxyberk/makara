@@ -431,12 +431,34 @@ UI and went with it (N8).
     capture first. Tried 15 Oct: 33 MB DMG; the exported app installed its runtime from local
     zips (`VD_SETUP_AUTOINSTALL=1` presses "Kur" for trials) and downloaded a real YouTube
     video (AV1 + Opus + subtitles) with its own Deno, FFmpeg and aria2c. `scripts/publish.sh`
-    then makes release `v<version>` on the public **xkbxyberk/makara-releases** (the source repo
-    stays private) with the DMG and `appcast.xml`; Sparkle 2.10.0 in the release reads
+    then makes release `v<version>` on the public **xkbxyberk/makara-releases** with the DMG and `appcast.xml`; Sparkle 2.10.0 in the release reads
     `releases/latest/download/appcast.xml`, so runtime releases are published `--latest=false`.
     The appcast is signed with the EdDSA key in Berk's keychain (account `makara`); losing it
     strands every installed copy (DEVELOPING.md, "Releasing from a new Mac"). Makara 1.0
     published 15 Oct (build 202610150302).
+52. **A framework callback can arrive off the main thread whatever its type says.** The SDK marks
+    `getStateOfSafariExtension`'s handler `NS_SWIFT_UI_ACTOR`, yet Safari answers on its XPC
+    queue, so Swift's isolation check trapped (`EXC_BREAKPOINT`, "Block was expected to execute
+    on queue [com.apple.main-thread]") seconds after every launch on macOS 27.2. `@Sendable`
+    does not help: the type comes from the SDK. Use the `async` form, which has no closure to
+    check. Any closure written in `@MainActor` code and handed to a non-Sendable handler is
+    isolated too, even an empty `{ _ in }` (pass `nil`), and `MainActor.assumeIsolated` traps the
+    same way when the API promises no queue. Tests never reach the Safari calls
+    (`extensionIdentifier` is nil under `VD_DATA_DIR`): check them in the real app.
+53. **A Developer ID extension that Safari will not list** (`SFErrorDomain` 1 from
+    `--print-extension-state`). It must be notarized ("Computing the code signing dictionary
+    failed" otherwise), and an archive leaves a second registration of the same id under
+    DerivedData's `ArchiveIntermediates`, which hides the installed one. List them with
+    `pluginkit -m -A -D -v -i com.berkakbay.Makara.Extension` and drop the stale one with
+    `pluginkit -r <appex path>`. Met 5 Nov; no Safari restart was needed. `release.sh` drops
+    its own copies now.
+54. **Everything a stranger's install reads must be online before the app is.** The format
+    of November 2026 lost `xkbxyberk/makara-releases` and Sparkle's key: "Kur" answered 404 and
+    no update could be signed. The repository was made again and 1.0.1 starts a new key, so
+    copies of 1.0 cannot update themselves. `publish.sh` now refuses an app whose runtime zips
+    are not online byte for byte, `release.sh` one whose `SUPublicEDKey` is not the keychain's.
+    Trial with local zips: `open --env VD_RUNTIME_BASE_URL=file:///…/build/runtime/
+    --env VD_SETUP_AUTOINSTALL=1 /Applications/Makara.app`.
 
 ## Rules
 

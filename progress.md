@@ -347,3 +347,13 @@ that kept it equal to `tr.ts` went with tr.ts. CLAUDE.md drops the web-only gotc
 apart from the touched pytest files and the shared.js tests.
 
 **Next:** the P-series (PLAN.md), starting with P1 — the Safari extension beyond YouTube.
+
+## 2026-11-05 — 1.0.1: a clean install again, for anyone
+
+After the format the app crashed seconds after every launch: Safari answers
+`getStateOfSafariExtension` on its XPC queue while the SDK types the handler `@MainActor`, and
+Swift's isolation check traps (gotcha 52; the tests never reach that call). Fixed with the async
+form, and two more handlers of the same kind. The format had also lost the releases repository
+and Sparkle's key, so a new install stopped at "Kur" (gotcha 54): repository made again, runtime
+2026.11.05 built and uploaded, new key. `release.sh` and `publish.sh` now refuse what went wrong
+here; a fresh clone passes the gate without `ffmpeg` on PATH.

@@ -23,7 +23,7 @@
 	<key>SUFeedURL</key>
 	<string>$(VD_FEED_URL)</string>
 	<key>SUPublicEDKey</key>
-	<string>0tsu6+slHqnI/09yzWxuIshafR6RlFFaGFyzXfNqnUE=</string>
+	<string>LGAAkGtPbKk4QvujaZmBRhmYiBrHWpgMGrhbizj6Z2s=</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
