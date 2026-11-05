@@ -134,7 +134,8 @@ final class ShellTests: XCTestCase {
         let item = app.menuBars.menuItems["Ayarlar…"]
         XCTAssertTrue(item.waitForExistence(timeout: 10))
         item.click()
-        let settings = app.windows["Makara Ayarları"]
+        // Named after the app, which is "Makara Dev" here and "Makara" in a release.
+        let settings = app.windows.matching(NSPredicate(format: "title ENDSWITH %@", "Ayarları")).firstMatch
         XCTAssertTrue(settings.waitForExistence(timeout: 10), "no Settings window")
         XCTAssertTrue(settings.staticTexts["İndirme klasörü"].waitForExistence(timeout: 10))
         XCTAssertFalse(app.webViews.firstMatch.exists, "Ayarlar is native now: no web page is left")
@@ -498,7 +499,8 @@ final class ShellTests: XCTestCase {
         native("Henüz bir şey incelemedin")
         sidebar("Sistem").click()
         native("JavaScript çalıştırıcı")
-        let link = URL(string: "makara://inspect?url=https%3A%2F%2Fexample.test%2Flocal-media")!
+        // This build's own scheme: `makara://` belongs to an installed release, if there is one.
+        let link = URL(string: "makara-dev://inspect?url=https%3A%2F%2Fexample.test%2Flocal-media")!
         NSWorkspace.shared.open(link)
         native("Local test clip")
         XCTAssertTrue(app.windows["İncele"].waitForExistence(timeout: 10), "the sidebar did not follow to İncele")
@@ -526,11 +528,14 @@ final class ShellTests: XCTestCase {
     func testAWebLinkFileOpenedWithTheAppIsInspected() throws {
         app.launch()
         native("Henüz bir şey incelemedin")
-        let webloc = scratch.appending(path: "clip.webloc")
-        let plist = try PropertyListSerialization.data(fromPropertyList: ["URL": "https://example.test/local-media"],
-                                                       format: .xml, options: 0)
-        try plist.write(to: webloc)
-        let appURL = try XCTUnwrap(NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.berkakbay.Makara.dev"))
+        // Carried by the test bundle. Written here it would be quarantined (this runner is
+        // sandboxed and cannot undo that), and macOS's "are you sure" dialog would hold up this
+        // runner's next links too, and cover the window.
+        let webloc = try XCTUnwrap(Bundle(for: ShellTests.self).url(forResource: "clip", withExtension: "webloc"))
+        // The running copy: this Mac may know others with the same id, and any of them would do
+        // for LaunchServices.
+        let appURL = try XCTUnwrap(NSRunningApplication.runningApplications(withBundleIdentifier: "com.berkakbay.Makara.dev")
+            .first?.bundleURL)
         let opened = expectation(description: "handed to the app")
         NSWorkspace.shared.open([webloc], withApplicationAt: appURL, configuration: NSWorkspace.OpenConfiguration()) { _, _ in
             opened.fulfill()
@@ -539,8 +544,14 @@ final class ShellTests: XCTestCase {
         native("Local test clip")
     }
 
-    func testABackendThatCannotStartIsExplainedWithARetry() {
-        app.launchEnvironment["VD_PROJECT_ROOT"] = "/nonexistent"
+    func testABackendThatCannotStartIsExplainedWithARetry() throws {
+        // A project with no environment and a uv that fails: nothing to start with. A missing
+        // project would not do, the app would fall back on the backend it carries.
+        let project = scratch.appending(path: "project")
+        try FileManager.default.createDirectory(at: project.appending(path: "backend/app"), withIntermediateDirectories: true)
+        try Data().write(to: project.appending(path: "backend/app/main.py"))
+        app.launchEnvironment["VD_PROJECT_ROOT"] = project.path
+        app.launchEnvironment["VD_UV"] = "/usr/bin/false"
         app.launchEnvironment["VD_PORT"] = "8791"
         app.launch()
         XCTAssertTrue(app.staticTexts["Uygulama sunucusu başlatılamadı"].waitForExistence(timeout: 30))
@@ -549,7 +560,12 @@ final class ShellTests: XCTestCase {
         screenshot("native-backend-failed-light")
     }
 
-    func testClosingTheWindowQuitsAndStopsTheBackend() {
+    func testClosingTheWindowQuitsAndStopsTheBackend() throws {
+        // Without the menu bar item, which keeps the app running on purpose (it is on by default).
+        let data = scratch.appending(path: "data")
+        try FileManager.default.createDirectory(at: data, withIntermediateDirectories: true)
+        try Data(#"{"menuBarIcon":false,"showInDock":true,"askedAboutLogin":true}"#.utf8)
+            .write(to: data.appending(path: "native-vd-shell.json"))
         app.launch()
         native("Henüz bir şey incelemedin")
         let started = Date()
