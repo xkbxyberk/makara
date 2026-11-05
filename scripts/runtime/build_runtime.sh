@@ -20,6 +20,8 @@ FFMPEG_BASE=https://ffmpeg.martin-riedl.de/download/macos
 FFMPEG_BUILD_arm64=arm64/1789931890_9.0.2
 FFMPEG_BUILD_x86_64=amd64/1789931006_9.0.2
 DENO_VERSION=2.9.7
+DENO_SHA_arm64=5cd46d6268f6f78f5d88bdc7159d20bd44cdaa4b3303474839f87ec6fe7ae25c
+DENO_SHA_x86_64=95daaff11c116a52ad54785e7914c8e9c9cdcaba793c5ed929c74ca2d8e6259a
 ARIA2_VERSION=1.37.0
 ARIA2_SHA256=60a420ad7085eb616cb6e2bdf0a7206d68ff3d37fb5a956dc44242eb2f79b66b
 
@@ -32,8 +34,9 @@ fetch() {  # url file sha256
   echo "$sha  $file" | shasum -a 256 -c --quiet - || { echo "SHA-256 mismatch: $file" >&2; rm -f "$file"; exit 1; }
 }
 
-# Upstream publishes a .sha256 beside each FFmpeg zip and Deno zip; they are fetched over HTTPS
-# and recorded in SOURCES.md. aria2's source hash is pinned above.
+# Upstream publishes a .sha256 beside each FFmpeg zip; it is fetched over HTTPS and recorded in
+# SOURCES.md. Deno's and aria2's hashes are pinned above (Deno's are the digests GitHub reports
+# for the release assets: its .sha256sum files answered 504 on 5 Nov 2026).
 remote_sha() { curl -sSfL "$1" | grep -oE "[0-9a-f]{64}" | head -1; }
 
 build_aria2() {  # arch host
@@ -77,7 +80,8 @@ for arch in arm64 x86_64; do
     sources+="- $tool $FFMPEG_VERSION: $url (sha256 $sha); build script https://git.martin-riedl.de/ffmpeg/build-script\n"
   done
   url="https://github.com/denoland/deno/releases/download/v$DENO_VERSION/deno-$deno_target.zip"
-  sha=$(remote_sha "$url.sha256sum")
+  sha_var="DENO_SHA_$arch"
+  sha=${!sha_var}
   fetch "$url" "deno-$arch.zip" "$sha"
   ditto -x -k "deno-$arch.zip" "$stage/bin"
   sources+="- deno $DENO_VERSION: $url (sha256 $sha)\n"
@@ -110,6 +114,7 @@ done
 {
   echo "{"
   echo "  \"version\": \"$VERSION\","
+  echo "  \"base\": \"https://github.com/xkbxyberk/makara-releases/releases/download/runtime-$VERSION/\","
   echo "  \"tools\": {\"ffmpeg\": \"$FFMPEG_VERSION\", \"deno\": \"$DENO_VERSION\", \"aria2c\": \"$ARIA2_VERSION\"},"
   echo "  \"archives\": {"
   echo "    ${manifest_entries[0]},"

@@ -34,6 +34,22 @@ cd "$WORK"
 
 step() { printf "\n==> %s\n" "$*"; }
 
+# Copies of the extension left registered beside the installed app hide it from Safari
+# (CLAUDE.md gotcha 53). Only this script's own build folders are touched.
+forget_build_copies() {
+  pluginkit -m -A -D -v -i com.berkakbay.Makara.Extension | awk -F'\t' '/ArchiveIntermediates|\/build\/release\// {print $NF}' \
+    | while IFS= read -r copy; do pluginkit -r "$copy" || true; done
+}
+
+# First, so a missing or wrong key stops the release before Apple's service is asked anything.
+step "Sparkle's tools and key"
+curl -sSfL -o sparkle.tar.xz "https://github.com/sparkle-project/Sparkle/releases/download/$SPARKLE_VERSION/Sparkle-$SPARKLE_VERSION.tar.xz"
+echo "$SPARKLE_SHA  sparkle.tar.xz" | shasum -a 256 -c --quiet -
+mkdir -p sparkle && tar -xf sparkle.tar.xz -C sparkle
+KEY=$(sparkle/bin/generate_keys --account makara -p)
+[ "$KEY" = "$(/usr/libexec/PlistBuddy -c 'Print SUPublicEDKey' "$ROOT/macos/VideoDownloader/VideoDownloader/Info.plist")" ] \
+  || { echo "the keychain's Sparkle key is not the app's SUPublicEDKey: updates would be refused" >&2; exit 1; }
+
 step "uv $UV_VERSION for both processors"
 for arch in arm64 x86_64; do
   target=$([ $arch = arm64 ] && echo aarch64-apple-darwin || echo x86_64-apple-darwin)
@@ -81,6 +97,12 @@ done
 [ "$(/usr/libexec/PlistBuddy -c 'Print VDProjectRoot' "$APP/Contents/Info.plist")" = "" ] \
   || { echo "a release must not name a checkout" >&2; exit 1; }
 
+# The tests never reach Safari (gotcha 52), so ask it here: a crash stops the release. Either
+# answer will do, this copy need not be the one Safari knows.
+state=$(perl -e 'alarm 60; exec @ARGV' "$APP/Contents/MacOS/Makara" --print-extension-state)
+[[ "$state" == enabled:* || "$state" == error:* ]] || { echo "no answer from Safari: $state" >&2; exit 1; }
+forget_build_copies
+
 notarize() {  # file
   xcrun notarytool submit "$1" --keychain-profile "$PROFILE" --wait --timeout 30m
 }
@@ -111,9 +133,6 @@ else
 fi
 
 step "Sparkle feed"
-curl -sSfL -o sparkle.tar.xz "https://github.com/sparkle-project/Sparkle/releases/download/$SPARKLE_VERSION/Sparkle-$SPARKLE_VERSION.tar.xz"
-echo "$SPARKLE_SHA  sparkle.tar.xz" | shasum -a 256 -c --quiet -
-mkdir -p sparkle && tar -xf sparkle.tar.xz -C sparkle
 signature=$(sparkle/bin/sign_update --account makara "$DMG")  # sparkle:edSignature="…" length="…"
 cat > "$OUT/appcast.xml" <<XML
 <?xml version="1.0" encoding="utf-8"?>

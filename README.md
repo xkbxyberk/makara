@@ -5,17 +5,25 @@ Sunucu sadece `127.0.0.1` üzerinden dinler; hiçbir veri dışarı gönderilmez
 
 ## Kurulum
 
-Gereken hazır araçlar: [uv](https://docs.astral.sh/uv/), Xcode ve `ffmpeg` (`brew install ffmpeg`).
-YouTube için bir JavaScript motoru gerekir; `deno` önerilir (`brew install deno`).
+[Son sürümü](https://github.com/xkbxyberk/makara-releases/releases/latest) indir, `Makara-….dmg`
+dosyasını aç ve Makara'yı Uygulamalar klasörüne sürükle. macOS 14 veya üstü gerekir; Apple silicon
+ve Intel desteklenir. İlk açılışta **Kur** düğmesi gereken araçları indirir (FFmpeg, Deno, aria2,
+Python); başka bir şey kurman gerekmez. Sonra Safari > Ayarlar > Uzantılar'dan Makara'yı aç.
+
+## Geliştirme sürümü
+
+Kaynaktan derlemek için [DEVELOPING.md](DEVELOPING.md) dosyasındaki adımları izle:
 
 ```bash
-cd ~/VideoDownloader
-uv sync                      # Python bağımlılıkları (yt-dlp dahil)
+gh repo clone xkbxyberk/makara ~/Makara
+cd ~/Makara
+./scripts/bootstrap.sh
 ```
 
 ## Çalıştırma
 
-Mac uygulaması olarak (Finder'dan çift tıklayabilirsin; gerekirse önce uygulamayı derler):
+Geliştirme sürümünü Mac uygulaması olarak açmak için (Finder'dan çift tıklayabilirsin; gerekirse
+önce uygulamayı derler):
 
 ```bash
 open Makara.command

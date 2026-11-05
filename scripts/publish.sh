@@ -11,6 +11,17 @@ DMG="$OUT/Makara-$VERSION.dmg"
 spctl --assess --type open --context context:primary-signature "$DMG"  # notarized, or stop here
 grep -q "Makara-$VERSION.dmg" "$OUT/appcast.xml"
 
+# What this app's setup assistant will download must be online, byte for byte, before anyone
+# can get the app: without it no new install gets past "Kur".
+MANIFEST="$ROOT/macos/VideoDownloaderKit/Sources/VideoDownloaderKit/Resources/runtime-manifest.json"
+BASE=$(plutil -extract base raw -o - "$MANIFEST")
+for arch in arm64 x86_64; do
+  file=$(plutil -extract "archives.$arch.file" raw -o - "$MANIFEST")
+  want=$(plutil -extract "archives.$arch.sha256" raw -o - "$MANIFEST")
+  got=$(curl -sSfL "$BASE$file" | shasum -a 256 | awk '{print $1}')
+  [ "$got" = "$want" ] || { echo "$BASE$file is not the manifest's file" >&2; exit 1; }
+done
+
 NOTES="${1:-}"
 if [ -z "$NOTES" ]; then
   NOTES="$OUT/notes.md"
@@ -19,3 +30,7 @@ if [ -z "$NOTES" ]; then
 fi
 gh release create "v$VERSION" --repo xkbxyberk/makara-releases --title "Makara $VERSION" \
   --notes-file "$NOTES" --latest "$DMG" "$DMG.sha256" "$OUT/appcast.xml"
+
+# The feed installed copies read, as they read it.
+curl -sSfL https://github.com/xkbxyberk/makara-releases/releases/latest/download/appcast.xml \
+  | grep -q "Makara-$VERSION.dmg" || { echo "the feed does not offer $VERSION" >&2; exit 1; }

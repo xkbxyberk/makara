@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import http.server
 import json
+import os
 import subprocess
 import sys
 import threading
@@ -16,6 +17,12 @@ FIXTURE_DIR = Path(__file__).parent / "fixtures" / "infojson"
 MEDIA_DIR = Path(__file__).parent / "fixtures" / "media"
 MEDIA_REQUESTS: list[dict[str, Any]] = []  # what the throttled endpoint was asked for
 REFUSED_ONCE: set[str] = set()  # files the /flaky403/ endpoint has already refused
+
+# The Brewfile installs only ffmpeg-full, which Homebrew keeps off PATH, and the tests and
+# scripts/make_test_media.py call plain `ffmpeg`: without this a fresh Mac fails 142 of them.
+_KEG = Path("/opt/homebrew/opt/ffmpeg-full/bin")
+if _KEG.is_dir():
+    os.environ["PATH"] = f"{_KEG}{os.pathsep}{os.environ.get('PATH', '')}"
 
 
 @pytest.fixture(autouse=True)
