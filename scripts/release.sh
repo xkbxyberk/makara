@@ -101,6 +101,31 @@ done
 # answer will do, this copy need not be the one Safari knows.
 state=$(perl -e 'alarm 60; exec @ARGV' "$APP/Contents/MacOS/Makara" --print-extension-state)
 [[ "$state" == enabled:* || "$state" == error:* ]] || { echo "no answer from Safari: $state" >&2; exit 1; }
+
+# The tests never run this flavour's server, so run it once from an empty runtime: setup, Python,
+# server. Anything it writes into the app breaks the seal (gotcha 57), so the signature is
+# checked again afterwards. Local zips when this Mac built them, else the published ones.
+step "The server leaves the signed app alone"
+TRIAL="$WORK/trial"
+LOCAL_ZIPS=""
+[ -f "$ROOT/build/runtime/runtime-manifest.json" ] && LOCAL_ZIPS="file://$ROOT/build/runtime/"
+# Started from this shell it inherits the shell's Python settings, which a user's app never has.
+env -u PYTHONDONTWRITEBYTECODE VD_PORT=8796 VD_SETUP_AUTOINSTALL=1 VD_RUNTIME_BASE_URL="$LOCAL_ZIPS" VD_RUNTIME_DIR="$TRIAL/runtime" \
+  VD_DATA_DIR="$TRIAL/data" VD_DOWNLOAD_DIR="$TRIAL/downloads" VD_LOG_FILE="$TRIAL/backend.log" \
+  "$APP/Contents/MacOS/Makara" > /dev/null 2>&1 &
+trial=$!
+up=0
+for _ in $(seq 1 240); do
+  if curl -sf -m 1 http://127.0.0.1:8796/api/health > /dev/null; then up=1; break; fi
+  kill -0 "$trial" 2> /dev/null || break
+  sleep 1
+done
+kill "$trial" 2> /dev/null || true
+wait "$trial" 2> /dev/null || true
+sleep 2  # the server stops when its parent is gone
+[ "$up" = 1 ] || { echo "the server did not start:" >&2; tail -5 "$TRIAL/backend.log" >&2 || true; exit 1; }
+[ -d "$TRIAL/runtime/pycache" ] || { echo "Python's cache is not in the runtime" >&2; exit 1; }
+codesign --verify --deep --strict "$APP" || { echo "the server changed the signed app" >&2; exit 1; }
 forget_build_copies
 
 notarize() {  # file
