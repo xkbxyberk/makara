@@ -28,7 +28,7 @@ release planned (PLAN P8), developed by Berk.
 | Fresh Mac to a working checkout | `./scripts/bootstrap.sh` (see DEVELOPING.md) |
 | The gate (lint, types, pytest, extension tests, Swift, app build, UI tests) | `./scripts/check.sh` |
 | Backend tests only | `uv run pytest -q` |
-| Extension tests | `cd macos/extension-tests && node --test shared.test.mjs && npx playwright test` |
+| Extension tests | `cd macos/extension-tests && node --test shared.test.mjs background.test.mjs && npx playwright test` |
 | Backend alone | `PYTHONPATH=backend uv run python -m app.main` |
 | Desktop app (builds if needed) | `open Makara.command` |
 | Update yt-dlp | `uv lock --upgrade-package yt-dlp --upgrade-package yt-dlp-ejs && uv sync` (see gotcha 2) |
@@ -467,6 +467,15 @@ UI and went with it (N8).
     A file the sandboxed runner writes is quarantined and it cannot undo that: its "are you sure"
     dialog holds up the runner's next links and covers the window, so `clip.webloc` ships in the
     test bundle.
+56. **An error nobody reads in a callback counts against the extension.** Safari 27 keeps
+    context menus between loads of the background script, so `create` answered "Identifier is
+    already used" for all three ids. With no callback reading `runtime.lastError` that became
+    "Runtime error reported" and `WKWebExtensionContextErrorDomain Code=7` (not in the public
+    enum), and Safari closed the background page about 0.4 s later, on every load (6 Nov,
+    5 of 5, no crash report anywhere; Berk saw the extension flick on and off). Read lastError
+    in every callback; the appex is not the suspect when `pluginkit` and crash reports are clean.
+    Fixed in 1.0.2 (build 202611062129, published 7 Nov): enabled and two hours without the error.
+    Read it in `log show --predicate 'subsystem == "com.apple.WebKit" AND category == "Extensions"'`.
 
 ## Rules
 
