@@ -228,15 +228,34 @@ browser.runtime.onMessage.addListener((message, sender) => {
 
 // ---- right-click on a link ------------------------------------------------------------------
 // Made on every load, not only at install: whether Safari keeps them across a restart is not
-// something to rely on. Removing first keeps it idempotent.
-function installMenus() {
-  browser.contextMenus.removeAll().finally(() => {
-    browser.contextMenus.create({ id: 'vd-download', title: t('menu_download'), contexts: ['link'] });
-    browser.contextMenus.create({ id: 'vd-inspect', title: t('menu_inspect'), contexts: ['link'] });
-    // On the page itself and on a player. YouTube answers the first right-click on its player
-    // with its own menu; a second right-click there opens Safari's, with this item in it.
-    browser.contextMenus.create({ id: 'vd-page', title: t('menu_download_page'), contexts: ['page', 'video', 'audio', 'frame'] });
+// something to rely on. One run at a time, because a load can also get onInstalled: two at once
+// create every id twice. An id that is still there is no failure, but the callback must read
+// lastError all the same, or Safari records an unchecked error on the extension (gotcha 56).
+const MENUS = () => [
+  { id: 'vd-download', title: t('menu_download'), contexts: ['link'] },
+  { id: 'vd-inspect', title: t('menu_inspect'), contexts: ['link'] },
+  // On the page itself and on a player. YouTube answers the first right-click on its player
+  // with its own menu; a second right-click there opens Safari's, with this item in it.
+  { id: 'vd-page', title: t('menu_download_page'), contexts: ['page', 'video', 'audio', 'frame'] },
+];
+
+const createMenu = (item) =>
+  new Promise((done) => {
+    browser.contextMenus.create(item, () => {
+      void browser.runtime.lastError;
+      done();
+    });
   });
+
+let menusReady = Promise.resolve();
+function installMenus() {
+  menusReady = menusReady
+    .then(async () => {
+      await browser.contextMenus.removeAll().catch(() => undefined);
+      for (const item of MENUS()) await createMenu(item);
+    })
+    .catch(() => undefined);
+  return menusReady;
 }
 installMenus();
 browser.runtime.onInstalled.addListener(installMenus);

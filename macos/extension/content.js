@@ -73,7 +73,14 @@
     return performance.getEntriesByType('resource').some((entry) => MANIFEST.test(entry.name));
   }
 
-  const send = (message) => browser.runtime.sendMessage(message).catch(() => undefined);
+  // Safari throws here, rather than rejecting, once a frame is on its way out.
+  const send = (message) => {
+    try {
+      return browser.runtime.sendMessage(message).catch(() => undefined);
+    } catch {
+      return Promise.resolve(undefined);
+    }
+  };
 
   let last = '';
   function report() {
