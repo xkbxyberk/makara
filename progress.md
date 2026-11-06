@@ -357,3 +357,10 @@ form, and two more handlers of the same kind. The format had also lost the relea
 and Sparkle's key, so a new install stopped at "Kur" (gotcha 54): repository made again, runtime
 2026.11.05 built and uploaded, new key. `release.sh` and `publish.sh` now refuse what went wrong
 here; a fresh clone passes the gate without `ffmpeg` on PATH.
+
+## 2026-11-07 — 1.0.2: the Safari extension stays on
+
+After its first use the extension flicked on and off in Safari. No crash: the background script's
+`contextMenus.create` met ids Safari had kept, nobody read `lastError`, and Safari closed the
+page 0.4 s later on every load (gotcha 56). Menus now install one run at a time and read it;
+`background.test.mjs` fails on the old code. Tried in Berk's Safari: stayed enabled.
