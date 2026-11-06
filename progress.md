@@ -364,3 +364,10 @@ After its first use the extension flicked on and off in Safari. No crash: the ba
 `contextMenus.create` met ids Safari had kept, nobody read `lastError`, and Safari closed the
 page 0.4 s later on every load (gotcha 56). Menus now install one run at a time and read it;
 `background.test.mjs` fails on the old code. Tried in Berk's Safari: stayed enabled.
+
+## 2026-11-07 — 1.0.3: nothing writes inside the signed app
+
+The first real Sparkle update (1.0.1 to 1.0.2) worked, and checking it found the release's
+server writing `__pycache__` inside the app, which breaks its seal (gotcha 57). The cache now
+lives in the runtime, and `release.sh` runs the real server from an empty runtime and checks the
+signature afterwards.
