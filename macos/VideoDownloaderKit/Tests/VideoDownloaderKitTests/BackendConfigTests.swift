@@ -65,6 +65,7 @@ struct BackendConfigTests {
         #expect(env["UV_PROJECT_ENVIRONMENT"] == runtime + "/venv")
         #expect(env["UV_PYTHON_INSTALL_DIR"] == runtime + "/python")
         #expect(env["UV_PYTHON_PREFERENCE"] == "only-managed")
+        #expect(env["PYTHONPYCACHEPREFIX"] == runtime + "/pycache")  // never inside the signed app
         #expect(env["VD_BIN_DIR"] == runtime + "/bin")
         #expect(env["VD_UV_PROJECT"] == runtime + "/project")
         #expect(env["VD_UV"] == "/Applications/Makara.app/Contents/Helpers/uv")
