@@ -136,6 +136,9 @@ public struct BackendConfig: Sendable, Equatable {
             env["UV_CACHE_DIR"] = release.uvCache.path
             // Never a Python that happens to be on this Mac (Xcode's, Homebrew's): uv's own.
             env["UV_PYTHON_PREFERENCE"] = "only-managed"
+            // Python would otherwise write .pyc files beside the sources, inside the signed app
+            // (gotcha 57). The workers inherit this.
+            env["PYTHONPYCACHEPREFIX"] = release.runtime.appending(path: "pycache").path
             env["VD_BIN_DIR"] = release.bin.path
             env["VD_UV_PROJECT"] = release.project.path
             if let uv { env["VD_UV"] = uv.path }
