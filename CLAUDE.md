@@ -476,6 +476,14 @@ UI and went with it (N8).
     in every callback; the appex is not the suspect when `pluginkit` and crash reports are clean.
     Fixed in 1.0.2 (build 202611062129, published 7 Nov): enabled and two hours without the error.
     Read it in `log show --predicate 'subsystem == "com.apple.WebKit" AND category == "Extensions"'`.
+57. **Nothing may write inside the signed app.** The release's server runs its sources from
+    `Contents/Resources/backend`, and Python put `__pycache__` beside them: "a sealed resource is
+    missing or invalid", seen on 7 Nov after a Sparkle update, though the app, its extension and
+    Safari kept working. `PYTHONPYCACHEPREFIX` now sends them to `runtime/pycache`. `release.sh`
+    runs the real server from an empty runtime and checks the signature afterwards. Check with
+    `codesign --verify --deep --strict /Applications/Makara.app`, on an app that has run. A
+    trial started from a shell inherits its Python settings (`PYTHONDONTWRITEBYTECODE` here hid
+    the writes at first), so `release.sh` clears that. Fixed in 1.0.3 (build 202611070227).
 
 ## Rules
 
